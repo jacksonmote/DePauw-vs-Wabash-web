@@ -970,7 +970,8 @@ def athletics_footer_block(now: dt.datetime, prefix: str, data: dict, checked: s
         updated_line(data["updated_at"], checked, now),
         f'<p class="downloads">Download the data: <a href="{esc(prefix)}data/series.json">series.json</a> '
         f'(every game, as JSON) · <a href="{esc(prefix)}games.csv">games.csv</a> (one row per game, for '
-        f'spreadsheets). {report_link()}. {enhancement_link(AREA_ATHLETICS)}.</p>',
+        f'spreadsheets).</p>',
+        f'<p class="feedback">{report_link()}. {enhancement_link(AREA_ATHLETICS)}.</p>',
         '<p>Data from <a href="https://depauwtigers.com/">depauwtigers.com</a> and '
         '<a href="https://sports.wabash.edu/">sports.wabash.edu</a>. Source pages:</p>',
         f'<ul class="sources">\n{sources}\n</ul>',
@@ -995,8 +996,9 @@ def alumni_footer_block(prefix: str, alumni_data: dict, endowment: dict) -> list
         f'<p>Records last verified <time datetime="{esc(verified)}">{esc(fmt_date(verified))}</time>.</p>',
         f'<p class="downloads">Download the data: <a href="{esc(prefix)}data/alumni.json">alumni.json</a> '
         f'(named graduates and their sources) · <a href="{esc(prefix)}data/endowment.json">endowment.json</a> '
-        f'(endowment, enrollment and basis). <a href="{esc(alumni_page.correction_url())}">Suggest a '
-        f'correction</a>. {enhancement_link(AREA_ALUMNI)}.</p>',
+        f'(endowment, enrollment and basis).</p>',
+        f'<p class="feedback"><a href="{esc(alumni_page.correction_url())}">Suggest a correction</a>. '
+        f'{enhancement_link(AREA_ALUMNI)}.</p>',
         f'<p>Data from: DePauw and Wabash audited {esc(fy)} financial statements, the U.S. Department of '
         f'Education’s College Navigator (IPEDS), and the sources listed with each name. Source pages:</p>',
         f'<ul class="sources">\n{sources}\n</ul>',

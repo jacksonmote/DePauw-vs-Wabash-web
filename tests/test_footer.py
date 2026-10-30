@@ -173,6 +173,16 @@ def test_the_enhancement_link_leaves_the_correction_links_as_they_were(site, nam
         assert f'<a href="{alumni.correction_url()}">Suggest a correction</a>' in f
 
 
+@pytest.mark.parametrize("name", [n for n, p in PAGES.items() if p[2] != "neutral"])
+def test_the_feedback_links_sit_on_their_own_line_between_the_downloads_and_the_data_from_line(site, name):
+    f = footer(site, name)
+    para = re.search(r'<p class="feedback">(.*?)</p>', f).group(1)
+    first = "Report a data error" if PAGES[name][2] == "athletics" else "Suggest a correction"
+    assert re.sub(r"<[^>]+>", "", para) == f"{first}. Suggest an enhancement."
+    assert f.index("Download the data") < f.index('<p class="feedback">') < f.index("Data from")
+    assert first not in f[f.index("Download the data"):f.index('<p class="feedback">')]
+
+
 @pytest.mark.parametrize("name", ["index.html", "alumni/index.html"])
 def test_the_enhancement_link_is_not_on_the_sport_or_category_cards(site, name):
     page = (site / name).read_text(encoding="utf-8")
