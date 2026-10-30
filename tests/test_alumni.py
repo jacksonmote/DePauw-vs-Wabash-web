@@ -172,7 +172,7 @@ def test_build_emits_navigation_alumni_and_auditable_json(tmp_path):
     assert page.count("<script") == 1 and '<script src="../easter-eggs.js" defer></script>' in page   # the title script only
     assert "ranked #340 in the 2008 Fortune 500" in page
     assert "https://depauwvswabash.com/alumni/" in sitemap
-    assert "© 2026 Jackson Mote" in page
+    assert "© 2026 Jackson Mote and Joe Haynes" in page
     assert page.count("<!DOCTYPE html>") == 1
     for name in ("alumni.json", "endowment.json"):
         assert (out / "data" / name).is_file()

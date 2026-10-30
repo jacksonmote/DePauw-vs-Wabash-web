@@ -124,6 +124,36 @@ def test_blank_issues_are_turned_off():
     assert cfg["blank_issues_enabled"] is False
 
 
+def test_the_enhancement_form_asks_what_why_and_an_example_and_nothing_personal():
+    cfg = yaml.safe_load((ROOT / ".github" / "ISSUE_TEMPLATE" / "enhancement.yml").read_text(encoding="utf-8"))
+    assert cfg["title"] == "Enhancement: " and cfg["labels"] == ["enhancement"]
+    body = [b for b in cfg["body"] if b["type"] != "markdown"]
+    assert [b["id"] for b in body] == ["area", "what_to_change", "why", "example"]
+    assert [b["validations"]["required"] for b in body] == [True, True, False, False]
+    assert body[0]["type"] == "dropdown" and body[0]["attributes"]["options"] == [
+        render.AREA_ATHLETICS, render.AREA_ALUMNI, render.AREA_SITE, "Other"]
+    text = json.dumps(cfg).lower()
+    assert "public" in text and "personal" in text
+    for ask in ("email address:", "phone number:", "your name", "home address:"):
+        assert ask not in text
+    assert not any(b["type"] == "checkboxes" for b in cfg["body"])
+
+
+def test_the_enhancement_form_asks_what_why_and_an_example_and_nothing_personal():
+    cfg = yaml.safe_load((ROOT / ".github" / "ISSUE_TEMPLATE" / "enhancement.yml").read_text(encoding="utf-8"))
+    assert cfg["title"] == "Enhancement: " and cfg["labels"] == ["enhancement"]
+    body = [b for b in cfg["body"] if b["type"] != "markdown"]
+    assert [b["id"] for b in body] == ["area", "what_to_change", "why", "example"]
+    assert [b["validations"]["required"] for b in body] == [True, True, False, False]
+    assert body[0]["type"] == "dropdown" and body[0]["attributes"]["options"] == [
+        render.AREA_ATHLETICS, render.AREA_ALUMNI, render.AREA_SITE, "Other"]
+    text = json.dumps(cfg).lower()
+    assert "public" in text and "personal" in text
+    for ask in ("email address:", "phone number:", "your name", "home address:"):
+        assert ask not in text
+    assert not any(b["type"] == "checkboxes" for b in cfg["body"])
+
+
 def test_the_report_link_targets_the_template_that_exists():
     assert (ROOT / ".github" / "ISSUE_TEMPLATE" / "data-correction.yml").exists()
     assert "template=data-correction.yml" in render.report_url()

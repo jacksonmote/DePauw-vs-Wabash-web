@@ -87,8 +87,10 @@ MEN_ONLY = ("Only men’s head-to-head competition is compared: Wabash is an all
             "events (cross country, track and field, golf, and swimming invitationals and championships) "
             "aren’t head-to-head.")
 DISCLAIMER = "Unofficial fan site, not affiliated with DePauw University or Wabash College."
-COPYRIGHT_HOLDER = "Jackson Mote"
+COPYRIGHT_HOLDER = "Jackson Mote and Joe Haynes"
 COPYRIGHT_START = 2026
+# The options of the "Which part of the site" dropdown in .github/ISSUE_TEMPLATE/enhancement.yml.
+AREA_ATHLETICS, AREA_ALUMNI, AREA_SITE = "Athletics", "Alumni and endowment", "Whole site"
 
 BELL_URL = "https://en.wikipedia.org/wiki/Monon_Bell"
 # Written in our own words. It holds no record, streak or other figure that changes: those come from the data.
@@ -175,6 +177,15 @@ def report_link(sport_name: str | None = None) -> str:
     return f'<a href="{esc(report_url(sport_name))}">Report a data error</a>'
 
 
+def enhancement_url(area: str) -> str:
+    """Opens the enhancement issue form with "Which part of the site" filled in; `area` is one of its options."""
+    return f"{REPO_URL}/issues/new?template=enhancement.yml&area={quote(area)}"
+
+
+def enhancement_link(area: str) -> str:
+    return f'<a href="{esc(enhancement_url(area))}">Suggest an enhancement</a>'
+
+
 def fmt_num(x) -> str:
     """A score, margin or total for display: 4,459.5 and 147.5, but 4,612 and 153 (never 147.50 or 153.0)."""
     return f"{facts.num(x):,}"
@@ -224,7 +235,7 @@ def count_noun(n: int, words: tuple) -> str:
 
 
 def copyright_line(now: dt.datetime | None = None) -> str:
-    """'© 2026 Jackson Mote', or '© 2026–2027 Jackson Mote' once the build year (Eastern) is later."""
+    """'© 2026 Jackson Mote and Joe Haynes', or '© 2026–2027 Jackson Mote and Joe Haynes' once the build year (Eastern) is later."""
     year = to_eastern(now or dt.datetime.now(dt.timezone.utc))[0].year
     years = str(COPYRIGHT_START) if year <= COPYRIGHT_START else f"{COPYRIGHT_START}–{year}"
     return f"© {years} {COPYRIGHT_HOLDER}"
@@ -959,7 +970,7 @@ def athletics_footer_block(now: dt.datetime, prefix: str, data: dict, checked: s
         updated_line(data["updated_at"], checked, now),
         f'<p class="downloads">Download the data: <a href="{esc(prefix)}data/series.json">series.json</a> '
         f'(every game, as JSON) · <a href="{esc(prefix)}games.csv">games.csv</a> (one row per game, for '
-        f'spreadsheets). {report_link()}.</p>',
+        f'spreadsheets). {report_link()}. {enhancement_link(AREA_ATHLETICS)}.</p>',
         '<p>Data from <a href="https://depauwtigers.com/">depauwtigers.com</a> and '
         '<a href="https://sports.wabash.edu/">sports.wabash.edu</a>. Source pages:</p>',
         f'<ul class="sources">\n{sources}\n</ul>',
@@ -985,7 +996,7 @@ def alumni_footer_block(prefix: str, alumni_data: dict, endowment: dict) -> list
         f'<p class="downloads">Download the data: <a href="{esc(prefix)}data/alumni.json">alumni.json</a> '
         f'(named graduates and their sources) · <a href="{esc(prefix)}data/endowment.json">endowment.json</a> '
         f'(endowment, enrollment and basis). <a href="{esc(alumni_page.correction_url())}">Suggest a '
-        f'correction</a>.</p>',
+        f'correction</a>. {enhancement_link(AREA_ALUMNI)}.</p>',
         f'<p>Data from: DePauw and Wabash audited {esc(fy)} financial statements, the U.S. Department of '
         f'Education’s College Navigator (IPEDS), and the sources listed with each name. Source pages:</p>',
         f'<ul class="sources">\n{sources}\n</ul>',
@@ -1002,6 +1013,7 @@ def site_footer(now: dt.datetime, *, prefix: str = "", data: dict | None = None,
     only on the athletics pages (it is about athletics, so the alumni and the neutral pages leave it out). The
     how-it-works landing page passes link_how=False: a link from that page to itself would go nowhere."""
     block, how, men_note = [], HOW_PATH, False
+    suggest = f' · {enhancement_link(AREA_SITE)}' if not (alumni or data) else ""
     if alumni:
         block, how = alumni_footer_block(prefix, *alumni), HOW_ALUMNI_PATH
     elif data:
@@ -1011,7 +1023,7 @@ def site_footer(now: dt.datetime, *, prefix: str = "", data: dict | None = None,
         *block,
         '<!-- Both schools supplied the records. Only one supplied the developers. -->',
         '<p class="footer-links">' + (f'<a href="{esc(prefix + how)}">How the numbers work</a> · ' if link_how else "") +
-        f'<a href="{esc(REPO_URL)}">Built in the open: code and data on GitHub</a></p>',
+        f'<a href="{esc(REPO_URL)}">Built in the open: code and data on GitHub</a>{suggest}</p>',
         *([f'<p>{esc(MEN_ONLY)}</p>'] if men_note else []),
         f'<p>{esc(DISCLAIMER)}</p>',
         '<details class="impartiality"><summary>A note on impartiality</summary>'
