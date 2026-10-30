@@ -169,7 +169,7 @@ def test_build_emits_navigation_alumni_and_auditable_json(tmp_path):
     assert "reported accounting scopes differ" in page
     assert page.count(">Endowment source</a>") == 2 and page.count(">Enrollment source</a>") == 2
     assert "FY2025" in page and "Jun 30, 2025" in page
-    assert "<script" not in page
+    assert page.count("<script") == 1 and '<script src="../easter-eggs.js" defer></script>' in page   # the title script only
     assert "ranked #340 in the 2008 Fortune 500" in page
     assert "https://depauwvswabash.com/alumni/" in sitemap
     assert "© 2026 Jackson Mote" in page
@@ -352,7 +352,8 @@ def test_name_lists_stack_below_600px_while_the_count_tiles_stay_side_by_side():
 
 def test_header_subtitle_and_page_heading_match_the_athletics_page_structure():
     page = committed_page()
-    assert '<p class="subtitle">Notable graduates and endowments, side by side, with a source for every name.</p>' in page
+    assert '<p class="subtitle">DePauw University vs. Wabash College: Notable graduates and endowments, side by side.</p>' in page
+    assert alumni.SUBTITLE.startswith("DePauw University vs. Wabash College: ")           # the athletics subtitle's wording style
     assert "Verified named graduates and endowment comparison" not in page
     main = page[page.index("<main"):]
     assert main.index('<h2 id="alumni-h">Alumni and endowment</h2>') < main.index('class="scoreboard"')

@@ -33,7 +33,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Check the home-page script syntax
+      - name: Check the title script syntax
         run: node --check static/easter-eggs.js
 
       - name: Validate generated HTML

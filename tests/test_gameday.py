@@ -548,7 +548,7 @@ def test_render_then_node_then_validation_then_report_precede_data_commit_and_ar
     steps = build_steps()
     render_index = step_index(steps, lambda step: step.get("name") == "Render site")
     node_index = step_index(steps, lambda step: step.get("uses", "").startswith("actions/setup-node@"))
-    syntax_index = step_index(steps, lambda step: step.get("name") == "Check the home-page script syntax")
+    syntax_index = step_index(steps, lambda step: step.get("name") == "Check the title script syntax")
     validation_index = step_index(steps, lambda step: step.get("name") == "Validate generated HTML")
     report_index = step_index(steps, lambda step: step.get("name") == "Report HTML validation problem")
     commit_index = step_index(steps, lambda step: step.get("name") == "Commit if data changed")
@@ -570,7 +570,7 @@ def test_render_is_fail_closed_and_node_and_validation_are_non_blocking_and_repo
     assert node_step["id"] == "setup_node"
     assert node_step["continue-on-error"] is True
 
-    syntax = named_step("Check the home-page script syntax")
+    syntax = named_step("Check the title script syntax")
     assert syntax["if"] == "${{ steps.setup_node.outcome == 'success' }}"
     assert syntax["continue-on-error"] is True  # PR checks gate syntax; production keeps publishing if Node fails.
 
@@ -609,10 +609,10 @@ def test_production_html_validation_matches_pull_request_checks():
     pr_node = next(step for step in production_checks if step.get("uses", "").startswith("actions/setup-node@"))
     assert production_node["uses"] == pr_node["uses"]
     assert production_node["with"] == pr_node["with"] == {"node-version": "22"}
-    production_syntax = named_step("Check the home-page script syntax")
+    production_syntax = named_step("Check the title script syntax")
     assert production_syntax["if"] == "${{ steps.setup_node.outcome == 'success' }}"
     assert production_syntax["continue-on-error"] is True
-    pr_syntax = next(step for step in production_checks if step.get("name") == "Check the home-page script syntax")
+    pr_syntax = next(step for step in production_checks if step.get("name") == "Check the title script syntax")
     assert "continue-on-error" not in pr_syntax and "if" not in pr_syntax
 
 

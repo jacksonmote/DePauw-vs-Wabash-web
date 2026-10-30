@@ -118,7 +118,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Check the home-page script syntax
+      - name: Check the title script syntax
         if: ${{ steps.setup_node.outcome == 'success' }}
         continue-on-error: true
         run: node --check static/easter-eggs.js

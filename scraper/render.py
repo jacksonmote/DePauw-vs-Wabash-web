@@ -3,16 +3,16 @@ Static site generator for the DePauw vs. Wabash page.
 
 Reads data/series.json (and, if present, data/upcoming.json and the uncommitted .checked-at) plus the
 hand-curated data/alumni.json and data/endowment.json, and writes a finished site to site/:
-  index.html                      the athletics home page (the only page with a deferred script)
-  alumni/index.html               the alumni and endowment page (alumni.py)
+  index.html                      the athletics home page (one of two pages with a deferred script)
+  alumni/index.html               the alumni and endowment page (alumni.py; the other page with the deferred script)
   how-it-works/index.html         landing page; how-it-works/athletics/ and how-it-works/alumni/ (howitworks.py)
   bell-heist/index.html           public, unindexed fictional story
   404.html                        root-relative URLs, noindex
-  styles.css, the icons, easter-eggs.js (home only), three original easter-egg SVGs,
+  styles.css, the icons, easter-eggs.js (home and alumni only), three original easter-egg SVGs,
   og-image.png and alumni-og-image.png (drawn by images.py), site.webmanifest,
   games.csv, data/series.json, data/alumni.json, data/endowment.json, robots.txt, sitemap.xml, .nojekyll
 Every page gets its header and nav (site_nav), head tags and footer (site_footer: a page-specific data block,
-then shared lines) here. Only the home page loads its optional deferred easter-eggs script; Pillow is needed only for images.
+then shared lines) here. Only the home and alumni pages load the optional deferred easter-eggs script; Pillow is needed only for images.
 
 Every figure on the page comes from the data file. Anything missing or inconsistent
 raises DataError and the script exits non-zero, so a bad data file can never produce
@@ -470,7 +470,7 @@ def render_manifest() -> str:
 
 def head(title: str, description: str, *, prefix: str, canonical: str | None, noindex: bool = False,
          preview: dict | None = None, easter_eggs: bool = False) -> str:
-    """preview is the share-card image and alt text; easter_eggs opts in to the home-only script and CSP rule."""
+    """preview is the share-card image and alt text; easter_eggs opts in to the title script (home and alumni pages) and its CSP rule."""
     policy = CSP + "; script-src 'self'" if easter_eggs else CSP
     lines = [
         '<!DOCTYPE html>',
@@ -518,10 +518,22 @@ def head(title: str, description: str, *, prefix: str, canonical: str | None, no
         f'<link rel="apple-touch-icon" href="{esc(prefix)}apple-touch-icon.png" sizes="180x180">',
         f'<link rel="manifest" href="{esc(prefix)}site.webmanifest">',
         f'<link rel="stylesheet" href="{esc(prefix)}styles.css">',
-        *(['<script src="easter-eggs.js" defer></script>'] if easter_eggs else []),
+        *([f'<script src="{esc(prefix)}easter-eggs.js" defer></script>'] if easter_eggs else []),
         '</head>',
     ]
     return "\n".join(lines)
+
+
+def title_entrance_html() -> str:
+    """The h1 of the home and alumni pages, with the pieces the title script needs (static/easter-eggs.js).
+    Without the script only the plain title shows, and the empty status line takes no room."""
+    return "\n".join([
+        '<h1 class="entrance-wrap"><span id="entrance-fallback">DePauw vs. Wabash</span>'
+        '<button id="tiger-entrance" class="entrance-button" type="button" hidden aria-describedby="entrance-hint">'
+        'DePauw vs. Wabash<span class="sr-only">, Tiger entrance</span></button></h1>',
+        '<span id="entrance-hint" class="sr-only">Activate five times, with no speed requirement, to unlock a message.</span>',
+        '<p id="entrance-status" class="entrance-status" role="status" aria-live="polite"></p>',
+    ])
 
 
 def heading(level: int, anchor: str, text: str) -> str:
@@ -1053,11 +1065,7 @@ def render_index(data: dict, checked: str | None = None, now: dt.datetime | None
         '<body>',
         '<header class="site-header">',
         '<div class="wrap">',
-        '<h1 class="entrance-wrap"><span id="entrance-fallback">DePauw vs. Wabash</span>'
-        '<button id="tiger-entrance" class="entrance-button" type="button" hidden aria-describedby="entrance-hint">'
-        'DePauw vs. Wabash<span class="sr-only">, Tiger entrance</span></button></h1>',
-        '<span id="entrance-hint" class="sr-only">Activate five times, with no speed requirement, to unlock a message.</span>',
-        '<p id="entrance-status" class="entrance-status" role="status" aria-live="polite"></p>',
+        title_entrance_html(),
         site_nav("", "athletics"),
         f'<p class="subtitle">{esc(SUBTITLE)}</p>',
         '</div>',
@@ -1259,10 +1267,10 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
     alumni_preview = alumni_preview_info(endowment_data)
     alumni_head = head("Alumni and Endowment | DePauw vs. Wabash",
                         alumni_description(alumni_data),
-                        prefix="../", canonical=SITE_URL + ALUMNI_PATH, preview=alumni_preview)
+                        prefix="../", canonical=SITE_URL + ALUMNI_PATH, preview=alumni_preview, easter_eggs=True)
     when = now or dt.datetime.now(dt.timezone.utc)
     alumni_html = alumni_page.render_page(
-        alumni_data, endowment_data, head_html=alumni_head,
+        alumni_data, endowment_data, head_html=alumni_head, title_html=title_entrance_html(),
         footer_html="\n".join(site_footer(when, prefix="../", alumni=(alumni_data, endowment_data))))
     upcoming = meetings.load_upcoming(upcoming_path)
     overrides_path = overrides_path or OVERRIDES
