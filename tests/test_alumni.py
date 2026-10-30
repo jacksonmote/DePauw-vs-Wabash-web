@@ -469,7 +469,7 @@ def test_sitemap_lastmod_for_the_alumni_page_follows_the_newest_verified_date(tm
     a.write_text(json.dumps(alumni_data), encoding="utf-8")
     e.write_text(json.dumps(endowment), encoding="utf-8")
     out = tmp_path / "site"
-    render.build(render.DATA, out, alumni_path=a, endowment_path=e)
+    render.build(render.DATA, out, alumni_path=a, endowment_path=e, now=NOW, upcoming_path=tmp_path / "no-upcoming.json")
     sitemap = (out / "sitemap.xml").read_text(encoding="utf-8")
     assert "<loc>https://depauwvswabash.com/alumni/</loc><lastmod>2026-11-09</lastmod>" in sitemap
 

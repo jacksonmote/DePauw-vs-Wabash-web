@@ -19,7 +19,8 @@ Commands are in README "Run it locally". Run them from the repo root.
 5. Visible change: look at the result at 375px wide and at desktop width, in light and dark mode, and show it.
 6. Update the README in the same PR. A change to the pipeline, data files, workflows, triggers or game-day behavior also updates the matching README diagram (and the workflow table). Keep the how-it-works text, module docstrings, workflow comments, issue templates and `scraper/sources.json` `_comment` in step with the code.
 7. Tests gate every deploy: a failing test stops all updates (scheduled, push and manual). Never write a test that depends on today's date, the current season or a live page.
-8. Never edit a pinned total in `tests/test_overrides.py` just to pass. Check each changed game first.
+8. Tests must never read the real clock, the network, or the bot-updated files in `data/` for an exact number. Pass a fixed `now` and use `tests/fixtures/` (the frozen `series-frozen-2026-10-30.json` for exact counts); checks on the live data are rules that always hold (`tests/test_real_data_invariants.py`). `tests/conftest.py` enforces the network part, and `pytest --fake-now=<ISO time with UTC offset>` (needs `requirements-clock.txt`) freezes the clock to prove the rest; the `fake-clock` job in `checks.yml` does that on every PR.
+9. Never edit a pinned total in `tests/test_overrides.py` just to pass. Check each changed game first.
 
 ## Invariants (do not break)
 

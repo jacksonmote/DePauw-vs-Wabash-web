@@ -219,10 +219,14 @@ def test_a_sport_with_no_saved_copy_is_taken_whole_and_holds_nothing(pages):
 
 # ---- what the page shows ------------------------------------------------------------------------------ #
 
+# A copy of data/series.json as it was on 2026-10-30. The bot rewrites the real file with every new result, so
+# the exact swimming numbers below are checked against this copy, never the live file.
+FROZEN_SERIES = ROOT / "tests" / "fixtures" / "series-frozen-2026-10-30.json"
+
 @pytest.fixture(scope="module")
 def site(tmp_path_factory):
     out = tmp_path_factory.mktemp("site")
-    render.build(ROOT / "data" / "series.json", out, upcoming_path=ROOT / "data" / "upcoming.json",
+    render.build(FROZEN_SERIES, out, upcoming_path=tmp_path_factory.mktemp("none") / "upcoming.json",
                  now=dt.datetime(2026, 11, 20, 15, 0, tzinfo=dt.timezone.utc))
     return out
 
@@ -267,7 +271,7 @@ def test_fun_facts_say_meets_and_leave_out_the_unscored_meets(site):
     t = text(card)
     assert "Close meets: 8 decided by 10 points or fewer" in t
     assert "Highest-scoring meet: Wabash 231, DePauw 120" in t and "Biggest DePauw win: DePauw 205, Wabash 80" in t
-    games = json.loads((ROOT / "data" / "series.json").read_text(encoding="utf-8"))["sports"][KEY]["games"]
+    games = json.loads(FROZEN_SERIES.read_text(encoding="utf-8"))["sports"][KEY]["games"]
     assert all(g.get("score_known", True) for g in facts.one_score_games(KEY, games) + facts.biggest_wins(games, "W")
                + facts.highest_scoring_games(games))
 

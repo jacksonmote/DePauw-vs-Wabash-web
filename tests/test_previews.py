@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scraper"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import images  # noqa: E402
 import render  # noqa: E402
-from test_render import build, football, lacrosse, series, write  # noqa: E402
+from test_render import NOW, build, football, lacrosse, series, write  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 TOTALS = {"depauw_wins": 359, "wabash_wins": 238, "ties": 16, "games_played": 613}
@@ -87,7 +87,8 @@ def test_the_og_image_url_is_absolute_and_versioned_by_the_totals(tmp_path):
     assert re.fullmatch(r"https://depauwvswabash\.com/og-image\.png\?v=[0-9a-f]{8}", url)
     other_dir = tmp_path / "b"
     other_dir.mkdir()
-    render.build(write(other_dir, series({"football": football(), "mens-lacrosse": lacrosse()})), other_dir / "site")
+    render.build(write(other_dir, series({"football": football(), "mens-lacrosse": lacrosse()})), other_dir / "site",
+                 now=NOW, upcoming_path=other_dir / "no-upcoming.json")
     other = meta(tags((other_dir / "site" / "index.html").read_text(encoding="utf-8")), property="og:image")
     assert url != other[0]["content"]               # the totals changed, so the version did
     assert images.og_version(TOTALS, "DePauw") != images.og_version(TOTALS, "Wabash")

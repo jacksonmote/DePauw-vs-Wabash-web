@@ -12,7 +12,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scraper"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import render  # noqa: E402
-from test_render import build, football, lacrosse, basketball, series, write  # noqa: E402
+from test_render import NOW, build, football, lacrosse, basketball, series, write  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = json.loads((ROOT / "scraper" / "sources.json").read_text(encoding="utf-8"))
@@ -22,7 +22,7 @@ def test_the_series_file_is_published_unchanged(tmp_path):
     data = series({"football": football()})
     src = write(tmp_path, data)
     out = tmp_path / "site"
-    render.build(src, out)
+    render.build(src, out, now=NOW, upcoming_path=tmp_path / "no-upcoming.json")
     assert (out / "data" / "series.json").read_bytes() == src.read_bytes()
 
 
@@ -48,7 +48,7 @@ def test_games_csv_has_one_row_per_game_with_the_documented_columns(tmp_path):
 def test_the_real_data_makes_a_csv_that_adds_up_to_the_totals(tmp_path):
     real = ROOT / "data" / "series.json"
     out = tmp_path / "site"
-    render.build(real, out)
+    render.build(real, out, now=NOW, upcoming_path=tmp_path / "no-upcoming.json")
     rows = list(csv.DictReader(io.StringIO((out / "games.csv").read_text(encoding="utf-8"))))
     totals = json.loads(real.read_text(encoding="utf-8"))["totals"]
     assert len(rows) == totals["games_played"]

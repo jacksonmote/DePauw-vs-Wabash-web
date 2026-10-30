@@ -143,7 +143,8 @@ def test_the_cli_reads_the_committed_files_and_writes_only_the_output_file(tmp_p
 def test_the_gate_stops_and_says_so_when_it_cannot_read_the_data(tmp_path, monkeypatch, capsys):
     out = tmp_path / "out.txt"
     monkeypatch.setenv("GITHUB_OUTPUT", str(out))
-    code = gameday.main(["gate", "--schedule", FREQ, "--series", str(tmp_path / "missing.json"),
+    code = gameday.main(["gate", "--schedule", FREQ, "--now", "2026-11-14T14:00:00-05:00",
+                         "--series", str(tmp_path / "missing.json"),
                          "--upcoming", str(tmp_path / "missing2.json")])
     assert code == 1 and out.read_text() == "run=false\n" and "could not read" in capsys.readouterr().err
 
