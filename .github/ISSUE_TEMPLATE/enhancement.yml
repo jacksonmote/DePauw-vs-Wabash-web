@@ -1,0 +1,43 @@
+name: Suggest an enhancement
+description: An idea to add to or change on the site.
+title: "Enhancement: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve the site. **This issue will be public**, so please don’t include personal details (no phone numbers, email addresses or home addresses). This site is an unofficial fan site and stays non-commercial, with no ads or sales.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the site is this about?
+      options:
+        - Athletics
+        - Alumni and endowment
+        - Whole site
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what_to_change
+    attributes:
+      label: What would you like added or changed?
+      description: Describe the idea in a sentence or two.
+      placeholder: It would be great if the site showed ...
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it help?
+      description: Who would use it, or what problem does it solve?
+    validations:
+      required: false
+  - type: input
+    id: example
+    attributes:
+      label: An example or link
+      description: A page, screenshot link or site that shows the idea, if you have one.
+      placeholder: https://
+    validations:
+      required: false
