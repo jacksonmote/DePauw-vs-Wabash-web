@@ -30,7 +30,7 @@ from urllib.parse import quote, urlparse
 
 
 SCHOOLS = {"depauw": "DePauw", "wabash": "Wabash"}
-SUBTITLE = "Notable graduates and endowments, side by side, with a source for every name."
+SUBTITLE = "DePauw University vs. Wabash College: Notable graduates and endowments, side by side."
 
 
 class AlumniError(ValueError):
