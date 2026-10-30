@@ -87,7 +87,7 @@ MEN_ONLY = ("Only men’s head-to-head competition is compared: Wabash is an all
             "events (cross country, track and field, golf, and swimming invitationals and championships) "
             "aren’t head-to-head.")
 DISCLAIMER = "Unofficial fan site, not affiliated with DePauw University or Wabash College."
-COPYRIGHT_HOLDER = "Jackson Mote"
+COPYRIGHT_HOLDER = "Jackson Mote and Joe Haynes"
 COPYRIGHT_START = 2026
 
 BELL_URL = "https://en.wikipedia.org/wiki/Monon_Bell"
@@ -224,7 +224,7 @@ def count_noun(n: int, words: tuple) -> str:
 
 
 def copyright_line(now: dt.datetime | None = None) -> str:
-    """'© 2026 Jackson Mote', or '© 2026–2027 Jackson Mote' once the build year (Eastern) is later."""
+    """'© 2026 Jackson Mote and Joe Haynes', or '© 2026–2027 Jackson Mote and Joe Haynes' once the build year (Eastern) is later."""
     year = to_eastern(now or dt.datetime.now(dt.timezone.utc))[0].year
     years = str(COPYRIGHT_START) if year <= COPYRIGHT_START else f"{COPYRIGHT_START}–{year}"
     return f"© {years} {COPYRIGHT_HOLDER}"
