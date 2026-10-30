@@ -17,7 +17,8 @@ import render  # noqa: E402
 
 NOW = dt.datetime(2026, 10, 30, 12, tzinfo=dt.timezone.utc)
 BASE_CSP = "default-src 'none'; style-src 'self'; img-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'"
-HOME_CSP = BASE_CSP + "; script-src 'self'"
+HOME_CSP = BASE_CSP + "; script-src 'self'"            # the policy of every page that loads the title script
+SCRIPT_PAGES = {"index.html": "easter-eggs.js", "alumni/index.html": "../easter-eggs.js"}   # page -> script src
 PAGES = (
     "index.html", "alumni/index.html", "how-it-works/index.html",
     "how-it-works/athletics/index.html", "how-it-works/alumni/index.html",
@@ -46,12 +47,15 @@ def test_seven_page_inventory_and_script_csp_are_exact(site):
         source = page(site, name)
         soup = BeautifulSoup(source, "html.parser")
         scripts = soup.find_all("script")
-        if name == "index.html":
+        if name in SCRIPT_PAGES:
             assert csp(source) == HOME_CSP
-            assert len(scripts) == 1 and scripts[0].get("src") == "easter-eggs.js"
+            assert len(scripts) == 1 and scripts[0].get("src") == SCRIPT_PAGES[name]
             assert scripts[0].has_attr("defer") and scripts[0].string is None
-            assert [img.get("src") for img in soup.find_all("img")] == [
-                "easter-bell.svg", "easter-paw.svg", "easter-paw.svg", "easter-paw.svg", "easter-tiger.svg"]
+            if name == "index.html":
+                assert [img.get("src") for img in soup.find_all("img")] == [
+                    "easter-bell.svg", "easter-paw.svg", "easter-paw.svg", "easter-paw.svg", "easter-tiger.svg"]
+            else:
+                assert soup.find_all("img") == []
         else:
             assert csp(source) == BASE_CSP
             assert scripts == [] and soup.find_all("img") == []
@@ -59,6 +63,34 @@ def test_seven_page_inventory_and_script_csp_are_exact(site):
         assert not soup.find_all("style")
         assert all(not attr.lower().startswith("on") and attr.lower() != "style"
                    for element in soup.find_all(True) for attr in element.attrs)
+
+
+def test_the_alumni_title_is_the_same_entrance_as_the_home_page_and_no_other_page_has_one(site):
+    def entrance(name):
+        soup = BeautifulSoup(page(site, name), "html.parser")
+        return [str(soup.find("h1")), str(soup.find(id="entrance-hint")), str(soup.find(id="entrance-status"))]
+
+    assert entrance("alumni/index.html") == entrance("index.html")
+    for name in PAGES:
+        soup = BeautifulSoup(page(site, name), "html.parser")
+        has = soup.find(id="tiger-entrance") is not None
+        assert has == (name in SCRIPT_PAGES), name
+        assert (soup.find(id="entrance-status") is not None) == (name in SCRIPT_PAGES), name
+
+
+def test_the_title_entrance_leaves_no_gap_between_the_title_and_the_nav(site):
+    css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+    status = re.search(r"\.entrance-status\s*\{([^}]*)\}", css).group(1)
+    assert "min-height" not in status and re.search(r"margin:\s*0\s*;", status)   # empty until the message appears
+    button = re.search(r"\.entrance-button\s*\{([^}]*)\}", css).group(1)
+    assert "height" not in button                                             # nothing taller than a plain title
+    assert re.search(r"\.entrance-button::after\s*\{[^}]*inset:[^}]*44px", css)  # the 44px tap area is not layout
+    for name in SCRIPT_PAGES:
+        soup = BeautifulSoup(page(site, name), "html.parser")
+        status_line = soup.find(id="entrance-status")
+        assert status_line.get_text() == ""
+        assert status_line.find_previous_sibling().get("id") == "entrance-hint"   # title, hidden hint, empty status,
+        assert status_line.find_next_sibling().name == "nav"                    # then straight to the nav
 
 
 def test_bell_heist_is_a_discoverable_unindexed_story_not_in_the_sitemap(site):

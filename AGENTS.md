@@ -43,7 +43,7 @@ Pipeline
 - `render.py --now` is for previews and tests; no workflow may use it.
 
 Site
-- No inline JavaScript or styles and no third-party requests. The one currently approved client-side exception is the deferred, same-origin `static/easter-eggs.js` title entrance on `/`; it opts into `script-src 'self'` only on that page. All six other generated pages remain script-free under the base CSP (`default-src 'none'`). Do not add other client-side code without a maintainer decision. No diagrams on the public site.
+- No inline JavaScript or styles and no third-party requests. The one currently approved client-side exception is the deferred, same-origin `static/easter-eggs.js` title entrance on `/` and `/alumni/`; it opts into `script-src 'self'` only on those two pages. All five other generated pages remain script-free under the base CSP (`default-src 'none'`). Do not add other client-side code without a maintainer decision. No diagrams on the public site.
 - Every number on a page comes from the data or a named constant. Never hardcode a count, year or size word ("twice").
 - No school logos, wordmarks, seals or official mascot art, on pages or in generated images. The one approved original generic tiger drawing is a small easter egg in `static/easter-tiger.svg`; it is not official mascot art and does not appear in generated images. Keep the site non-commercial (no ads, affiliate links, donations or sales) and not official-looking. Every page keeps the "unofficial fan site, not affiliated" note.
 - Text rules: curly apostrophe (’) in visible text, serial comma in lists of three or more, AP-style locations (display only), dates like "Oct 29, 2026". Each page's footer comes from `site_footer()`; add footer content as a block there, never as page HTML.

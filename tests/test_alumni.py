@@ -169,7 +169,7 @@ def test_build_emits_navigation_alumni_and_auditable_json(tmp_path):
     assert "reported accounting scopes differ" in page
     assert page.count(">Endowment source</a>") == 2 and page.count(">Enrollment source</a>") == 2
     assert "FY2025" in page and "Jun 30, 2025" in page
-    assert "<script" not in page
+    assert page.count("<script") == 1 and '<script src="../easter-eggs.js" defer></script>' in page   # the title script only
     assert "ranked #340 in the 2008 Fortune 500" in page
     assert "https://depauwvswabash.com/alumni/" in sitemap
     assert "© 2026 Jackson Mote" in page

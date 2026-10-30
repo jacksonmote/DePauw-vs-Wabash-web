@@ -87,10 +87,12 @@ h1, h2 { line-height: 1.2; margin: 0; }
 .site-nav a { color: var(--color-header-text); font-weight: 650; text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
 .site-nav a[aria-current="page"] { text-decoration-color: var(--color-depauw-accent); text-decoration-thickness: 4px; font-weight: 800; }
 .entrance-wrap { min-height: 1.2em; }
-.entrance-button { appearance: none; border: 0; padding: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer; min-height: 44px; }
+.entrance-button { appearance: none; border: 0; padding: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer; position: relative; }
+.entrance-button::after { content: ""; position: absolute; inset: min(0px, calc((100% - 44px) / 2)) 0; }
 .entrance-button[hidden] { display: none; }
 .site-header .entrance-button:focus-visible { outline-color: var(--color-header-text); }
-.entrance-status { min-height: 1.5em; margin: 0.25rem 0 0; color: var(--color-header-muted); }
+.entrance-status { margin: 0; color: var(--color-header-muted); }
+.entrance-status:not(:empty) { margin: 0.25rem 0 0; }
 .entrance-unlocked { animation: tiger-glint 700ms ease-out 1; }
 @keyframes tiger-glint { 45% { color: var(--color-depauw-accent); text-shadow: 0 0 0.35em var(--color-depauw-accent); } }
 
