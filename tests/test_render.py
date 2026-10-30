@@ -71,7 +71,11 @@ def write(tmp_path, data):
 
 
 def build(tmp_path, sports, **kw):
+    """Render made-up sports. The clock and the schedule are fixed unless a test passes its own, so no test
+    sees the real date or the committed data/upcoming.json."""
     out = tmp_path / "site"
+    kw.setdefault("now", NOW)
+    kw.setdefault("upcoming_path", tmp_path / "no-upcoming.json")
     render.build(write(tmp_path, series(sports)), out, **kw)
     return out, (out / "index.html").read_text(encoding="utf-8")
 
@@ -306,7 +310,7 @@ def test_bad_json_and_unsafe_key_fail(tmp_path):
 
 def test_real_data_file_renders(tmp_path):
     real = Path(__file__).resolve().parent.parent / "data" / "series.json"
-    render.build(real, tmp_path / "site")
+    render.build(real, tmp_path / "site", now=NOW, upcoming_path=tmp_path / "no-upcoming.json")
     assert "<article" in (tmp_path / "site" / "index.html").read_text(encoding="utf-8")
 
 

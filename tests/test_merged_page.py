@@ -16,7 +16,7 @@ import render  # noqa: E402
 import scrape  # noqa: E402
 import upcoming  # noqa: E402
 from test_meetings import entry, page as meeting_page, sched  # noqa: E402
-from test_render import build, football, game, sport, text_of  # noqa: E402
+from test_render import NOW, build, football, game, sport, text_of  # noqa: E402
 from test_scrape import both_dir, fixture_dir  # noqa: E402,F401  (pytest fixtures)
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -268,7 +268,7 @@ def test_the_real_series_file_is_the_merge_of_the_two_raw_files():
 
 def test_the_real_series_never_shows_a_placeholder_january_date(tmp_path):
     out = tmp_path / "site"
-    render.build(ROOT / "data" / "series.json", out)
+    render.build(ROOT / "data" / "series.json", out, now=NOW, upcoming_path=tmp_path / "no-upcoming.json")
     page = (out / "index.html").read_text(encoding="utf-8")
     series = json.loads((ROOT / "data" / "series.json").read_text(encoding="utf-8"))
     unknown = [g for s in series["sports"].values() for g in s["games"] if g.get("date_known") is False]

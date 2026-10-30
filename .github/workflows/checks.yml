@@ -53,3 +53,36 @@ jobs:
           echo "Rendering $blocks diagram(s)."
           echo '{"args": ["--no-sandbox"]}' > "$RUNNER_TEMP/puppeteer.json"
           npx --yes -p @mermaid-js/mermaid-cli@11.17.0 mmdc -p "$RUNNER_TEMP/puppeteer.json" -i README.md -o "$RUNNER_TEMP/readme-diagrams.md"
+
+  # Runs the whole test suite with the clock frozen at a few moments, so a test that quietly depends on today's
+  # date fails here in a pull request instead of blocking a production deploy later. time-machine fakes the clock
+  # for the whole Python process (requirements-clock.txt pins it); the tests themselves never use the network.
+  # Separate from the `checks` job on purpose: the required status check stays `checks`.
+  fake-clock:
+    name: fake-clock (${{ matrix.label }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Bell game, Nov 14 2026 1:30 PM ET
+            now: "2026-11-14T13:30:00-05:00"
+          - label: New Year, Jan 1 2027 12:30 AM ET
+            now: "2027-01-01T00:30:00-05:00"
+          - label: a year out, Oct 30 2027 noon ET
+            now: "2027-10-30T12:00:00-04:00"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt -r requirements-clock.txt
+
+      - name: Run tests with the clock frozen
+        run: python -m pytest -q tests --fake-now="${{ matrix.now }}"

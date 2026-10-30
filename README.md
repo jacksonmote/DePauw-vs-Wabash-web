@@ -166,7 +166,7 @@ Three GitHub Actions workflows live in `.github/workflows/`:
 | Workflow | Runs when | Jobs and permissions |
 |---|---|---|
 | `update-and-deploy.yml` ("Update data and deploy site") | Twice a day, every 30 minutes (ended at once by the gate unless a game is being played), on every push to `main`, and by hand | `gate` (read-only; decides whether a 30-minute run does anything), `build` (`contents: write`; runs required tests, scrapes, renders the candidate site, which must succeed, checks all seven generated pages with `html-validate`, which only warns, then commits changed `data/` as the Actions bot and uploads the site), `deploy` (`pages: write`, `id-token: write`; publishes to GitHub Pages), `issues` (`issues: write`; keeps the `data-review` issue in step), `report` (turns the run red after the deploy if a sport failed to scrape or the HTML validation failed or was skipped, and says which; test and render failures stop the build instead) |
-| `checks.yml` ("Checks") | On every pull request to `main` | One read-only job: the tests, the render, script syntax, `html-validate` on all seven pages and every Mermaid diagram in this README |
+| `checks.yml` ("Checks") | On every pull request to `main` | Two read-only jobs. `checks`: the tests, the render, script syntax, `html-validate` on all seven pages and every Mermaid diagram in this README. `fake-clock` (three runs): the whole test suite again with the clock frozen at Nov 14, 2026 1:30 PM ET, Jan 1, 2027 and Oct 30, 2027, so a test that secretly depends on today’s date fails in the pull request. Only `checks` is the required status check |
 | `snapshot.yml` ("Data snapshot") | July 1 and January 2, and by hand | `prepare` (read-only; the change check and the release files), `release` (`contents: write`; the GitHub Release), `archive` (`contents: write`; asks the Wayback Machine to save the source pages, last, and can never fail the run) |
 
 To run the update by hand: Actions, "Update data and deploy site", Run workflow, on `main`. The two optional inputs are "Accept a sport whose game count went down" (`allow_shrink`) and "Apply the changes to old games waiting for review" (`apply_reviewed_changes`, see "Review hold"). Scraping and rendering share one `build` job because the "Last checked" time is an uncommitted file that exists only on that runner. A push made with the workflow's own token does not start another run, so scraping on every push to `main` cannot loop. Every run that gets past the gate scrapes first, so every deploy carries a fresh "Last checked". It then renders the candidate site before committing changed data; a render failure stops the build before the data commit, artifact upload, deploy, or issue sync. HTML validation problems are reported as warnings and do not stop publishing. With no data changes, the site is still rendered, checked, and uploaded. A scraper failure remains tolerated when its validated fallback data can render. "Data last changed" is different: it is when `series.json` last changed (`updated_at`), which can be weeks ago because nothing changes between games.
@@ -373,11 +373,19 @@ After the first deploy of a change to the preview, test it by texting yourself t
 
 ## Run it locally
 
+Tests never read the real clock, the network or the bot-updated files in `data/` for an exact count. They use
+fixtures (`tests/fixtures/`, including a frozen copy of `series.json`), a fixed `now` passed to the code, and
+`tests/conftest.py`, which fails any test that opens a connection or runs `gh`, `npm`, `node` or `curl`. The
+checks on the live `data/series.json` are rules that always hold (totals add up, results match scores, the Bell
+era starts in 1932), in `tests/test_real_data_invariants.py`.
+
 Python 3.12 or newer (the workflows use 3.12) and, for the HTML and diagram checks only, Node 22.
 
 ```bash
 pip install -r requirements.txt
 python -m pytest -q tests            # scraper and renderer tests (use saved page markup, no network)
+pip install -r requirements-clock.txt   # optional: lets you run the tests as if it were another date
+python -m pytest -q tests --fake-now=2026-11-14T13:30:00-05:00   # the whole suite with the clock frozen (needs a UTC offset)
 python scraper/scrape.py --dry-run   # fetch both schools' live pages and report, without writing
 python scraper/scrape.py             # fetch and update data/ (and record the check time)
 python scraper/scrape.py --apply-reviewed   # also accept the old-game changes already waiting in data/pending-changes.json

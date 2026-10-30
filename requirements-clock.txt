@@ -1,0 +1,2 @@
+# Only for `pytest --fake-now=...` (the fake-clock CI job and local date simulations). Not used by production.
+time-machine==3.6.0
