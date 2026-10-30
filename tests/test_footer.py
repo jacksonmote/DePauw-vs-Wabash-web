@@ -18,7 +18,7 @@ NOW = dt.datetime(2026, 12, 1, 15, 0, tzinfo=dt.timezone.utc)
 MEN_ONLY = ("Only men’s head-to-head competition is compared: Wabash is an all-male college, and multi-team "
             "events (cross country, track and field, golf, and swimming invitationals and championships) "
             "aren’t head-to-head.")
-SITE_SUGGEST = f" · {render.enhancement_link('Whole site')}"        # the neutral pages carry it in the shared line
+SITE_FEEDBACK = f'<p class="feedback">{render.enhancement_link("Whole site")}.</p>\n'      # the neutral pages: their whole data block
 ATHLETICS_ONLY = ("Data last changed", "series.json", "games.csv", "Report a data error", "depauwtigers.com",
                   "sports.wabash.edu", MEN_ONLY, "Last checked")
 
@@ -114,8 +114,8 @@ def test_the_alumni_footer_has_the_alumni_data_block_and_nothing_athletics_only(
 def test_the_neutral_footer_is_only_the_shared_lines(site, name):
     f = footer(site, name)
     how_link = "" if PAGES[name][1] is None else f'<a href="{PAGES[name][0]}how-it-works/">How the numbers work</a> · '
-    assert f == ('<footer class="site-footer">\n<div class="wrap">\n<!-- Both schools supplied the records. Only one supplied the developers. -->\n<p class="footer-links">' + how_link +
-                 f'<a href="{render.REPO_URL}">Built in the open: code and data on GitHub</a>{SITE_SUGGEST}</p>\n'
+    assert f == ('<footer class="site-footer">\n<div class="wrap">\n' + SITE_FEEDBACK + '<!-- Both schools supplied the records. Only one supplied the developers. -->\n<p class="footer-links">' + how_link +
+                 f'<a href="{render.REPO_URL}">Built in the open: code and data on GitHub</a></p>\n'
                  f'<p>{render.DISCLAIMER}</p>\n<details class="impartiality"><summary>A note on impartiality</summary><p>The data is independently sourced. The developers were educated correctly.</p></details>\n<p class="copyright">© 2026 Jackson Mote and Joe Haynes</p>\n'
                  '</div>\n</footer>\n</body>\n</html>\n')
     for athletics_only in ATHLETICS_ONLY:
@@ -141,9 +141,8 @@ def test_the_shared_lines_are_the_same_on_every_page_apart_from_the_how_link_and
     tail = tail.replace(f"<p>{MEN_ONLY}</p>\n", "")
     tail = tail.replace('<details class="impartiality"><summary>A note on impartiality</summary><p>The data is independently sourced. The developers were educated correctly.</p></details>\n', "IMPARTIALITY\n")
     link = '<a href="HOW">How the numbers work</a> · ' if how else ""
-    suggest = SITE_SUGGEST if kind == "neutral" else ""
     assert tail == ('<p class="footer-links">' + link +
-                    f'<a href="{render.REPO_URL}">Built in the open: code and data on GitHub</a>{suggest}</p>\n'
+                    f'<a href="{render.REPO_URL}">Built in the open: code and data on GitHub</a></p>\n'
                     f'<p>{render.DISCLAIMER}</p>\nIMPARTIALITY\n<p class="copyright">© 2026 Jackson Mote and Joe Haynes</p>\n'
                     '</div>\n</footer>\n</body>\n</html>\n')
 
@@ -173,14 +172,18 @@ def test_the_enhancement_link_leaves_the_correction_links_as_they_were(site, nam
         assert f'<a href="{alumni.correction_url()}">Suggest a correction</a>' in f
 
 
-@pytest.mark.parametrize("name", [n for n, p in PAGES.items() if p[2] != "neutral"])
+@pytest.mark.parametrize("name", PAGES)
 def test_the_feedback_links_sit_on_their_own_line_between_the_downloads_and_the_data_from_line(site, name):
     f = footer(site, name)
     para = re.search(r'<p class="feedback">(.*?)</p>', f).group(1)
-    first = "Report a data error" if PAGES[name][2] == "athletics" else "Suggest a correction"
-    assert re.sub(r"<[^>]+>", "", para) == f"{first}. Suggest an enhancement."
-    assert f.index("Download the data") < f.index('<p class="feedback">') < f.index("Data from")
-    assert first not in f[f.index("Download the data"):f.index('<p class="feedback">')]
+    kind = PAGES[name][2]
+    first = {"athletics": "Report a data error. ", "alumni": "Suggest a correction. ", "neutral": ""}[kind]
+    assert re.sub(r"<[^>]+>", "", para) == f"{first}Suggest an enhancement."
+    if kind == "neutral":                                 # the neutral pages: before the shared links line
+        assert f.index('<p class="feedback">') < f.index('<p class="footer-links">')
+    else:
+        assert f.index("Download the data") < f.index('<p class="feedback">') < f.index("Data from")
+        assert first.strip(". ") not in f[f.index("Download the data"):f.index('<p class="feedback">')]
 
 
 @pytest.mark.parametrize("name", ["index.html", "alumni/index.html"])

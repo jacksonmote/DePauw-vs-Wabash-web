@@ -1015,17 +1015,18 @@ def site_footer(now: dt.datetime, *, prefix: str = "", data: dict | None = None,
     only on the athletics pages (it is about athletics, so the alumni and the neutral pages leave it out). The
     how-it-works landing page passes link_how=False: a link from that page to itself would go nowhere."""
     block, how, men_note = [], HOW_PATH, False
-    suggest = f' · {enhancement_link(AREA_SITE)}' if not (alumni or data) else ""
     if alumni:
         block, how = alumni_footer_block(prefix, *alumni), HOW_ALUMNI_PATH
     elif data:
         block, how, men_note = athletics_footer_block(now, prefix, data, checked, upcoming), HOW_ATHLETICS_PATH, True
+    else:                                           # the neutral pages: the feedback line is their whole data block
+        block = [f'<p class="feedback">{enhancement_link(AREA_SITE)}.</p>']
     return [
         '<footer class="site-footer">', '<div class="wrap">',
         *block,
         '<!-- Both schools supplied the records. Only one supplied the developers. -->',
         '<p class="footer-links">' + (f'<a href="{esc(prefix + how)}">How the numbers work</a> · ' if link_how else "") +
-        f'<a href="{esc(REPO_URL)}">Built in the open: code and data on GitHub</a>{suggest}</p>',
+        f'<a href="{esc(REPO_URL)}">Built in the open: code and data on GitHub</a></p>',
         *([f'<p>{esc(MEN_ONLY)}</p>'] if men_note else []),
         f'<p>{esc(DISCLAIMER)}</p>',
         '<details class="impartiality"><summary>A note on impartiality</summary>'
