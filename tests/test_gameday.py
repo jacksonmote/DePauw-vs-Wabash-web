@@ -269,7 +269,7 @@ def test_a_game_already_in_the_history_is_not_also_shown_as_the_next_meeting(tmp
 
 def test_the_banner_is_static_html_with_no_script_or_inline_style(tmp_path):
     _, html, _ = banner(tmp_path, "2026-11-14 17:00", {"football": [sched()]})
-    assert "<script" not in html and "style=" not in html
+    assert html.count('<script src="easter-eggs.js" defer></script>') == 1 and "style=" not in html
 
 
 # ---- the share image ----------------------------------------------------- #
@@ -548,11 +548,12 @@ def test_render_then_node_then_validation_then_report_precede_data_commit_and_ar
     steps = build_steps()
     render_index = step_index(steps, lambda step: step.get("name") == "Render site")
     node_index = step_index(steps, lambda step: step.get("uses", "").startswith("actions/setup-node@"))
+    syntax_index = step_index(steps, lambda step: step.get("name") == "Check the home-page script syntax")
     validation_index = step_index(steps, lambda step: step.get("name") == "Validate generated HTML")
     report_index = step_index(steps, lambda step: step.get("name") == "Report HTML validation problem")
     commit_index = step_index(steps, lambda step: step.get("name") == "Commit if data changed")
     upload_index = step_index(steps, lambda step: step.get("uses", "").startswith("actions/upload-pages-artifact@"))
-    assert render_index < node_index < validation_index < report_index < commit_index < upload_index
+    assert render_index < node_index < syntax_index < validation_index < report_index < commit_index < upload_index
     assert upload_index == commit_index + 1
     assert sum(step.get("name") == "Render site" for step in steps) == 1
 
@@ -568,6 +569,10 @@ def test_render_is_fail_closed_and_node_and_validation_are_non_blocking_and_repo
     node_step = next(step for step in steps if step.get("uses", "").startswith("actions/setup-node@"))
     assert node_step["id"] == "setup_node"
     assert node_step["continue-on-error"] is True
+
+    syntax = named_step("Check the home-page script syntax")
+    assert syntax["if"] == "${{ steps.setup_node.outcome == 'success' }}"
+    assert syntax["continue-on-error"] is True  # PR checks gate syntax; production keeps publishing if Node fails.
 
     validation = named_step("Validate generated HTML")
     assert validation["id"] == "validate_html"
@@ -593,6 +598,7 @@ def test_production_html_validation_matches_pull_request_checks():
     assert set(production_command[3:]) == {
         "site/index.html",
         "site/404.html",
+        "site/bell-heist/index.html",
         "site/how-it-works/index.html",
         "site/how-it-works/athletics/index.html",
         "site/how-it-works/alumni/index.html",
@@ -603,6 +609,11 @@ def test_production_html_validation_matches_pull_request_checks():
     pr_node = next(step for step in production_checks if step.get("uses", "").startswith("actions/setup-node@"))
     assert production_node["uses"] == pr_node["uses"]
     assert production_node["with"] == pr_node["with"] == {"node-version": "22"}
+    production_syntax = named_step("Check the home-page script syntax")
+    assert production_syntax["if"] == "${{ steps.setup_node.outcome == 'success' }}"
+    assert production_syntax["continue-on-error"] is True
+    pr_syntax = next(step for step in production_checks if step.get("name") == "Check the home-page script syntax")
+    assert "continue-on-error" not in pr_syntax and "if" not in pr_syntax
 
 
 def test_readme_documents_render_and_html_validation_before_data_commit():
@@ -625,7 +636,7 @@ def test_readme_documents_render_and_html_validation_before_data_commit():
     assert (
         workflow_section.index("render site")
         < workflow_section.index("set up node")
-        < workflow_section.index("validate all six")
+        < workflow_section.index("validate all seven")
         < workflow_section.index("data/ changed?")
         < workflow_section.index("commits data")
     )

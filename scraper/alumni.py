@@ -545,6 +545,8 @@ def render_page(data: dict, endowment: dict, *, head_html: str, footer_html: str
         f'<p class="alumni-report"><a href="{_esc(correction_url("Endowment", repo_url))}">Suggest a correction</a></p>'
         f'<p>Verified {_esc(fmt_date(endowment["verified_at"]))}.</p></section>',
         *cards,
+        '<details class="admissions-note"><summary>How can Wabash improve these numbers?</summary>'
+        '<p>We recommend transferring to DePauw.</p></details>',
         '</main>', footer_html,
         '</body>', '</html>', ''])
 

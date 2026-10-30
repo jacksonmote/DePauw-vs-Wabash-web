@@ -14,7 +14,7 @@ Commands are in README "Run it locally". Run them from the repo root.
 
 1. `python -m pytest -q tests`
 2. `python scraper/render.py`
-3. html-validate on all six built pages (the command in README and `.github/workflows/checks.yml`).
+3. `node --check static/easter-eggs.js`, then html-validate on all seven built pages (the commands in README and `.github/workflows/checks.yml`).
 4. The Mermaid diagram check (same two places). GitHub draws with a newer Mermaid than the CLI, so after a diagram change also look at the README on GitHub.
 5. Visible change: look at the result at 375px wide and at desktop width, in light and dark mode, and show it.
 6. Update the README in the same PR. A change to the pipeline, data files, workflows, triggers or game-day behavior also updates the matching README diagram (and the workflow table). Keep the how-it-works text, module docstrings, workflow comments, issue templates and `scraper/sources.json` `_comment` in step with the code.
@@ -37,15 +37,15 @@ Data
 
 Pipeline
 - Tests run before the scrape in `update-and-deploy.yml`. A scraper failure is tolerated (validated fallback data publishes) and the `report` job turns the run red after the deploy. A push made with the workflow's token does not start another run.
-- Render is a hard gate: `render.py` runs after the scrape and before the data commit, and a failure stops the build before any commit, upload or deploy. The HTML validation then runs in production after the render, with the same pinned `setup-node`, `html-validate` version and page list as `checks.yml`; it and the Node setup are non-blocking. A failed or skipped validation writes a `::warning` annotation and a run-summary note, the site still publishes, and the `report` job turns the run red after the deploy and says which problem it was.
+- Render is a hard gate: `render.py` runs after the scrape and before the data commit, and a failure stops the build before any commit, upload or deploy. The HTML validation then runs in production after the render, with the same pinned `setup-node`, `html-validate` version and seven-page list as `checks.yml`; it, the Node setup, and the production script syntax check are non-blocking. The syntax check runs only if Node setup succeeds; pull-request checks remain the hard syntax gate. A failed or skipped validation writes a `::warning` annotation and a run-summary note, the site still publishes, and the `report` job turns the run red after the deploy and says which problem it was.
 - The frequent cron (`7,37 * * * *`) must equal `gameday.FREQUENT_CRON`. GitHub can delay or skip scheduled runs and switches them off after 60 days without repo activity.
 - Snapshots: the Wayback calls stay in the last `archive` job, which can never fail the run. A retry merges links and never overwrites them. The limits are the `SAVE_*` constants in `scraper/snapshot.py`.
 - `render.py --now` is for previews and tests; no workflow may use it.
 
 Site
-- No client-side JavaScript, no inline styles, no third-party requests. Keep the strict CSP (`default-src 'none'`) in `render.py`. No diagrams on the public site.
+- No inline JavaScript or styles and no third-party requests. The one currently approved client-side exception is the deferred, same-origin `static/easter-eggs.js` title entrance on `/`; it opts into `script-src 'self'` only on that page. All six other generated pages remain script-free under the base CSP (`default-src 'none'`). Do not add other client-side code without a maintainer decision. No diagrams on the public site.
 - Every number on a page comes from the data or a named constant. Never hardcode a count, year or size word ("twice").
-- No school logos, wordmarks, seals or mascot art, on pages or in generated images. Keep the site non-commercial (no ads, affiliate links, donations or sales) and not official-looking. Every page keeps the "unofficial fan site, not affiliated" note.
+- No school logos, wordmarks, seals or official mascot art, on pages or in generated images. The one approved original generic tiger drawing is a small easter egg in `static/easter-tiger.svg`; it is not official mascot art and does not appear in generated images. Keep the site non-commercial (no ads, affiliate links, donations or sales) and not official-looking. Every page keeps the "unofficial fan site, not affiliated" note.
 - Text rules: curly apostrophe (’) in visible text, serial comma in lists of three or more, AP-style locations (display only), dates like "Oct 29, 2026". Each page's footer comes from `site_footer()`; add footer content as a block there, never as page HTML.
 - Alumni and endowment data is hand-curated, validated on every build and reviewed in PRs. No overall alumni score. Endowment per student uses one basis (pooled endowment net assets) and the 5% "about even" rule. Do not return to the unadjusted totals without a maintainer decision.
 

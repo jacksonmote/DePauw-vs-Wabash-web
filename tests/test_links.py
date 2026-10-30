@@ -57,5 +57,5 @@ def test_linked_sections_leave_room_at_the_top_of_the_screen():
         assert selector in rule
 
 
-def test_no_script_was_added_for_the_links(tmp_path):
-    assert "<script" not in full_page(tmp_path)
+def test_home_page_loads_only_the_deferred_same_origin_script(tmp_path):
+    assert full_page(tmp_path).count('<script src="easter-eggs.js" defer></script>') == 1

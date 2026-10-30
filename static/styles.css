@@ -66,7 +66,7 @@ body {
 }
 
 a { color: var(--color-link); overflow-wrap: anywhere; }
-a:focus-visible, summary:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+a:focus-visible, summary:focus-visible, button:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
 
 h1, h2 { line-height: 1.2; margin: 0; }
 
@@ -86,6 +86,13 @@ h1, h2 { line-height: 1.2; margin: 0; }
 .site-nav { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.75rem; }
 .site-nav a { color: var(--color-header-text); font-weight: 650; text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
 .site-nav a[aria-current="page"] { text-decoration-color: var(--color-depauw-accent); text-decoration-thickness: 4px; font-weight: 800; }
+.entrance-wrap { min-height: 1.2em; }
+.entrance-button { appearance: none; border: 0; padding: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer; min-height: 44px; }
+.entrance-button[hidden] { display: none; }
+.site-header .entrance-button:focus-visible { outline-color: var(--color-header-text); }
+.entrance-status { min-height: 1.5em; margin: 0.25rem 0 0; color: var(--color-header-muted); }
+.entrance-unlocked { animation: tiger-glint 700ms ease-out 1; }
+@keyframes tiger-glint { 45% { color: var(--color-depauw-accent); text-shadow: 0 0 0.35em var(--color-depauw-accent); } }
 
 main { padding-block: 1.5rem 2.5rem; display: grid; gap: 1.5rem; }
 
@@ -175,6 +182,9 @@ main { padding-block: 1.5rem 2.5rem; display: grid; gap: 1.5rem; }
 /* Footer */
 .site-footer { border-top: 1px solid var(--color-border); padding-block: 1.5rem 2.5rem; color: var(--color-text-muted); font-size: 0.9375rem; }
 .site-footer p { margin: 0 0 0.5rem; }
+.site-footer details { margin: 0.25rem 0 0.5rem; }
+.site-footer summary { cursor: pointer; width: fit-content; min-height: 44px; padding: 0.4rem 0; }
+.site-footer details p { margin: 0 0 0.5rem; }
 .sources { margin: 0 0 0.5rem; padding-left: 1.25rem; }
 
 /* Monon Bell block inside the football card */
@@ -236,6 +246,28 @@ main { padding-block: 1.5rem 2.5rem; display: grid; gap: 1.5rem; }
 .tiles-small .tile { padding: 0.375rem 0.5rem; }
 .tiles-small .tile-num { font-size: 1.5rem; }
 .bell-history { margin: 0.75rem 0 0; color: var(--color-text-muted); font-size: 0.9375rem; }
+.bell-heist-link { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; vertical-align: middle; }
+.paw-trail { height: 2rem; display: flex; align-items: center; justify-content: flex-end; padding-inline: 0.25rem; }
+.paw-left { justify-content: flex-start; }
+.paw-right { justify-content: flex-end; }
+.tiger-note { display: grid; justify-items: center; border: 1px solid var(--color-border); border-radius: var(--radius); padding: 0.5rem; }
+.tiger-note summary { display: flex; align-items: center; gap: 0.5rem; min-height: 44px; cursor: pointer; font-weight: 650; }
+.tiger-note summary img { max-width: 80px; height: auto; }
+.tiger-note p { margin: 0.5rem 0; }
+.admissions-note { border: 1px solid var(--color-border); border-radius: var(--radius); padding: 0.75rem 1rem; }
+.admissions-note summary { cursor: pointer; font-weight: 650; min-height: 44px; padding-block: 0.5rem; }
+.admissions-note p { margin: 0.5rem 0 0; }
+.history-reward { color: var(--color-text-muted); font-style: italic; }
+.impartiality { color: var(--color-text-muted); }
+.impartiality summary { font-weight: 600; }
+.impartiality p { margin: 0.25rem 0 0; }
+.bell-heist { gap: 0.75rem; }
+@media (prefers-reduced-motion: reduce) { .entrance-unlocked { animation: none; } }
+@media (forced-colors: active) {
+  .entrance-button:focus-visible, .bell-heist-link:focus-visible, .tiger-note summary:focus-visible { outline: 2px solid ButtonText; }
+  .site-header .entrance-button:focus-visible { outline-color: ButtonText; }
+  .tiger-note, .admissions-note { border-color: CanvasText; }
+}
 
 /* Fun facts and the season-by-season list */
 .fun-facts { margin-top: 1.25rem; }

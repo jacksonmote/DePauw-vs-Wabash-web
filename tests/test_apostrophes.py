@@ -67,7 +67,7 @@ def straight(page_text):
 
 def test_no_page_has_a_straight_apostrophe_in_visible_text(site):
     pages = sorted(site.rglob("*.html"))
-    assert len(pages) == 6
+    assert len(pages) == 7
     found = {str(p.relative_to(site)): straight(p.read_text(encoding="utf-8")) for p in pages}
     assert {k: v for k, v in found.items() if v} == {}
 

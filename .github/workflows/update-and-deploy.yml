@@ -118,11 +118,16 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Check the home-page script syntax
+        if: ${{ steps.setup_node.outcome == 'success' }}
+        continue-on-error: true
+        run: node --check static/easter-eggs.js
+
       - name: Validate generated HTML
         id: validate_html
         if: ${{ steps.setup_node.outcome == 'success' }}
         continue-on-error: true
-        run: npx --yes html-validate@11.17.0 site/index.html site/404.html site/how-it-works/index.html site/how-it-works/athletics/index.html site/how-it-works/alumni/index.html site/alumni/index.html
+        run: npx --yes html-validate@11.17.0 site/index.html site/404.html site/bell-heist/index.html site/how-it-works/index.html site/how-it-works/athletics/index.html site/how-it-works/alumni/index.html site/alumni/index.html
 
       - name: Report HTML validation problem
         if: ${{ steps.setup_node.outcome != 'success' || steps.validate_html.outcome == 'failure' }}

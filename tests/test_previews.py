@@ -190,8 +190,7 @@ def test_manifest_fields(tmp_path):
 def test_the_csp_allows_the_manifest_and_nothing_extra(tmp_path):
     _, index = build(tmp_path, {"football": football()})
     csp = html.unescape(re.search(r"Content-Security-Policy\" content=\"([^\"]+)\"", index).group(1))
-    assert "manifest-src 'self'" in csp and "img-src 'self'" in csp and "default-src 'none'" in csp
-    assert "script-src" not in csp and "unsafe" not in csp
+    assert csp == render.CSP + "; script-src 'self'"
     assert "style=" not in index                      # style-src 'self' would block inline styles
 
 

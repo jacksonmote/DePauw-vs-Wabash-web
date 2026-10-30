@@ -30,12 +30,16 @@ def meta(page, key):
 
 def test_every_description_is_155_characters_or_fewer_and_matches_its_share_tags(site):
     pages = sorted(site.rglob("*.html"))
-    assert len(pages) == 6
+    assert len(pages) == 7
     for p in pages:
         page = p.read_text(encoding="utf-8")
         d = meta(page, "description")
         assert d and len(d) <= 155, (p.name, len(d or ""))
-        if p.name == "404.html":                # not indexed and never shared: no share tags
+        if p.name == "404.html":
+            continue
+        if p.relative_to(site).as_posix() == "bell-heist/index.html":
+            assert 'name="robots" content="noindex"' in page
+            assert "canonical" not in page and "og:" not in page and "twitter:" not in page
             continue
         assert meta(page, "og:description") == d == meta(page, "twitter:description"), p
 

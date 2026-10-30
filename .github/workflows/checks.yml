@@ -33,8 +33,11 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Check the home-page script syntax
+        run: node --check static/easter-eggs.js
+
       - name: Validate generated HTML
-        run: npx --yes html-validate@11.17.0 site/index.html site/404.html site/how-it-works/index.html site/how-it-works/athletics/index.html site/how-it-works/alumni/index.html site/alumni/index.html
+        run: npx --yes html-validate@11.17.0 site/index.html site/404.html site/bell-heist/index.html site/how-it-works/index.html site/how-it-works/athletics/index.html site/how-it-works/alumni/index.html site/alumni/index.html
 
       # Draws every mermaid block in README.md with the Mermaid CLI, so a diagram with a syntax error fails the
       # PR instead of showing an error box on GitHub. The CLI exits 0 when a file has no blocks, so the count

@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from bs4 import BeautifulSoup
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scraper"))
 import render  # noqa: E402
@@ -129,7 +130,18 @@ def test_scraped_text_is_escaped_and_unsafe_links_dropped(tmp_path):
     evil["games"][3]["boxscore"] = "http://depauwtigers.com/insecure"
     evil["games"][4]["boxscore"] = "https://evil.example/depauwtigers.com"
     _, page = build(tmp_path, {"football": evil})
-    assert "<script" not in page and "<img" not in page and "<b>" not in page
+    soup = BeautifulSoup(page, "html.parser")
+    scripts = soup.find_all("script")
+    assert len(scripts) == 1 and scripts[0].get("src") == "easter-eggs.js" and scripts[0].has_attr("defer")
+    assert set(scripts[0].attrs) == {"src", "defer"}
+    assert scripts[0].string is None
+    assert [image.get("src") for image in soup.find_all("img")] == [
+        "easter-bell.svg", "easter-paw.svg", "easter-tiger.svg"]
+    assert not soup.find_all(["iframe", "object", "embed", "foreignobject"])
+    assert soup.find("b") is None and soup.find("img", src="x") is None
+    assert all(not attr.lower().startswith("on") and attr.lower() != "style"
+               for element in soup.find_all(True) for attr in element.attrs)
+    assert "<b>Bold</b>" not in page
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in page
     assert "&lt;b&gt;Bold&lt;/b&gt; &amp; co" in page
     assert "javascript:" not in page and "evil.example" not in page and "http://" not in page
@@ -150,7 +162,18 @@ def test_no_inline_script_or_style_and_security_meta(tmp_path):
     out, page = build(tmp_path, {"football": football()})
     for name in ("index.html", "404.html"):
         p = (out / name).read_text(encoding="utf-8")
-        assert "<script" not in p and "style=" not in p and "<style" not in p
+        soup = BeautifulSoup(p, "html.parser")
+        scripts = soup.find_all("script")
+        if name == "index.html":
+            assert len(scripts) == 1 and scripts[0].get("src") == "easter-eggs.js" and scripts[0].has_attr("defer")
+            assert set(scripts[0].attrs) == {"src", "defer"}
+            assert scripts[0].string is None
+        else:
+            assert scripts == []
+        csp = soup.find("meta", attrs={"http-equiv": "Content-Security-Policy"})["content"]
+        assert csp == (render.CSP + "; script-src 'self'" if name == "index.html" else render.CSP)
+        assert all(not attr.lower().startswith("on") and attr.lower() != "style"
+                   for element in soup.find_all(True) for attr in element.attrs)
         assert "default-src &#x27;none&#x27;" in p and "base-uri &#x27;none&#x27;" in p
         assert 'name="referrer" content="strict-origin-when-cross-origin"' in p
     assert 'href="styles.css"' in page and 'href="favicon.svg"' in page
@@ -362,7 +385,7 @@ def test_full_school_names_are_in_the_tab_title_and_subtitle_but_the_headline_st
     out, page = build(tmp_path, {"football": football()})
     assert "<title>DePauw University vs. Wabash College: All-Time Head-to-Head Records</title>" in page
     assert 'class="subtitle">DePauw University vs. Wabash College: all-time' in page
-    assert "<h1>DePauw vs. Wabash</h1>" in page
+    assert 'id="entrance-fallback">DePauw vs. Wabash</span>' in page
     assert json.loads((out / "site.webmanifest").read_text())["name"] == "DePauw vs. Wabash"
 
 

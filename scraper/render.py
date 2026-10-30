@@ -3,14 +3,16 @@ Static site generator for the DePauw vs. Wabash page.
 
 Reads data/series.json (and, if present, data/upcoming.json and the uncommitted .checked-at) plus the
 hand-curated data/alumni.json and data/endowment.json, and writes a finished site to site/:
-  index.html                      the athletics home page
+  index.html                      the athletics home page (the only page with a deferred script)
   alumni/index.html               the alumni and endowment page (alumni.py)
   how-it-works/index.html         landing page; how-it-works/athletics/ and how-it-works/alumni/ (howitworks.py)
+  bell-heist/index.html           public, unindexed fictional story
   404.html                        root-relative URLs, noindex
-  styles.css, the icons, og-image.png and alumni-og-image.png (drawn by images.py), site.webmanifest,
+  styles.css, the icons, easter-eggs.js (home only), three original easter-egg SVGs,
+  og-image.png and alumni-og-image.png (drawn by images.py), site.webmanifest,
   games.csv, data/series.json, data/alumni.json, data/endowment.json, robots.txt, sitemap.xml, .nojekyll
 Every page gets its header and nav (site_nav), head tags and footer (site_footer: a page-specific data block,
-then the shared lines) from the functions here. No client-side JavaScript; Pillow is needed only for the images.
+then shared lines) here. Only the home page loads its optional deferred easter-eggs script; Pillow is needed only for images.
 
 Every figure on the page comes from the data file. Anything missing or inconsistent
 raises DataError and the script exits non-zero, so a bad data file can never produce
@@ -467,15 +469,16 @@ def render_manifest() -> str:
 
 
 def head(title: str, description: str, *, prefix: str, canonical: str | None, noindex: bool = False,
-         preview: dict | None = None) -> str:
-    """preview, when given, is {"image": absolute og-image URL with ?v=, "alt": ...} for the share cards."""
+         preview: dict | None = None, easter_eggs: bool = False) -> str:
+    """preview is the share-card image and alt text; easter_eggs opts in to the home-only script and CSP rule."""
+    policy = CSP + "; script-src 'self'" if easter_eggs else CSP
     lines = [
         '<!DOCTYPE html>',
         '<html lang="en">',
         '<head>',
         '<meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
-        f'<meta http-equiv="Content-Security-Policy" content="{esc(CSP)}">',
+        f'<meta http-equiv="Content-Security-Policy" content="{esc(policy)}">',
         '<meta name="referrer" content="strict-origin-when-cross-origin">',
         f'<title>{esc(title)}</title>',
         f'<meta name="description" content="{esc(description)}">',
@@ -515,6 +518,7 @@ def head(title: str, description: str, *, prefix: str, canonical: str | None, no
         f'<link rel="apple-touch-icon" href="{esc(prefix)}apple-touch-icon.png" sizes="180x180">',
         f'<link rel="manifest" href="{esc(prefix)}site.webmanifest">',
         f'<link rel="stylesheet" href="{esc(prefix)}styles.css">',
+        *(['<script src="easter-eggs.js" defer></script>'] if easter_eggs else []),
         '</head>',
     ]
     return "\n".join(lines)
@@ -686,7 +690,9 @@ def games_table(key: str, games: list, words: tuple = ("game", "games"), merged:
         f'<caption class="sr-only">Every {esc(key.replace("-", " "))} {esc(words[0])}, newest first</caption>\n'
         '<thead><tr><th scope="col">Date</th><th scope="col">Site</th><th scope="col">Result</th>'
         '<th scope="col">Notes</th><th scope="col">Box score</th></tr></thead>\n'
-        '<tbody>\n' + "\n".join(rows) + '\n</tbody>\n</table>\n</details>'
+        '<tbody>\n' + "\n".join(rows) + '\n</tbody>\n</table>\n'
+        + ('<p class="history-reward">You’ve reached the bottom. Wabash jokes practically write themselves.</p>\n'
+           if games else '') + '</details>'
     )
 
 
@@ -714,6 +720,8 @@ def bell_block(games: list) -> str:
         *rows,
         f'<dl class="facts bell-facts">\n<div><dt>Bell record since {facts.BELL_START}</dt><dd>{record}</dd></div>\n</dl>',
         f'<p class="bell-history">{esc(BELL_HISTORY)} <a href="{esc(BELL_URL)}">Read more on Wikipedia</a></p>',
+        '<a class="bell-heist-link" href="bell-heist/" aria-label="A little Bell business">'
+        '<img src="easter-bell.svg" width="28" height="28" alt=""></a>',
         '</section>',
     ])
 
@@ -989,10 +997,13 @@ def site_footer(now: dt.datetime, *, prefix: str = "", data: dict | None = None,
     return [
         '<footer class="site-footer">', '<div class="wrap">',
         *block,
+        '<!-- Both schools supplied the records. Only one supplied the developers. -->',
         '<p class="footer-links">' + (f'<a href="{esc(prefix + how)}">How the numbers work</a> · ' if link_how else "") +
         f'<a href="{esc(REPO_URL)}">Built in the open: code and data on GitHub</a></p>',
         *([f'<p>{esc(MEN_ONLY)}</p>'] if men_note else []),
         f'<p>{esc(DISCLAIMER)}</p>',
+        '<details class="impartiality"><summary>A note on impartiality</summary>'
+        '<p>The data is independently sourced. The developers were educated correctly.</p></details>',
         f'<p class="copyright">{esc(copyright_line(now))}</p>',
         '</div>',
         '</footer>',
@@ -1028,14 +1039,25 @@ def render_index(data: dict, checked: str | None = None, now: dt.datetime | None
             upcoming.get(key, {}).get("games", []), s["games"], today)
 
     today_games = gameday.todays_games(now, upcoming, sports)
+    sports_cards = []
+    paw_start = max(0, n_sports - 3)
+    for i, (key, sport) in enumerate(sports.items()):
+        sports_cards.append(card(key, sport, ahead[key], pending[key], upcoming.get(key), today))
+        if i >= paw_start:
+            side = "paw-left" if (i - paw_start) % 2 == 0 else "paw-right"
+            sports_cards.append(f'<div class="paw-trail {side}" aria-hidden="true"><img src="easter-paw.svg" width="32" height="32" alt=""></div>')
 
     return "\n".join([
         head(TITLE, description, prefix="", canonical=SITE_URL,
-             preview=preview_info(data, game_day_label(today_games))),
+             preview=preview_info(data, game_day_label(today_games)), easter_eggs=True),
         '<body>',
         '<header class="site-header">',
         '<div class="wrap">',
-        '<h1>DePauw vs. Wabash</h1>',
+        '<h1 class="entrance-wrap"><span id="entrance-fallback">DePauw vs. Wabash</span>'
+        '<button id="tiger-entrance" class="entrance-button" type="button" hidden aria-describedby="entrance-hint">'
+        'DePauw vs. Wabash<span class="sr-only">, Tiger entrance</span></button></h1>',
+        '<span id="entrance-hint" class="sr-only">Activate five times, with no speed requirement, to unlock a message.</span>',
+        '<p id="entrance-status" class="entrance-status" role="status" aria-live="polite"></p>',
         site_nav("", "athletics"),
         f'<p class="subtitle">{esc(SUBTITLE)}</p>',
         '</div>',
@@ -1050,7 +1072,9 @@ def render_index(data: dict, checked: str | None = None, now: dt.datetime | None
         f'<p class="series-summary">{esc(series_summary(sports))}</p>' if series_summary(sports) else '',
         f'<p class="not-included"><strong>Not included:</strong> {esc(NOT_INCLUDED)}</p>',
         '</section>',
-        *(card(k, s, ahead[k], pending[k], upcoming.get(k), today) for k, s in sports.items()),
+        *sports_cards,
+        '<details class="tiger-note"><summary><img src="easter-tiger.svg" width="80" height="80" alt="">'
+        '<span>A tiger with something to say</span></summary><p>No further questions.</p></details>',
         '</main>',
         *site_footer(now, data=data, checked=checked, upcoming=upcoming),
         '</body>',
@@ -1151,6 +1175,24 @@ def render_404(now: dt.datetime | None = None) -> str:
     ])
 
 
+def render_bell_heist(now: dt.datetime | None = None) -> str:
+    return "\n".join([
+        head("Mission accomplished | DePauw vs. Wabash", "An entirely fictional Monon Bell mission.",
+             prefix="../", canonical=None, noindex=True),
+        '<body>',
+        '<header class="site-header"><div class="wrap"><h1>DePauw vs. Wabash</h1>',
+        site_nav("../", ""),
+        f'<p class="subtitle">{esc(NEUTRAL_SUBTITLE)}</p></div></header>',
+        '<main class="wrap prose bell-heist"><h2>Mission accomplished</h2>',
+        '<p>You’ve successfully relocated the Monon Bell to Greencastle. Your alumni association has no knowledge of this operation.</p>',
+        '<p>An entirely fictional mission.</p>',
+        '<p><a href="../#monon-bell">Check the real Bell holder</a></p>',
+        f'<p class="back"><a href="../">{esc(BACK_ATHLETICS)}</a> · <a href="../alumni/">{esc(BACK_ALUMNI)}</a></p>',
+        '</main>', *site_footer(now or dt.datetime.now(dt.timezone.utc), prefix="../"),
+        '</body>', '</html>', '',
+    ])
+
+
 def render_sitemap(data: dict, checked: str | None = None, alumni_verified: str | None = None) -> str:
     """lastmod is the Eastern date of the newest time the page states: when the data last changed or,
     when there is one, when they were last checked."""
@@ -1233,6 +1275,7 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
         HOW_ALUMNI_PATH + "index.html": render_how_alumni(alumni_data, endowment_data, now),
         ALUMNI_PATH + "index.html": alumni_html,
         "404.html": render_404(now),
+        "bell-heist/index.html": render_bell_heist(now),
         "games.csv": render_csv(data),
         "site.webmanifest": render_manifest(),
         "sitemap.xml": render_sitemap(data, checked_at, alumni_verified_date(alumni_data, endowment_data)),
@@ -1245,7 +1288,7 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
     for name, text in pages.items():
         (out / name).parent.mkdir(parents=True, exist_ok=True)
         (out / name).write_text(curly_html(text) if name.endswith(".html") else text, encoding="utf-8", newline="\n")
-    for asset in ("styles.css", "favicon.svg"):
+    for asset in ("styles.css", "favicon.svg", "easter-eggs.js", "easter-bell.svg", "easter-paw.svg", "easter-tiger.svg"):
         shutil.copyfile(STATIC / asset, out / asset)
     # Images are drawn at build time from the bundled font, so every deploy has a card that matches the data.
     info = preview_info(data, game_day_label(gameday.todays_games(when, upcoming, data["sports"])))
