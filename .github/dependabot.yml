@@ -10,3 +10,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  # package.json and package-lock.json lock the HTML validator CI runs on the generated pages.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly

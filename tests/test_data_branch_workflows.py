@@ -126,7 +126,8 @@ def test_a_failed_push_to_the_data_branch_still_deploys_warns_and_turns_the_run_
     assert "data branch" in summary and "::warning title=Data commit::" in summary
     report = "\n".join(s.get("run", "") for s in wf["jobs"]["report"]["steps"])
     assert "data branch" in report and "exit 1" in report
-    assert wf["jobs"]["report"]["if"] == "${{ !cancelled() && needs.build.outputs.problems == 'true' }}"
+    report_if = wf["jobs"]["report"]["if"]
+    assert "!cancelled()" in report_if and "needs.build.outputs.problems == 'true'" in report_if
 
 
 def test_every_action_stays_pinned_to_a_full_sha_with_a_version_comment():

@@ -86,7 +86,6 @@ jobs:
     outputs:
       problems: ${{ steps.summary.outputs.problems }}
       scrape: ${{ steps.summary.outputs.scrape }}
-      validation: ${{ steps.summary.outputs.validation }}
       commit: ${{ steps.summary.outputs.commit }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -135,45 +134,6 @@ jobs:
       - name: Render site
         run: python scraper/render.py
 
-      # HTML validation only warns. If Node cannot be set up, validation is skipped and reported; either
-      # way the site is still uploaded and deployed (the report job turns the run red afterward).
-      - name: Set up Node for HTML validation
-        id: setup_node
-        continue-on-error: true
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "22"
-
-      - name: Check the title script syntax
-        if: ${{ steps.setup_node.outcome == 'success' }}
-        continue-on-error: true
-        run: node --check static/easter-eggs.js
-
-      - name: Validate generated HTML
-        id: validate_html
-        if: ${{ steps.setup_node.outcome == 'success' }}
-        continue-on-error: true
-        run: npx --yes html-validate@11.17.0 site/index.html site/404.html site/bell-heist/index.html site/heist-details/index.html site/how-it-works/index.html site/how-it-works/athletics/index.html site/how-it-works/alumni/index.html site/alumni/index.html
-
-      - name: Report HTML validation problem
-        if: ${{ steps.setup_node.outcome != 'success' || steps.validate_html.outcome == 'failure' }}
-        env:
-          SETUP_NODE: ${{ steps.setup_node.outcome }}
-        run: |
-          if [ "$SETUP_NODE" != "success" ]; then
-            heading="Warning: HTML validation was skipped"
-            message="HTML validation was skipped because Node could not be set up. Publishing continues; review the Set up Node for HTML validation step logs."
-          else
-            heading="Warning: generated HTML validation failed"
-            message="The HTML validator found a problem. Publishing continues; review the Validate generated HTML step logs."
-          fi
-          {
-            echo "## $heading"
-            echo
-            echo "$message"
-          } >> "$GITHUB_STEP_SUMMARY"
-          echo "::warning title=HTML validation::$message"
-
       # A rejected push to the data branch must not stop the deploy: the site is built from the data this run
       # just scraped, not from what is stored. A failure here only leaves the data branch stale, and the
       # Summarize step and the report job say so. test_data_commit commits only a marker file (no real data).
@@ -196,20 +156,11 @@ jobs:
         id: summary
         env:
           SCRAPE: ${{ steps.scrape.outcome }}
-          SETUP_NODE: ${{ steps.setup_node.outcome }}
-          VALIDATE: ${{ steps.validate_html.outcome }}
           COMMIT: ${{ steps.commit.outcome }}
         run: |
           if [ "$SCRAPE" = "success" ]; then scrape=ok; else scrape=failed; fi
           if [ "$COMMIT" = "failure" ]; then commit=failed; else commit=ok; fi
-          if [ "$SETUP_NODE" != "success" ]; then
-            validation=skipped
-          elif [ "$VALIDATE" = "success" ]; then
-            validation=ok
-          else
-            validation=failed
-          fi
-          if [ "$scrape" = "ok" ] && [ "$validation" = "ok" ] && [ "$commit" = "ok" ]; then problems=false; else problems=true; fi
+          if [ "$scrape" = "ok" ] && [ "$commit" = "ok" ]; then problems=false; else problems=true; fi
           if [ "$commit" = "failed" ]; then
             message="The data commit to the data branch failed, so the stored data was not updated. Publishing continues with the data this run scraped; review the Commit if data changed step logs and the Protect data ruleset."
             {
@@ -222,9 +173,106 @@ jobs:
           {
             echo "problems=$problems"
             echo "scrape=$scrape"
-            echo "validation=$validation"
             echo "commit=$commit"
           } >> "$GITHUB_OUTPUT"
+
+  validate:
+    # Checks the site the build job just made with html-validate, in a job that holds no write token and no
+    # persisted credentials, so the npm packages it installs never run beside one. It reads the Pages artifact
+    # the build job uploaded, installs the validator from package-lock.json with scripts off, and can never stop
+    # publishing: deploy needs only the build job. A problem becomes a warning annotation, a run-summary note and
+    # a red report job after the deploy. Every step that can fail is non-blocking, so this job itself succeeds.
+    needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      validation: ${{ steps.summary.outputs.validation }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Get the generated site from the build job
+        id: download
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: github-pages
+          path: ${{ runner.temp }}/pages
+
+      - name: Unpack the site
+        id: unpack
+        if: ${{ steps.download.outcome == 'success' }}
+        continue-on-error: true
+        run: |
+          mkdir site
+          tar -xf "$RUNNER_TEMP/pages/artifact.tar" -C site
+          test -f site/index.html
+
+      - name: Set up Node for HTML validation
+        id: setup_node
+        continue-on-error: true
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+
+      - name: Install the HTML validator from the lockfile
+        id: install
+        if: ${{ steps.setup_node.outcome == 'success' }}
+        continue-on-error: true
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Check the title script syntax
+        if: ${{ steps.setup_node.outcome == 'success' }}
+        continue-on-error: true
+        run: node --check static/easter-eggs.js
+
+      - name: Validate generated HTML
+        id: validate_html
+        if: ${{ steps.setup_node.outcome == 'success' && steps.install.outcome == 'success' && steps.unpack.outcome == 'success' }}
+        continue-on-error: true
+        run: npx --no-install html-validate site/index.html site/404.html site/bell-heist/index.html site/heist-details/index.html site/how-it-works/index.html site/how-it-works/athletics/index.html site/how-it-works/alumni/index.html site/alumni/index.html
+
+      - name: Report HTML validation problem
+        if: ${{ steps.validate_html.outcome != 'success' }}
+        env:
+          VALIDATE: ${{ steps.validate_html.outcome }}
+          SETUP_NODE: ${{ steps.setup_node.outcome }}
+          INSTALL: ${{ steps.install.outcome }}
+        run: |
+          if [ "$VALIDATE" = "failure" ]; then
+            heading="Warning: generated HTML validation failed"
+            message="The HTML validator found a problem. Publishing continues; review the Validate generated HTML step logs."
+          elif [ "$SETUP_NODE" != "success" ]; then
+            heading="Warning: HTML validation was skipped"
+            message="HTML validation was skipped because Node could not be set up. Publishing continues; review the Set up Node for HTML validation step logs."
+          elif [ "$INSTALL" != "success" ]; then
+            heading="Warning: HTML validation was skipped"
+            message="HTML validation was skipped because the validator could not be installed from the lockfile. Publishing continues; review the Install the HTML validator from the lockfile step logs."
+          else
+            heading="Warning: HTML validation was skipped"
+            message="HTML validation was skipped because the generated site could not be fetched from the build job. Publishing continues; review the Get the generated site and Unpack the site step logs."
+          fi
+          {
+            echo "## $heading"
+            echo
+            echo "$message"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning title=HTML validation::$message"
+
+      - name: Summarize
+        id: summary
+        env:
+          VALIDATE: ${{ steps.validate_html.outcome }}
+        run: |
+          if [ "$VALIDATE" = "success" ]; then validation=ok
+          elif [ "$VALIDATE" = "failure" ]; then validation=failed
+          else validation=skipped
+          fi
+          echo "validation=$validation" >> "$GITHUB_OUTPUT"
 
   deploy:
     needs: build
@@ -283,16 +331,17 @@ jobs:
 
   report:
     # A failed test or render stops the build directly. This turns the run red after the deployment attempt for
-    # the problems that do not stop publishing: a scraper failure, HTML validation that failed or was skipped,
-    # or a data commit that was rejected.
-    needs: [build, deploy]
-    if: ${{ !cancelled() && needs.build.outputs.problems == 'true' }}
+    # the problems that do not stop publishing: a scraper failure, HTML validation that failed or was skipped
+    # (or whose job did not finish), or a data commit that was rejected.
+    needs: [build, deploy, validate]
+    if: ${{ !cancelled() && needs.build.result == 'success' && (needs.build.outputs.problems == 'true' || needs.validate.result != 'success' || needs.validate.outputs.validation != 'ok') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
       - env:
           SCRAPE: ${{ needs.build.outputs.scrape }}
-          VALIDATION: ${{ needs.build.outputs.validation }}
+          VALIDATION: ${{ needs.validate.outputs.validation }}
+          VALIDATE_JOB: ${{ needs.validate.result }}
           COMMIT: ${{ needs.build.outputs.commit }}
         run: |
           if [ "$SCRAPE" != "ok" ]; then
@@ -302,8 +351,10 @@ jobs:
             echo "The data commit to the data branch failed, so the stored data is stale. It does not block publishing. Check the Commit if data changed step logs, the Protect data ruleset and the deployment result."
           fi
           if [ "$VALIDATION" = "failed" ]; then
-            echo "HTML validation failed. It does not block publishing. Check the Validate generated HTML step logs and the deployment result."
+            echo "HTML validation failed. It does not block publishing. Check the Validate generated HTML step logs in the validate job and the deployment result."
           elif [ "$VALIDATION" = "skipped" ]; then
-            echo "HTML validation was skipped because Node could not be set up. It does not block publishing. Check the Set up Node for HTML validation step logs and the deployment result."
+            echo "HTML validation was skipped because Node, the validator or the generated site could not be set up. It does not block publishing. Check the validate job's step logs and the deployment result."
+          elif [ "$VALIDATE_JOB" != "success" ]; then
+            echo "HTML validation did not finish because the validate job did not complete. It does not block publishing. Check the validate job and the deployment result."
           fi
           exit 1
