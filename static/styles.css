@@ -190,7 +190,6 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .tile-tie .tile-name { color: var(--color-text-muted); }
 .tile-num { font: 700 clamp(2rem, 10vw, 2.75rem)/1 var(--font-numbers); font-variant-numeric: tabular-nums; }
 .tile-label { color: var(--color-text-muted); font-size: 0.875rem; }
-.tiles-big .tile-num { font-size: clamp(2.75rem, 13vw, 4.5rem); }
 
 /* Fact list */
 .facts { display: grid; gap: 0.5rem 1.5rem; margin: 1.25rem 0 0; }
@@ -265,11 +264,12 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .scoreboard thead th { border-top: 0; border-bottom: 2px solid var(--color-border); color: var(--color-text-muted); font-size: 0.8125rem; text-align: right; }
 .scoreboard thead th:first-child, .scoreboard tbody th { text-align: left; }
 .scoreboard tbody th { font-weight: 600; overflow-wrap: anywhere; }
-.scoreboard .score { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; width: 5.5rem; }
+.scoreboard .score { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; width: 1%; }   /* as narrow as its figure, so the category name gets the room */
 .scoreboard .lead { box-shadow: inset 0 -3px 0 currentColor; }
 .scoreboard .lead-depauw { color: var(--color-depauw-text); }
 .scoreboard .lead-wabash { color: var(--color-wabash-text); }
-.alumni-report { margin: 0.75rem 0 0; font-size: 0.9375rem; }
+.alumni-report { margin: 0.25rem 0 0; font-size: 0.9375rem; }
+.alumni-report a { display: inline-flex; align-items: center; min-height: var(--tap); }
 .endowment:target { outline: 3px solid var(--color-focus); outline-offset: 2px; }
 .alumni-method, .alumni-download { color: var(--color-text-muted); margin: 0; }
 .alumni-context { color: var(--color-text-muted); margin: 0.75rem 0 0.5rem; }
@@ -304,9 +304,6 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 }
 .bell-note { color: var(--color-text-muted); font-size: 0.9375rem; }
 .bell-facts { margin-top: 0.75rem; grid-template-columns: minmax(0, 1fr); }
-.bell-facts .tiles { margin-top: 0.25rem; }
-.tiles-small .tile { padding: 0.375rem 0.5rem; }
-.tiles-small .tile-num { font-size: 1.875rem; }
 .bell-history { margin: 0.75rem 0 0; color: var(--color-text-muted); font-size: 0.9375rem; }
 .bell-heist-link { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; vertical-align: middle; }
 .paw-trail { height: 2rem; display: flex; align-items: center; justify-content: flex-end; padding-inline: 0.25rem; }
@@ -369,7 +366,8 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .prose h3 { margin: 1.75rem 0 0.5rem; font-size: 1.1875rem; }
 .prose p, .prose li { line-height: 1.6; }
 .prose li { margin-block: 0.5rem; }
-.back { margin: 1rem 0 0; }
+.back { margin: 0.75rem 0 0; }
+.back a { padding-block: 0.75rem; }   /* padding on an inline link grows the tap area, not the line */
 
 /* Monon Bell heist history (/heist-details/): a card per story, edged in the color of the school that did it */
 .heist-page { max-width: 46rem; display: block; }   /* block flow: the shared main grid would add a 1.5rem gap between every element */
@@ -471,3 +469,38 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .w-80{width:80%}.w-81{width:81%}.w-82{width:82%}.w-83{width:83%}.w-84{width:84%}.w-85{width:85%}.w-86{width:86%}.w-87{width:87%}.w-88{width:88%}.w-89{width:89%}
 .w-90{width:90%}.w-91{width:91%}.w-92{width:92%}.w-93{width:93%}.w-94{width:94%}.w-95{width:95%}.w-96{width:96%}.w-97{width:97%}.w-98{width:98%}.w-99{width:99%}
 .w-100{width:100%}
+
+/* Sport cards: the card board, the two groups, the every-game chart */
+.board-sport .board-score { padding: var(--space-3) var(--gutter) var(--space-2); }
+.board-sport .board-num { font-size: clamp(2.75rem, 14vw, 4.5rem); }
+.board-sport .board-t .board-num { font-size: clamp(1.75rem, 8vw, 2.75rem); }
+.board-sport .rbar-board { height: 12px; }
+.lead-line { margin: var(--space-3) 0 0; font-size: var(--text-md); font-weight: 600; }
+.groups { display: grid; gap: var(--space-4) var(--space-5); margin-top: var(--space-3); }
+.groups .facts { margin-top: var(--space-2); grid-template-columns: minmax(0, 1fr); }
+.eyebrow, .chart-sec h3 {
+  margin: 0; font: 700 var(--text-sm)/1.2 var(--font-body); text-transform: uppercase; letter-spacing: 0.12em; color: var(--color-text-muted);
+}
+.bell-facts dd .rbar { margin: var(--space-2) 0 var(--space-1); }
+.chart-sec { margin-top: var(--space-5); }
+.chart { display: block; width: 100%; height: 7.5rem; margin-top: var(--space-2); }   /* stretched sideways on wide cards: bars are plain shapes */
+.c-d { stroke: var(--color-depauw-accent); fill: none; }
+.c-w { stroke: var(--color-wabash-accent); fill: none; }
+.c-t { stroke: var(--color-tie-accent); fill: none; }
+.c-base { stroke: var(--color-text-muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.chart-axis { display: flex; justify-content: space-between; margin: var(--space-1) 0 0; font-size: var(--text-sm); color: var(--color-text-muted); }
+.chart-legend { list-style: none; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: var(--space-2) 0 0; padding: 0; font-size: var(--text-sm); }
+.sw { display: inline-block; width: 0.75rem; height: 0.75rem; margin-right: 0.375rem; border-radius: 2px; vertical-align: -1px; }
+.sw-d { background: var(--color-depauw-accent); }
+.sw-w { background: var(--color-wabash-accent); }
+.sw-t { background: var(--color-tie-accent); }
+.chart-sec .hint { margin: var(--space-2) 0 0; }
+@media (min-width: 40rem) { .groups { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chart { height: 9rem; } }
+@media (forced-colors: active) { .chart path, .sw { forced-color-adjust: none; } }
+/* Alumni: the record bars under a scoreboard row, a category's tiles and the endowment tiles */
+.scoreboard th .rbar { margin-top: 0.375rem; max-width: 12rem; }
+.alumni-card > .rbar, .endowment > .rbar { margin-top: var(--space-2); }
+@media (max-width: 37.4375rem) {
+  .scoreboard th, .scoreboard td { padding-inline: 0.25rem; }
+  .scoreboard tbody th, .scoreboard .score { font-size: 0.9375rem; }
+}

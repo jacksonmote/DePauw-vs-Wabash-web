@@ -40,6 +40,8 @@ import sys
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
+import bars
+import chart
 import databranch
 import facts
 import gameday
@@ -570,18 +572,6 @@ def heading(level: int, anchor: str, text: str) -> str:
     return f'<h{level}><a class="permalink" id="{esc(anchor)}-h" href="#{esc(anchor)}">{esc(text)}</a></h{level}>'
 
 
-def tiles(depauw: int, wabash: int, ties: int, css_class: str = "") -> str:
-    def tile(cls, name, n, label):
-        return (f'<div class="tile {cls}"><span class="tile-name">{esc(name)}</span>'
-                f'<span class="tile-num">{n:,}</span><span class="tile-label">{esc(label)}</span></div>')
-    parts = [tile("tile-depauw", "DePauw", depauw, "wins" if depauw != 1 else "win"),
-             tile("tile-wabash", "Wabash", wabash, "wins" if wabash != 1 else "win")]
-    if ties:
-        parts.append(tile("tile-tie", "Ties", ties, "tie" if ties == 1 else "ties"))
-    classes = f"tiles {css_class}" if css_class else "tiles"
-    return f'<div class="{classes}">' + "".join(parts) + "</div>"
-
-
 UNITS = {"points": ("point", "points"), "runs": ("run", "runs"), "goals": ("goal", "goals"),
          "individual matches": ("match", "matches")}
 
@@ -751,6 +741,12 @@ def bell_held_text(b: dict) -> str:
     return f'{plural(b["held_games"], "game")}: {plural(wins, "win")} and {plural(ties, "tie")}'
 
 
+def bell_record_text(b: dict) -> str:
+    """"DePauw 43 · Wabash 44 · 6 ties", each school's count in its own color (the names are in the text)."""
+    return (f'<span class="t-d">DePauw {b["depauw"]}</span> · <span class="t-w">Wabash {b["wabash"]}</span>'
+            + (f' · {esc(plural(b["ties"], "tie"))}' if b["ties"] else ""))
+
+
 def bell_block(games: list) -> str:
     """The Monon Bell section of the football card: holder, Bell-era record and short history. The last and
     next games are the football card's own "Most recent" and "Next meeting" stats."""
@@ -761,7 +757,8 @@ def bell_block(games: list) -> str:
     if b["holder"]:
         rows.append(f'<p class="bell-holder"><strong>{esc(b["holder"])} has held the Bell since {b["since"]}</strong>'
                     f' <span class="bell-note">({esc(bell_held_text(b))})</span></p>')
-    record = tiles(b["depauw"], b["wabash"], b["ties"], "tiles-small")
+    record = (record_bar(b["depauw"], b["ties"], b["wabash"])
+              + f'<p class="bell-rec">{bell_record_text(b)}</p>')
     return "\n".join([
         '<section class="bell" id="monon-bell" aria-labelledby="monon-bell-h">',
         heading(3, "monon-bell", "The Monon Bell"),
@@ -813,34 +810,45 @@ def card(key: str, s: dict, ahead: list, pending: list, up: dict | None, today: 
     last = facts.most_recent(games)
     words = game_words(s)
     since = facts.game_year(games[0])
-    stat_rows = [
+    series_rows = [
         ("Current streak", esc(streak_text(code, words[1] if s.get("unit") else ""))),
         ("Records since", esc(since)),
         (f"{words[1].capitalize()} played", esc(f"{len(games):,}")),
         (f"Total {s.get('total_label') or 'points'}",
          f'DePauw {fmt_num(s["points"]["depauw"])}, Wabash {fmt_num(s["points"]["wabash"])}'),
-        ("Most recent",
-         f'{date_html(last)} · {esc(score_text(last))}'),
     ]
+    latest_rows = [("Most recent", f'{date_html(last)} · {esc(score_text(last))}')]
     if ahead:
-        stat_rows.append(("Next meeting", meeting_html(meetings.next_group(ahead), today)))
+        latest_rows.append(("Next meeting", meeting_html(meetings.next_group(ahead), today)))
     if pending:
         day = fmt_when(pending[0], today).split(" · ")[0]
-        stat_rows.append(("Result pending", esc(day) + " · not on the history page yet"))
-    dl = "\n".join(f'<div><dt>{esc(k)}</dt><dd>{v}</dd></div>' for k, v in stat_rows)
+        latest_rows.append(("Result pending", esc(day) + " · not on the history page yet"))
+    def dl(rows):
+        return '<dl class="facts">\n' + "\n".join(f'<div><dt>{esc(k)}</dt><dd>{v}</dd></div>' for k, v in rows) + '\n</dl>'
     merged = bool(s.get("sources"))
     links = [f'<a href="{esc(u)}">{esc(label)}</a>' for label, u in page_links(s, up)]
     links.append(report_link(s["name"]))
     provenance = provenance_text(s)
     source = (f'<p class="provenance">{esc(provenance)}</p>\n' if provenance else "") + \
              f'<p class="source">Sources: {" · ".join(links)}</p>'
+    k = esc(key)
+    lead = rec["depauw_wins"] - rec["wabash_wins"]
+    lead_line = ("The series is even." if not lead else
+                 f'{"DePauw" if lead > 0 else "Wabash"} leads the series by {plural(abs(lead), "win")}.')
+    unit_many = UNITS.get(s.get("total_label") or "points", ("", s.get("total_label") or "points"))[1]
     return (
-        f'<article class="sport" id="{esc(key)}" aria-labelledby="{esc(key)}-h">\n'
+        f'<article class="sport" id="{k}" aria-labelledby="{k}-h">\n'
         f'{heading(2, key, s["name"])}\n'
-        f'{tiles(rec["depauw_wins"], rec["wabash_wins"], rec["ties"])}\n'
-        f'<dl class="facts">\n{dl}\n</dl>\n{source}\n'
+        f'{board_html(rec["depauw_wins"], rec["wabash_wins"], rec["ties"], "board-sport")}\n'
+        f'<p class="lead-line">{esc(lead_line)}</p>\n'
+        '<div class="groups">\n'
+        f'<div><h3 id="{k}-latest-h" class="eyebrow">Latest and next</h3>\n{dl(latest_rows)}</div>\n'
+        f'<div><h3 id="{k}-series-h" class="eyebrow">The series</h3>\n{dl(series_rows)}</div>\n'
+        '</div>\n'
         f'{bell_block(games) if key == "football" else ""}\n'
+        f'{chart.series_chart(key, s["name"], games, unit_many, words)}\n'
         f'{fun_facts_html(fun_facts(key, s), (bell_heist_fact(),) if key == "football" and facts.bell(games) else ())}\n'
+        f'{source}\n'
         f'{games_table(key, games, words, merged)}\n</article>'
     )
 
@@ -897,31 +905,13 @@ def bell_week_countdown(best: tuple | None, today: dt.date) -> str:
             f'<span class="cd-unit">{"day" if days == 1 else "days"} to the Bell game</span></p>')
 
 
-def record_widths(counts: list) -> list:
-    """Whole-percent bar widths for counts, summing to exactly 100 (largest remainder; a zero count gets 0 and a
-    nonzero count is never rounded away entirely unless it is under 0.5%). All zeros when there are no games."""
-    total = sum(counts)
-    if not total:
-        return [0] * len(counts)
-    exact = [c * 100 / total for c in counts]
-    widths = [int(x) for x in exact]
-    order = sorted(range(len(counts)), key=lambda i: (exact[i] - widths[i], counts[i]), reverse=True)
-    for i in order[:100 - sum(widths)]:
-        widths[i] += 1
-    return widths
+record_widths = bars.record_widths
+record_bar = bars.record_bar
 
 
-def record_bar(depauw: int, ties: int, wabash: int, css_class: str = "") -> str:
-    """The proportional record bar: DePauw, ties, Wabash. Widths are the .w-N classes (never inline styles, which
-    the CSP forbids). Decorative: the numbers beside it say the same in text."""
-    widths = record_widths([depauw, ties, wabash])
-    segs = "".join(f'<span class="seg {cls} w-{w}"></span>'
-                   for cls, w, n in zip(("seg-d", "seg-t", "seg-w"), widths, (depauw, ties, wabash)) if n)
-    return f'<div class="rbar {css_class}" aria-hidden="true">{segs}</div>'.replace('class="rbar "', 'class="rbar"')
-
-
-def board_html(depauw: int, wabash: int, ties: int) -> str:
-    """The scoreboard: wins, ties, wins on a dark board with the record bar as its bottom strip."""
+def board_html(depauw: int, wabash: int, ties: int, css_class: str = "") -> str:
+    """The scoreboard: wins, ties, wins on a dark board with the record bar as its bottom strip. A card uses the
+    same board, one size down (css_class board-sport)."""
     def side(cls, name, n, label):
         return (f'<div class="board-side {cls}"><span class="board-name">{esc(name)}</span>'
                 f'<span class="board-num">{n:,}</span><span class="board-label">{esc(label)}</span></div>')
@@ -929,7 +919,7 @@ def board_html(depauw: int, wabash: int, ties: int) -> str:
     if ties:
         parts.append(side("board-t", "Ties", ties, "tie" if ties == 1 else "ties"))
     parts.append(side("board-w", "Wabash", wabash, "wins" if wabash != 1 else "win"))
-    return ('<div class="board">'
+    return (f'<div class="board{" " + css_class if css_class else ""}">'
             f'<div class="board-score{" has-ties" if ties else ""}">{"".join(parts)}</div>'
             f'{record_bar(depauw, ties, wabash, "rbar-board")}</div>')
 
@@ -940,8 +930,7 @@ def bell_strip(games: list) -> str:
     b = facts.bell(games)
     if b is None or not b["holder"]:
         return ""
-    record = (f'<span class="t-d">DePauw {b["depauw"]}</span> · <span class="t-w">Wabash {b["wabash"]}</span>'
-              + (f' · {esc(plural(b["ties"], "tie"))}' if b["ties"] else ""))
+    record = bell_record_text(b)
     return "\n".join([
         '<section class="bell-strip" id="bell-strip" aria-label="Current Monon Bell holder">',
         '<h2 id="bell-strip-h">The Monon Bell</h2>',

@@ -28,6 +28,8 @@ from fractions import Fraction
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
+import bars
+
 
 SCHOOLS = {"depauw": "DePauw", "wabash": "Wabash"}
 SUBTITLE = "DePauw University vs. Wabash College: Notable graduates and endowments, side by side."
@@ -440,7 +442,10 @@ def scoreboard(categories: list, counts_by_id: dict, per: dict, even: bool = Fal
     def row(href, name, depauw, wabash, shown, even=False):
         lead = None if even else "depauw" if depauw > wabash else "wabash" if wabash > depauw else None
         note = ' <span class="even-note">about even</span>' if even else ""
-        rows.append(f'<tr><th scope="row"><a href="#{_esc(href)}">{_esc(name)}</a>{note}</th>'
+        # a proportional bar under the name; none for an empty category, and none when the figures are "about
+        # even", because a bar would show a difference the page says is not one
+        bar = bars.record_bar(depauw, 0, wabash, "rbar-sm") if (depauw or wabash) and not even else ""
+        rows.append(f'<tr><th scope="row"><a href="#{_esc(href)}">{_esc(name)}</a>{note}{bar}</th>'
                     f'{_score_cell("depauw", shown[0], lead == "depauw")}'
                     f'{_score_cell("wabash", shown[1], lead == "wabash")}</tr>')
 
@@ -493,9 +498,11 @@ def render_page(data: dict, endowment: dict, *, head_html: str, footer_html: str
                 details = '<p class="alumni-zero">No qualifying graduates found in the reviewed sources.</p>'
             schools_html.append(f'<div class="alumni-school alumni-school-{school}"><h3 class="alumni-school-name">{label}</h3>{details}</div>')
             tiles_html.append(_tile(f"tile-{school}", label, str(count), tile_label(cid, count)))
+        both = [counts_by_id[cid][school] for school in SCHOOLS]
+        count_bar = bars.record_bar(both[0], 0, both[1]) if any(both) else ""
         cards.append(f'<section class="sport alumni-card" id="{_esc(cid)}" aria-labelledby="{_esc(cid)}-h">'
                      f'{_heading(cid, category["name"])}'
-                     f'<p>{_esc(category["definition"])}</p><div class="tiles">{"".join(tiles_html)}</div>'
+                     f'<p>{_esc(category["definition"])}</p><div class="tiles">{"".join(tiles_html)}</div>{count_bar}'
                      f'<div class="alumni-schools">{"".join(schools_html)}</div>'
                      f'<p class="alumni-report"><a href="{_esc(correction_url(category["name"], repo_url))}">'
                      f'Suggest a correction</a></p></section>')
@@ -539,6 +546,7 @@ def render_page(data: dict, endowment: dict, *, head_html: str, footer_html: str
         f'<section class="overall endowment" id="endowment" aria-labelledby="endowment-h">{_heading("endowment", "Endowment")}'
         f'<p>Audited {_esc(endowment["fiscal_year"])} figures as of {_esc(fmt_date(endowment["as_of"]))}; reported accounting scopes differ.</p>'
         f'<div class="tiles endowment-values">{"".join(endow_cards)}</div>'
+        + ('' if even else bars.record_bar(per["depauw"], 0, per["wabash"]))
         + ('<p class="endowment-even"><strong>About even:</strong> the per-student figures are within '
            f'{EVEN_PERCENT}% of each other.</p>' if even else '') +
         f'<p class="endowment-caveat">{_esc(endowment["explanation"])} {_esc(per_student_note(endowment))}</p>'
