@@ -88,7 +88,7 @@ def test_totals_and_counts_come_from_the_data(tmp_path):
     _, page = build(tmp_path, {"football": football(), "mens-lacrosse": lacrosse()})
     t = text_of(page)
     # football 3-1-1, lacrosse 2-0 => 5 DePauw wins, 1 Wabash, 1 tie, 7 games, 2 sports
-    assert "DePauw 5 wins Wabash 1 win Ties 1 tie" in t
+    assert "DePauw 5 wins Ties 1 tie Wabash 1 win" in t   # the board reads wins, ties, wins
     assert "7 games across 2 sports" in t
     assert "DePauw 5 wins, Wabash 1, 1 tie, across 7 games in 2 sports" in page
 

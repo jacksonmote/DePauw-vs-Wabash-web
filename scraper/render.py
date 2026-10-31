@@ -117,6 +117,10 @@ CSP = ("default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; m
 WEB_FONT = "fonts/BarlowCondensed-Bold-latin.woff2"
 FONT_LICENSE = "fonts/OFL.txt"
 
+# The Bell-week box replaces the plain next-meeting box when the next meeting is the football game and it is this
+# many days away or fewer (counted in Eastern calendar days, so it never shows hours).
+BELL_WEEK_DAYS = 7
+
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
           "August", "September", "October", "November", "December"]
 KEY_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -864,8 +868,112 @@ def next_meeting_section(per_sport: dict, pending: dict, sports: dict, today: dt
             lines.append(f'<p class="next-pending">{esc(sports[key]["name"])}: result pending</p>')
     if not lines:
         return ""
-    return "\n".join(['<section class="next-meeting" id="next-meeting" aria-labelledby="next-meeting-h">',
+    countdown = bell_week_countdown(best, today)
+    if countdown:
+        lines.insert(0, countdown)
+    cls = "next-meeting next-meeting-bell" if countdown else "next-meeting"
+    return "\n".join([f'<section class="{cls}" id="next-meeting" aria-labelledby="next-meeting-h">',
                       heading(2, "next-meeting", "Next meeting"), *lines, '</section>'])
+
+
+def bell_week_days(best: tuple | None, today: dt.date) -> int | None:
+    """Days from `today` (the Eastern date) to the next meeting when that meeting is the football game and is at
+    most BELL_WEEK_DAYS away, else None. Postponed games never get here (next_overall skips them)."""
+    if not best or best[0] != "football":
+        return None
+    days = (dt.date.fromisoformat(best[1]["date"]) - today).days
+    return days if 0 <= days <= BELL_WEEK_DAYS else None
+
+
+def bell_week_countdown(best: tuple | None, today: dt.date) -> str:
+    """The Bell-week line: "N days to the Bell game", or "Today" on game day. The dated meeting line always
+    follows it, because the page can be up to one run old."""
+    days = bell_week_days(best, today)
+    if days is None:
+        return ""
+    if days == 0:
+        return '<p class="countdown"><span class="cd-num">Today</span> <span class="cd-unit">is the Bell game</span></p>'
+    return (f'<p class="countdown"><span class="cd-num">{days}</span> '
+            f'<span class="cd-unit">{"day" if days == 1 else "days"} to the Bell game</span></p>')
+
+
+def record_widths(counts: list) -> list:
+    """Whole-percent bar widths for counts, summing to exactly 100 (largest remainder; a zero count gets 0 and a
+    nonzero count is never rounded away entirely unless it is under 0.5%). All zeros when there are no games."""
+    total = sum(counts)
+    if not total:
+        return [0] * len(counts)
+    exact = [c * 100 / total for c in counts]
+    widths = [int(x) for x in exact]
+    order = sorted(range(len(counts)), key=lambda i: (exact[i] - widths[i], counts[i]), reverse=True)
+    for i in order[:100 - sum(widths)]:
+        widths[i] += 1
+    return widths
+
+
+def record_bar(depauw: int, ties: int, wabash: int, css_class: str = "") -> str:
+    """The proportional record bar: DePauw, ties, Wabash. Widths are the .w-N classes (never inline styles, which
+    the CSP forbids). Decorative: the numbers beside it say the same in text."""
+    widths = record_widths([depauw, ties, wabash])
+    segs = "".join(f'<span class="seg {cls} w-{w}"></span>'
+                   for cls, w, n in zip(("seg-d", "seg-t", "seg-w"), widths, (depauw, ties, wabash)) if n)
+    return f'<div class="rbar {css_class}" aria-hidden="true">{segs}</div>'.replace('class="rbar "', 'class="rbar"')
+
+
+def board_html(depauw: int, wabash: int, ties: int) -> str:
+    """The scoreboard: wins, ties, wins on a dark board with the record bar as its bottom strip."""
+    def side(cls, name, n, label):
+        return (f'<div class="board-side {cls}"><span class="board-name">{esc(name)}</span>'
+                f'<span class="board-num">{n:,}</span><span class="board-label">{esc(label)}</span></div>')
+    parts = [side("board-d", "DePauw", depauw, "wins" if depauw != 1 else "win")]
+    if ties:
+        parts.append(side("board-t", "Ties", ties, "tie" if ties == 1 else "ties"))
+    parts.append(side("board-w", "Wabash", wabash, "wins" if wabash != 1 else "win"))
+    return ('<div class="board">'
+            f'<div class="board-score{" has-ties" if ties else ""}">{"".join(parts)}</div>'
+            f'{record_bar(depauw, ties, wabash, "rbar-board")}</div>')
+
+
+def bell_strip(games: list) -> str:
+    """The Monon Bell holder near the top of the home page. The full block stays on the football card
+    (it keeps the id monon-bell, which this strip links to)."""
+    b = facts.bell(games)
+    if b is None or not b["holder"]:
+        return ""
+    record = (f'<span class="t-d">DePauw {b["depauw"]}</span> · <span class="t-w">Wabash {b["wabash"]}</span>'
+              + (f' · {esc(plural(b["ties"], "tie"))}' if b["ties"] else ""))
+    return "\n".join([
+        '<section class="bell-strip" id="bell-strip" aria-label="Current Monon Bell holder">',
+        '<h2 id="bell-strip-h">The Monon Bell</h2>',
+        f'<p class="bell-now"><strong>{esc(b["holder"])} holds the Bell</strong>'
+        f'<span class="bell-since">since {b["since"]} · {esc(bell_held_text(b))}</span></p>',
+        f'<p class="bell-rec">Bell record since {facts.BELL_START}: {record} · <a href="#monon-bell">The Bell’s story</a></p>',
+        '</section>',
+    ])
+
+
+def lead_label(rec: dict) -> str:
+    if rec["depauw_wins"] == rec["wabash_wins"]:
+        return "Even"
+    return "DePauw leads" if rec["depauw_wins"] > rec["wabash_wins"] else "Wabash leads"
+
+
+def jump_list(sports: dict) -> str:
+    """"Jump to a sport": one link per sport with its record, a proportional bar and who leads. Each goes to that
+    sport's card (its id), so every existing #sport link still lands where it did."""
+    rows = []
+    for key, s in sports.items():
+        r = s["record"]
+        spoken = f'DePauw {r["depauw_wins"]}, Wabash {r["wabash_wins"]}' + (f', {plural(r["ties"], "tie")}' if r["ties"] else "")
+        rows.append(
+            f'<li><a class="jump" href="#{esc(key)}"><span class="jn">{esc(s["name"])}</span>'
+            f'<span class="jr" aria-hidden="true">{r["depauw_wins"]}–{r["wabash_wins"]}–{r["ties"]}</span>'
+            f'<span class="sr-only">{esc(spoken)}</span>'
+            f'{record_bar(r["depauw_wins"], r["ties"], r["wabash_wins"], "rbar-sm")}'
+            f'<span class="jl">{esc(lead_label(r))}</span></a></li>')
+    return "\n".join(['<nav class="jumps" aria-labelledby="jump-h">', '<h2 id="jump-h">Jump to a sport</h2>',
+                      '<p class="jump-hint">Records read DePauw–Wabash–ties.</p>',
+                      '<ul class="jump-list">', *rows, '</ul>', '</nav>'])
 
 
 def sport_word(name: str) -> str:
@@ -1140,14 +1248,16 @@ def render_index(data: dict, checked: str | None = None, now: dt.datetime | None
         site_header("", "athletics", SUBTITLE, title_html=title_entrance_html()),
         '<main class="wrap" id="main">',
         game_day_html(today_games, sports),
-        next_meeting_section(ahead, pending, sports, today),
-        '<section class="overall" aria-labelledby="overall-h">',
+        '<section class="totals" aria-labelledby="overall-h">',
         '<h2 id="overall-h">All head-to-head sports</h2>',
-        tiles(t["depauw_wins"], t["wabash_wins"], t["ties"], "tiles-big"),
+        board_html(t["depauw_wins"], t["wabash_wins"], t["ties"]),
         f'<p class="overall-meta">{esc(plural(t["games_played"], "game"))} across {esc(plural(n_sports, "sport"))}</p>',
-        f'<p class="series-summary">{esc(series_summary(sports))}</p>' if series_summary(sports) else '',
-        f'<p class="not-included"><strong>Not included:</strong> {esc(NOT_INCLUDED)}</p>',
         '</section>',
+        bell_strip(sports["football"]["games"]) if "football" in sports else '',
+        next_meeting_section(ahead, pending, sports, today),
+        f'<p class="series-summary">{esc(series_summary(sports))}</p>' if series_summary(sports) else '',
+        jump_list(sports),
+        f'<p class="not-included"><strong>Not included:</strong> {esc(NOT_INCLUDED)}</p>',
         *sports_cards,
         '<details class="tiger-note"><summary><img src="easter-tiger.svg" width="80" height="80" alt="">'
         '<span>A tiger with something to say</span></summary><p>No further questions.</p></details>',

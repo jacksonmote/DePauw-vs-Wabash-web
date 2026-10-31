@@ -177,7 +177,7 @@ def banner(tmp_path, now, games, sports=None, text=True):
 def test_before_the_start_it_says_game_day_with_the_time_and_place(tmp_path):
     t, html, _ = banner(tmp_path, "2026-11-14 07:30", {"football": [sched()]})
     assert t == "Game day: Football vs. Wabash today, 1:07 PM · Scheumann Stadium, Muncie, Ind."
-    assert html.index('class="game-day"') < html.index('id="next-meeting"') < html.index('id="overall-h"')
+    assert html.index('class="game-day"') < html.index('id="overall-h"') < html.index('id="next-meeting"')   # the banner stays first
 
 
 def test_after_the_scheduled_start_it_says_underway_until_the_result_is_in(tmp_path):
