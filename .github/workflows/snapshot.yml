@@ -37,7 +37,7 @@ jobs:
     # Read-only: decides whether anything changed, then builds the release files (no Internet Archive calls)
     # and hands them to the release job as an artifact. Skipped when a manual run only retries archiving.
     if: ${{ github.event.inputs.archive_release_tag == '' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -87,7 +87,7 @@ jobs:
   release:
     needs: prepare
     if: ${{ needs.prepare.outputs.changed == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
@@ -122,7 +122,7 @@ jobs:
     if: >-
       ${{ always() && github.event.inputs.archive != 'false' &&
       (github.event.inputs.archive_release_tag != '' || needs.release.result == 'success') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     continue-on-error: true
     permissions:
