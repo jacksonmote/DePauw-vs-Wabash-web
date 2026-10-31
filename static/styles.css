@@ -183,11 +183,9 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 }
 .tile-depauw { border-top-color: var(--color-depauw-accent); }
 .tile-wabash { border-top-color: var(--color-wabash-accent); }
-.tile-tie { border-top-color: var(--color-tie-accent); }
 .tile-name { font-weight: 600; }
 .tile-depauw .tile-name { color: var(--color-depauw-text); }
 .tile-wabash .tile-name { color: var(--color-wabash-text); }
-.tile-tie .tile-name { color: var(--color-text-muted); }
 .tile-num { font: 700 clamp(2rem, 10vw, 2.75rem)/1 var(--font-numbers); font-variant-numeric: tabular-nums; }
 .tile-label { color: var(--color-text-muted); font-size: 0.875rem; }
 
@@ -198,7 +196,7 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .facts dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
 .source { margin: 1rem 0 0; font-size: 0.9375rem; }
 .provenance { margin: 1rem 0 0; color: var(--color-text-muted); font-size: 0.9375rem; }
-.date-note, .alt-score, .game-flag { color: var(--color-text-muted); font-size: 0.875rem; font-weight: 400; }
+.date-note, .game-flag { color: var(--color-text-muted); font-size: 0.875rem; font-weight: 400; }
 
 /* Game list */
 .games { margin-top: 1.25rem; border-top: 1px solid var(--color-border); padding-top: 0.75rem; }
@@ -271,7 +269,7 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .alumni-report { margin: 0.25rem 0 0; font-size: 0.9375rem; }
 .alumni-report a { display: inline-flex; align-items: center; min-height: var(--tap); }
 .endowment:target { outline: 3px solid var(--color-focus); outline-offset: 2px; }
-.alumni-method, .alumni-download { color: var(--color-text-muted); margin: 0; }
+.alumni-method { color: var(--color-text-muted); margin: 0; }
 .alumni-context { color: var(--color-text-muted); margin: 0.75rem 0 0.5rem; }
 .alumni-method-details { color: var(--color-text-muted); margin: 0.75rem 0 1.25rem; }
 .alumni-method-details summary { cursor: pointer; font-weight: 650; padding: 0.4rem 0; }

@@ -444,8 +444,11 @@ def load(path: Path) -> dict:
 # --------------------------------------------------------------------------- #
 
 # Icon files written to the site root (see build()): link tag attributes and the manifest entries.
-THEME_LIGHT, THEME_DARK = "#111111", "#000000"   # the header band's color in each mode
-BACKGROUND = "#f6f4ee"                           # the page's light-mode background
+# The browser's own chrome (address bar, splash screen) takes these from the meta tags and the manifest. They are
+# the header and page colors in static/styles.css (--color-header and --color-page, light and dark); a test reads
+# the stylesheet and fails if they drift apart.
+THEME_LIGHT, THEME_DARK = "#f4f1e8", "#0f0f0f"   # the header band's color in each mode
+BACKGROUND = "#f4f1e8"                           # the page's light-mode background
 
 
 def preview_info(data: dict, label: str | None = None) -> dict:

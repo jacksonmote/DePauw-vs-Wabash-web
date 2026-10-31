@@ -185,6 +185,15 @@ def _tokens():
     return light, {**light, **pick(dark_css)}
 
 
+def test_browser_chrome_colors_match_the_header_and_page_tokens_in_both_modes():
+    """theme-color tags and the manifest are the header and page colors of the stylesheet, so the phone's address
+    bar and the install splash screen never show a leftover color from an older design."""
+    light, dark = _tokens()
+    assert render.THEME_LIGHT == light["--color-header"] and render.THEME_DARK == dark["--color-header"]
+    assert render.BACKGROUND == light["--color-page"]
+    assert dark["--color-header"] == dark["--color-page"]               # the dark header is the page color
+
+
 def _lum(hex_):
     rgb = [int(hex_[i:i + 2], 16) / 255 for i in (1, 3, 5)]
     c = [v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in rgb]

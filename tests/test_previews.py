@@ -165,8 +165,8 @@ def test_theme_colors_follow_light_and_dark_mode(tmp_path):
     out, index = build(tmp_path, {"football": football()})
     for html in (index, (out / "404.html").read_text(encoding="utf-8")):
         p = tags(html)
-        assert meta(p, name="theme-color", media="(prefers-color-scheme: light)")[0]["content"] == "#111111"
-        assert meta(p, name="theme-color", media="(prefers-color-scheme: dark)")[0]["content"] == "#000000"
+        assert meta(p, name="theme-color", media="(prefers-color-scheme: light)")[0]["content"] == "#f4f1e8"
+        assert meta(p, name="theme-color", media="(prefers-color-scheme: dark)")[0]["content"] == "#0f0f0f"
 
 
 def test_every_page_links_every_icon_including_the_404_with_root_relative_paths(tmp_path):
@@ -183,7 +183,7 @@ def test_manifest_fields(tmp_path):
     out, _ = build(tmp_path, {"football": football()})
     m = json.loads((out / "site.webmanifest").read_text(encoding="utf-8"))
     assert m["name"] == "DePauw vs. Wabash" and m["short_name"] and m["start_url"] == "/"
-    assert m["display"] == "browser" and m["theme_color"] == "#111111" and m["background_color"] == "#f6f4ee"
+    assert m["display"] == "browser" and m["theme_color"] == "#f4f1e8" and m["background_color"] == "#f4f1e8"
     assert [(i["sizes"], i.get("purpose")) for i in m["icons"]] == [
         ("192x192", None), ("512x512", None), ("512x512", "maskable")]
 
