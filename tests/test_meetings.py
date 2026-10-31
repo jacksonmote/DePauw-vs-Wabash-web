@@ -96,11 +96,11 @@ def entry(*games):
     return {"schedule_url": "https://depauwtigers.com/sports/x/schedule", "games": list(games)}
 
 
-def test_next_meeting_sits_above_the_totals_and_names_sport_day_time_and_place(tmp_path):
+def test_next_meeting_sits_under_the_totals_board_and_names_sport_day_time_and_place(tmp_path):
     html = page(tmp_path, {"football": entry(sched("2026-11-14"))})
-    assert html.index('id="next-meeting"') < html.index('id="overall-h"')
-    top = text_of(html[html.index('id="next-meeting"'):html.index('id="overall-h"')])
-    assert "Next meeting Football, Sat, Nov 14 · 1:07 PM · Scheumann Stadium, Muncie, Ind." in top
+    assert html.index('id="overall-h"') < html.index('id="next-meeting"') < html.index('id="jump-h"')   # board, Bell, next meeting, jump list
+    top = text_of(html[html.index('id="next-meeting"'):html.index('id="jump-h"')])
+    assert "Next meeting 4 days to the Bell game Football, Sat, Nov 14 · 1:07 PM · Scheumann Stadium, Muncie, Ind." in top   # Nov 10 to Nov 14
     assert '<time datetime="2026-11-14">' in html
 
 
@@ -108,7 +108,7 @@ def test_the_soonest_sport_wins_the_top_spot_and_every_card_shows_its_own(tmp_pa
     html = page(tmp_path, {
         "football": entry(sched("2026-11-14")),
         "mens-basketball": entry(sched("2026-11-12", "7:00 PM", "home", "Neal Fieldhouse, Greencastle, Ind."))})
-    top = text_of(html[html.index('id="next-meeting"'):html.index('id="overall-h"')])
+    top = text_of(html[html.index('id="next-meeting"'):html.index('id="jump-h"')])
     assert "Men’s Basketball, Thu, Nov 12 · 7:00 PM · Neal Fieldhouse" in top
     football_card = html[html.index('id="football"'):html.index('id="mens-basketball"')]
     assert "Next meeting" in text_of(football_card) and "Sat, Nov 14 · 1:07 PM" in text_of(football_card)
@@ -174,7 +174,7 @@ def baseball_page(tmp_path, games, **kw):
 
 def test_a_doubleheader_from_one_school_is_one_entry_with_both_times(tmp_path):
     html = baseball_page(tmp_path, dh("2027-04-28", "12:00 PM", "3:30 PM"))
-    top = text_of(html[html.index('id="next-meeting"'):html.index('id="overall-h"')])
+    top = text_of(html[html.index('id="next-meeting"'):html.index('id="jump-h"')])
     assert ("Baseball, Wed, Apr 28, 2027 · Doubleheader · 12:00 PM and 3:30 PM · "
             "Goodrich Ballpark, Crawfordsville, Ind. (from Wabash's schedule)") in top.replace("’", "'")
     card = baseball_card(html)

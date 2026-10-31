@@ -218,6 +218,8 @@ def test_text_roles_meet_aa_and_fills_meet_3_to_1_in_both_modes(mode):
     # the gold and scarlet marks on the dark board (the record bar's strip)
     assert _ratio(t["--color-depauw-accent"], t["--color-board"]) >= 3
     assert _ratio(t["--color-bar-wabash"], t["--color-board"]) >= 3
+    assert _ratio(t["--color-board-tie-fill"], t["--color-board"]) >= 3
+    assert _ratio(t["--color-board-depauw"], t["--color-board"]) >= 3
 
 
 def test_dark_mode_scarlet_text_is_red_not_pink():

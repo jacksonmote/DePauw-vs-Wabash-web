@@ -232,8 +232,9 @@ def test_new_assets_and_stylesheet_stay_within_the_approved_budgets():
     assert sum((ROOT / f"static/{asset}").stat().st_size for asset in
                ("easter-bell.svg", "easter-paw.svg", "easter-tiger.svg")) <= 12288
     # Baseline stylesheet on c9fcced: 13,666 bytes; feature allowance: 6,144 bytes. The front-end polish (design
-    # tokens, compact header, quiet footer) raised the allowance to 24,576 bytes; later polish PRs state their own.
-    assert (ROOT / "static/styles.css").stat().st_size <= 24576
+    # tokens, compact header, quiet footer) raised the allowance to 24,576 bytes; the home top (scoreboard, record
+    # bars with 101 width classes, jump list) to 32,768; later polish PRs state their own.
+    assert (ROOT / "static/styles.css").stat().st_size <= 32768
     # The one web font: a Latin subset of Barlow Condensed Bold, served from this site, license text beside it.
     assert (ROOT / "static/fonts/BarlowCondensed-Bold-latin.woff2").stat().st_size <= 16384
 

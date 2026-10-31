@@ -400,7 +400,7 @@ def test_a_game_only_wabashs_schedule_lists_shows_on_the_page_with_its_source(tm
     g = {**sched("2026-11-14"), "source": "wabash"}
     both = {**sched("2026-11-20"), "source": "both"}
     html = meeting_page(tmp_path, {"football": entry(g), "mens-lacrosse": entry(both)})
-    top = text_of(html[html.index('id="next-meeting"'):html.index('id="overall-h"')])
+    top = text_of(html[html.index('id="next-meeting"'):html.index('id="jump-h"')])
     assert "Sat, Nov 14 · 1:07 PM · Scheumann Stadium, Muncie, Ind. (from Wabash’s schedule)" in top
     lax = text_of(html[html.index('id="mens-lacrosse"'):html.index("</article>", html.index('id="mens-lacrosse"'))])
     assert "Nov 20" in lax and "from Wabash" not in lax
