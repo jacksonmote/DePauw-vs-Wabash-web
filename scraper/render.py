@@ -52,6 +52,7 @@ import merge
 import places
 import review
 import alumni as alumni_page
+import funfacts
 import heists as heists_page
 from timeutil import from_eastern, to_eastern
 
@@ -75,6 +76,7 @@ ALUMNI_DATA = ROOT / "data" / "alumni.json"
 ENDOWMENT_DATA = ROOT / "data" / "endowment.json"
 HEIST_PATH = "heist-details/"
 HEISTS_DATA = ROOT / "data" / "bell-heists.json"
+FUNFACTS_DATA = ROOT / "data" / "fun-facts.json"
 REPO_URL = "https://github.com/jacksonmote/DePauw-vs-Wabash-web"
 SOURCE_HOST = "depauwtigers.com"
 WABASH_HOST = "sports.wabash.edu"
@@ -587,6 +589,26 @@ def title_entrance_html() -> str:
         '<span id="entrance-hint" class="sr-only">Activate five times, with no speed requirement, to unlock a message.</span>',
         '<p id="entrance-status" class="entrance-status" role="status" aria-live="polite"></p>',
     ])
+
+
+def tiger_note_html(facts_data: dict, today: dt.date) -> str:
+    """The home page's tiger easter egg. Every fact is in the page, each hidden except one; static/easter-eggs.js shows
+    a different random one each time the disclosure opens. The one visible without JavaScript is picked from the
+    Eastern date (funfacts.fallback_index), never at random, so a build is predictable."""
+    facts = facts_data["facts"]
+    shown = funfacts.fallback_index(len(facts), today)
+    items = []
+    for i, fact in enumerate(facts):
+        many = len(fact["sources"]) > 1
+        links = " · ".join(
+            f'<a href="{esc(src["url"])}" aria-label="Source: {esc(src["label"])}">Source{f" {n}" if many else ""}</a>'
+            for n, src in enumerate(fact["sources"], 1))
+        items.append(f'<li class="tiger-fact"{"" if i == shown else " hidden"}>'
+                     f'<span class="tiger-fact-school">{esc(funfacts.SCHOOL_LABELS[fact["school"]])}</span> '
+                     f'{esc(fact["text"])} <span class="tiger-fact-source">{links}</span></li>')
+    return ('<details class="tiger-note"><summary><img src="easter-tiger.svg" width="80" height="80" alt="">'
+            '<span>A tiger with something to say</span></summary>'
+            f'<ul class="tiger-facts">{"".join(items)}</ul></details>')
 
 
 def heading(level: int, anchor: str, text: str) -> str:
@@ -1227,7 +1249,7 @@ def site_header(prefix: str, current: str, subtitle: str, *, title_html: str = "
 
 
 def render_index(data: dict, checked: str | None = None, now: dt.datetime | None = None,
-                 upcoming: dict | None = None) -> str:
+                 upcoming: dict | None = None, fun_facts_data: dict | None = None) -> str:
     t = data["totals"]
     sports = data["sports"]
     n_sports = len(sports)
@@ -1239,6 +1261,8 @@ def render_index(data: dict, checked: str | None = None, now: dt.datetime | None
     now = now or dt.datetime.now(dt.timezone.utc)
     today = to_eastern(now)[0].date()
     upcoming = upcoming or {}
+    if fun_facts_data is None:
+        fun_facts_data = funfacts.validate(funfacts.load_json(FUNFACTS_DATA))
     ahead, pending = {}, {}
     for key, s in sports.items():
         ahead[key], pending[key] = meetings.split_games(
@@ -1271,8 +1295,7 @@ def render_index(data: dict, checked: str | None = None, now: dt.datetime | None
         jump_list(sports),
         f'<p class="not-included"><strong>Not included:</strong> {esc(NOT_INCLUDED)}</p>',
         *sports_cards,
-        '<details class="tiger-note"><summary><img src="easter-tiger.svg" width="80" height="80" alt="">'
-        '<span>A tiger with something to say</span></summary><p>No further questions.</p></details>',
+        tiger_note_html(fun_facts_data, today),
         '</main>',
         *site_footer(now, data=data, checked=checked, upcoming=upcoming),
         '</body>',
@@ -1470,8 +1493,10 @@ def render_csv(data: dict) -> str:
 def build(data_path: Path, out: Path, *, checked_at: str | None = None,
           now: dt.datetime | None = None, upcoming_path: Path | None = None,
           overrides_path: Path | None = None, alumni_path: Path | None = None,
-          endowment_path: Path | None = None, heists_path: Path | None = None) -> None:
+          endowment_path: Path | None = None, heists_path: Path | None = None,
+          fun_facts_path: Path | None = None) -> None:
     data = load(data_path)
+    fun_facts_data = funfacts.validate(funfacts.load_json(fun_facts_path or FUNFACTS_DATA))
     heists_data = heists_page.validate(heists_page.load_json(heists_path or HEISTS_DATA))
     # Validate all curated input and render every page before removing the previous output.
     alumni_data = alumni_page.validate_alumni(alumni_page.load_json(alumni_path or ALUMNI_DATA, "alumni"))
@@ -1490,7 +1515,7 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
     rules = merge.load_overrides(overrides_path)
     kept = sum(len(r) for r in review.load_keep_previous(overrides_path).values())
     pages = {
-        "index.html": render_index(data, checked_at, now, upcoming),
+        "index.html": render_index(data, checked_at, now, upcoming, fun_facts_data),
         HOW_PATH + "index.html": render_how_landing(data, now, upcoming),
         HOW_ATHLETICS_PATH + "index.html": render_how_athletics(data, rules, kept, checked_at, now, upcoming),
         HOW_ALUMNI_PATH + "index.html": render_how_alumni(alumni_data, endowment_data, now),
@@ -1566,6 +1591,7 @@ def main(argv=None) -> int:
     ap.add_argument("--alumni", type=Path, default=ALUMNI_DATA, help="curated alumni records")
     ap.add_argument("--endowment", type=Path, default=ENDOWMENT_DATA, help="matched-year endowment records")
     ap.add_argument("--heists", type=Path, default=HEISTS_DATA, help="curated Monon Bell heist history")
+    ap.add_argument("--fun-facts", type=Path, default=FUNFACTS_DATA, help="curated facts for the tiger easter egg")
     ap.add_argument("--checked-file", type=Path, default=CHECKED_AT,
                     help="file holding the time of the last successful scrape (optional)")
     ap.add_argument("--now", help="pretend it is this time, for local previews and tests only (never used by "
@@ -1580,7 +1606,8 @@ def main(argv=None) -> int:
     try:
         build(args.data, args.out, checked_at=read_checked(args.checked_file),
               upcoming_path=args.upcoming, now=parse_now(args.now), overrides_path=args.overrides,
-              alumni_path=args.alumni, endowment_path=args.endowment, heists_path=args.heists)
+              alumni_path=args.alumni, endowment_path=args.endowment, heists_path=args.heists,
+              fun_facts_path=args.fun_facts)
     except (merge.MergeError, DataError, KeyError, TypeError, ValueError, AttributeError) as exc:
         print(f"render failed: {exc!r}", file=sys.stderr)
         return 1

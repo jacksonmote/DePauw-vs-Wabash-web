@@ -9,7 +9,7 @@ import databranch  # noqa: E402
 import render  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-CURATED = ("overrides.json", "alumni.json", "endowment.json", "bell-heists.json")
+CURATED = ("overrides.json", "alumni.json", "endowment.json", "bell-heists.json", "fun-facts.json")
 
 
 def test_the_bot_files_and_the_curated_files_are_two_disjoint_lists_that_cover_data():

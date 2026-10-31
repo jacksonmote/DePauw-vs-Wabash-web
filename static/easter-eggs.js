@@ -16,3 +16,17 @@
   });
   button.hidden = false;
 })();
+
+(() => {
+  const note = document.querySelector(".tiger-note");
+  const facts = note ? Array.from(note.querySelectorAll(".tiger-fact")) : [];
+  if (!note || facts.length < 2) return;
+  let last = facts.findIndex((fact) => !fact.hidden);
+  note.addEventListener("toggle", () => {
+    if (!note.open) return;
+    let next;
+    do { next = Math.floor(Math.random() * facts.length); } while (next === last);
+    facts.forEach((fact, i) => { fact.hidden = i !== next; });
+    last = next;
+  });
+})();

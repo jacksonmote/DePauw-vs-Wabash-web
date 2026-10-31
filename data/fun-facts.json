@@ -1,0 +1,491 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-31",
+  "facts": [
+    {
+      "id": "depauw-founding",
+      "school": "depauw",
+      "text": "DePauw began in 1837 as Indiana Asbury University, founded by the Methodist Church and named for Francis Asbury, the first American bishop of the Methodist Episcopal Church.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        },
+        {
+          "label": "DePauw catalog: The University",
+          "url": "https://www.depauw.edu/academics/catalog/university/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-women-1867",
+      "school": "depauw",
+      "text": "DePauw admitted a small group of women in 1867.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        },
+        {
+          "label": "DePauw catalog: The University",
+          "url": "https://www.depauw.edu/academics/catalog/university/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-theta",
+      "school": "depauw",
+      "text": "Kappa Alpha Theta was founded at DePauw (then Indiana Asbury) on Jan 27, 1870. DePauw calls it the first sorority in the nation, and Alpha Chi Omega’s Alpha chapter began there too.",
+      "sources": [
+        {
+          "label": "DePauw: Kappa Alpha Theta",
+          "url": "https://www.depauw.edu/campus-life/greek/councilschapters/depauwchapters/kappaalphatheta/"
+        },
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        },
+        {
+          "label": "DePauw catalog: The University",
+          "url": "https://www.depauw.edu/academics/catalog/university/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-rector",
+      "school": "depauw",
+      "text": "The Rector Scholarship, begun in 1919, is DePauw’s oldest merit academic award.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-nature-park",
+      "school": "depauw",
+      "text": "DePauw’s nature park covers 520 acres, one-third of a mile west of campus.",
+      "sources": [
+        {
+          "label": "DePauw catalog: The University",
+          "url": "https://www.depauw.edu/academics/catalog/university/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-phi-beta-kappa",
+      "school": "depauw",
+      "text": "Indiana’s first Phi Beta Kappa chapter is at DePauw.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        },
+        {
+          "label": "DePauw catalog: The University",
+          "url": "https://www.depauw.edu/academics/catalog/university/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-wgre",
+      "school": "depauw",
+      "text": "DePauw’s radio station, WGRE, was the first collegiate FM station in the country, on the air in 1949.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-boulder",
+      "school": "depauw",
+      "text": "A massive granite boulder, given to DePauw in 1892, sits in front of East College.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-winter-term",
+      "school": "depauw",
+      "text": "Every January, DePauw students take part in Winter Term, a four-week immersive experience.",
+      "sources": [
+        {
+          "label": "DePauw: FAQ",
+          "url": "https://www.depauw.edu/faq/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-spj",
+      "school": "depauw",
+      "text": "The Society of Professional Journalists was founded on DePauw’s campus in 1909.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-name",
+      "school": "depauw",
+      "text": "Indiana Asbury University became DePauw University in appreciation of gifts from Washington C. DePauw and his family.",
+      "sources": [
+        {
+          "label": "DePauw catalog: The University",
+          "url": "https://www.depauw.edu/academics/catalog/university/"
+        },
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-nrhp",
+      "school": "depauw",
+      "text": "East College and McKim Observatory, built in 1884, are both listed on the National Register of Historic Places.",
+      "sources": [
+        {
+          "label": "DePauw catalog: The University",
+          "url": "https://www.depauw.edu/academics/catalog/university/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-prindle",
+      "school": "depauw",
+      "text": "The Janet Prindle Institute for Ethics, funded by a gift from Janet Prindle ’58, sits in the DePauw Nature Park. Its building opened in 2007.",
+      "sources": [
+        {
+          "label": "DePauw catalog: The University",
+          "url": "https://www.depauw.edu/academics/catalog/university/"
+        },
+        {
+          "label": "DePauw: remembering Janet Prindle Seidler ’58",
+          "url": "https://www.depauw.edu/stories/details/depauw-mourns-janet-prindle-seidler-58-founder-of-the-prindle-institute-for-ethics/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-music",
+      "school": "depauw",
+      "text": "DePauw’s music school was established in 1884 with a gift from Washington C. DePauw and is one of the oldest in the country.",
+      "sources": [
+        {
+          "label": "DePauw: Institute of Music",
+          "url": "https://www.depauw.edu/stories/details/institute-of-music/"
+        },
+        {
+          "label": "DePauw catalog: The University",
+          "url": "https://www.depauw.edu/academics/catalog/university/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-d3tv",
+      "school": "depauw",
+      "text": "D3TV, DePauw’s internet-distributed campus television station, was established in 1995.",
+      "sources": [
+        {
+          "label": "DePauw: Journalism at DePauw",
+          "url": "https://www.depauw.edu/academics/centers/pccm/journalism-at-depauw/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-tigers",
+      "school": "depauw",
+      "text": "DePauw’s teams became the Tigers in 1917–18, when a campus contest picked the name over Yellowjackets, Wasps, and Yellow Demons. The colors are old gold and black.",
+      "sources": [
+        {
+          "label": "DePauw archives: History",
+          "url": "https://library.depauw.edu/library/archives/ehistory/chapter2/2index13.html"
+        },
+        {
+          "label": "DePauw Athletics: Quick facts",
+          "url": "https://depauwtigers.com/sports/2022/5/26/information-athcomm-index.aspx"
+        }
+      ]
+    },
+    {
+      "id": "wabash-founding",
+      "school": "wabash",
+      "text": "Wabash was founded on Nov 21, 1832, and its founders knelt in the snow the next day to dedicate the school.",
+      "sources": [
+        {
+          "label": "Wabash: A Brief History",
+          "url": "https://www.wabash.edu/aboutwabash/history"
+        }
+      ]
+    },
+    {
+      "id": "wabash-nonsectarian",
+      "school": "wabash",
+      "text": "Wabash has always been independent and non-sectarian.",
+      "sources": [
+        {
+          "label": "Wabash: A Brief History",
+          "url": "https://www.wabash.edu/aboutwabash/history"
+        }
+      ]
+    },
+    {
+      "id": "wabash-caleb-mills",
+      "school": "wabash",
+      "text": "Wabash’s history says Caleb Mills, an early figure at the college, later became the father of the Indiana public school system.",
+      "sources": [
+        {
+          "label": "Wabash: A Brief History",
+          "url": "https://www.wabash.edu/aboutwabash/history"
+        }
+      ]
+    },
+    {
+      "id": "wabash-mills-bell",
+      "school": "wabash",
+      "text": "Each fall, Wabash uses Caleb Mills’ bell to ring in the freshman class, and each spring it rings out the graduating class.",
+      "sources": [
+        {
+          "label": "Wabash: A Brief History",
+          "url": "https://www.wabash.edu/aboutwabash/history"
+        }
+      ]
+    },
+    {
+      "id": "wabash-gentlemans-rule",
+      "school": "wabash",
+      "text": "Student conduct at Wabash is governed by the Gentleman’s Rule: behave as a gentleman and a responsible citizen.",
+      "sources": [
+        {
+          "label": "About Wabash",
+          "url": "https://www.wabash.edu/aboutwabash/"
+        }
+      ]
+    },
+    {
+      "id": "wabash-little-giants",
+      "school": "wabash",
+      "text": "Wabash got the nickname Little Giants in 1904, from an Indianapolis News sportswriter talking with coach Francis Cayou.",
+      "sources": [
+        {
+          "label": "Wabash Athletics History",
+          "url": "https://sports.wabash.edu/sports/2011/8/1/GEN_0801115020.aspx"
+        }
+      ]
+    },
+    {
+      "id": "wabash-always-fights",
+      "school": "wabash",
+      "text": "The phrase “Wabash Always Fights” first appeared at a 1919 meeting of the Montgomery County Alumni Association.",
+      "sources": [
+        {
+          "label": "Wabash Athletics History",
+          "url": "https://sports.wabash.edu/sports/2011/8/1/GEN_0801115020.aspx"
+        }
+      ]
+    },
+    {
+      "id": "wabash-old-wabash",
+      "school": "wabash",
+      "text": "“Old Wabash” was written in 1899, and Wabash calls it the nation’s longest fight song.",
+      "sources": [
+        {
+          "label": "About Wabash",
+          "url": "https://www.wabash.edu/aboutwabash/"
+        },
+        {
+          "label": "Wabash Athletics History",
+          "url": "https://sports.wabash.edu/sports/2011/8/1/GEN_0801115020.aspx"
+        }
+      ]
+    },
+    {
+      "id": "wabash-scarlet",
+      "school": "wabash",
+      "text": "Scarlet became Wabash’s official school color in 1886.",
+      "sources": [
+        {
+          "label": "Wabash Athletics History",
+          "url": "https://sports.wabash.edu/sports/2011/8/1/GEN_0801115020.aspx"
+        }
+      ]
+    },
+    {
+      "id": "wabash-mission",
+      "school": "wabash",
+      "text": "Wabash’s mission is to educate men to think critically, act responsibly, lead effectively, and live humanely.",
+      "sources": [
+        {
+          "label": "About Wabash",
+          "url": "https://www.wabash.edu/aboutwabash/"
+        }
+      ]
+    },
+    {
+      "id": "wabash-mxibs",
+      "school": "wabash",
+      "text": "Wabash’s Malcolm X Institute of Black Studies was founded in 1970, according to the institute’s own page.",
+      "sources": [
+        {
+          "label": "Wabash: Malcolm X Institute of Black Studies",
+          "url": "https://www.wabash.edu/mxibs/"
+        },
+        {
+          "label": "Wabash: MXIBS celebrates 40 years",
+          "url": "https://www.wabash.edu/news/displaystory.cfm?news_ID=9160"
+        }
+      ]
+    },
+    {
+      "id": "wabash-archives",
+      "school": "wabash",
+      "text": "Wabash’s college archives, part of Lilly Library, hold a Biblia Sacra printed in 1540 as their oldest volume.",
+      "sources": [
+        {
+          "label": "Wabash: Archives book collections",
+          "url": "https://library.wabash.edu/archives/bookcollections"
+        }
+      ]
+    },
+    {
+      "id": "wabash-chapel-sing",
+      "school": "wabash",
+      "text": "At Chapel Sing, a Wabash tradition, freshmen show they know the words to “Old Wabash” and the alma mater.",
+      "sources": [
+        {
+          "label": "Wabash: Chapel Sing tradition",
+          "url": "https://www.wabash.edu/news/displaystory.cfm?news_ID=2768"
+        }
+      ]
+    },
+    {
+      "id": "wabash-democracy",
+      "school": "wabash",
+      "text": "The Wabash Democracy and Public Discourse initiative works to advance deliberation, discussion, debate, and advocacy.",
+      "sources": [
+        {
+          "label": "Wabash: Democracy and Public Discourse",
+          "url": "https://www.wabash.edu/wabashx/democracy/"
+        }
+      ]
+    },
+    {
+      "id": "wabash-scarlet-yarns",
+      "school": "wabash",
+      "text": "Scarlet Yarns is a Wabash project in which alumni record their stories at the Big Bash reunion, modeled on StoryCorps.",
+      "sources": [
+        {
+          "label": "Wabash: Dear Old Wabash blog",
+          "url": "https://blog.wabash.edu/dearoldwabash/2010/05/28/scarlet-yarns-now-a-big-bash-tradition/"
+        }
+      ]
+    },
+    {
+      "id": "wabash-sphinx",
+      "school": "wabash",
+      "text": "The Sphinx Club, a Wabash student group dating to 1921, was founded purely for social purposes.",
+      "sources": [
+        {
+          "label": "Wabash: Dear Old Wabash blog",
+          "url": "https://blog.wabash.edu/dearoldwabash/2021/12/13/founding-of-the-sphinx-club/"
+        }
+      ]
+    },
+    {
+      "id": "both-locomotive-bell",
+      "school": "both",
+      "text": "The Monon Bell is a locomotive bell from the Monon Railroad, and it became the rivalry’s trophy in 1932.",
+      "sources": [
+        {
+          "label": "DePauw Athletics: Monon Bell history",
+          "url": "https://depauwtigers.com/sports/2022/6/28/monon-bell-history.aspx"
+        },
+        {
+          "label": "Wabash Athletics: Monon Bell",
+          "url": "https://sports.wabash.edu/mononbell"
+        }
+      ]
+    },
+    {
+      "id": "both-bell-weight",
+      "school": "both",
+      "text": "The Monon Bell weighs about 300 pounds, though reports have put it anywhere from 200 to 400.",
+      "sources": [
+        {
+          "label": "DePauw Athletics: Rivalry facts",
+          "url": "https://depauwtigers.com/sports/2022/6/28/rivalry-facts.aspx"
+        }
+      ]
+    },
+    {
+      "id": "both-monon-line",
+      "school": "both",
+      "text": "The Monon Railroad line between Crawfordsville and Greencastle often carried the teams to the game.",
+      "sources": [
+        {
+          "label": "Wabash Athletics: Monon Bell",
+          "url": "https://sports.wabash.edu/mononbell"
+        }
+      ]
+    },
+    {
+      "id": "both-tie-rule",
+      "school": "both",
+      "text": "If the Monon Bell game ends in a tie, the team that held the Bell going in keeps it.",
+      "sources": [
+        {
+          "label": "DePauw Athletics: Rivalry facts",
+          "url": "https://depauwtigers.com/sports/2022/6/28/rivalry-facts.aspx"
+        }
+      ]
+    },
+    {
+      "id": "both-ballad",
+      "school": "both",
+      "text": "“The Ballad of the Monon Bell,” a song about the rivalry, was recorded in 1985.",
+      "sources": [
+        {
+          "label": "DePauw Athletics: Monon Bell history",
+          "url": "https://depauwtigers.com/sports/2022/6/28/monon-bell-history.aspx"
+        }
+      ]
+    },
+    {
+      "id": "both-glca",
+      "school": "both",
+      "text": "DePauw and Wabash are both members of the Great Lakes Colleges Association.",
+      "sources": [
+        {
+          "label": "Great Lakes Colleges Association: Our colleges",
+          "url": "https://www.glca.org/our-colleges/"
+        }
+      ]
+    },
+    {
+      "id": "both-ncac",
+      "school": "both",
+      "text": "DePauw and Wabash both compete in the North Coast Athletic Conference, which DePauw joined effective July 1, 2011.",
+      "sources": [
+        {
+          "label": "Wabash: DePauw joins the NCAC",
+          "url": "https://www.wabash.edu/news/story/8126"
+        },
+        {
+          "label": "DePauw: FAQ",
+          "url": "https://www.depauw.edu/faq/"
+        },
+        {
+          "label": "Wikipedia: North Coast Athletic Conference",
+          "url": "https://en.wikipedia.org/wiki/North_Coast_Athletic_Conference"
+        }
+      ]
+    }
+  ]
+}

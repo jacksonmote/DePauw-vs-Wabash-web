@@ -310,6 +310,9 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .tiger-note summary { display: flex; align-items: center; gap: 0.5rem; min-height: 44px; cursor: pointer; font-weight: 650; }
 .tiger-note summary img { max-width: 80px; height: auto; }
 .tiger-note p { margin: 0.5rem 0; }
+.tiger-facts { list-style: none; margin: 0.5rem 0 0; padding: 0; max-width: 40rem; }
+.tiger-fact-school { font-weight: 650; }
+.tiger-fact-source { font-size: var(--text-sm); white-space: nowrap; }
 .admissions-note { border: 1px solid var(--color-border); border-radius: var(--radius); padding: 0.75rem 1rem; }
 .admissions-note summary { cursor: pointer; font-weight: 650; min-height: 44px; padding-block: 0.5rem; }
 .admissions-note p { margin: 0.5rem 0 0; }
