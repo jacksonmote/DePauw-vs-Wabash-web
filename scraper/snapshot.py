@@ -45,6 +45,7 @@ DATA_FILES = ("series.json", "depauw.json", "wabash.json", "overrides.json", "up
 HASHED_FILES = ("series.json", "depauw.json", "wabash.json", "overrides.json")
 USER_AGENT = "DePauw-vs-Wabash-fan-site snapshot (https://github.com/jacksonmote/DePauw-vs-Wabash-web)"
 SAVE_URL = "https://web.archive.org/save/"
+WAYBACK_PREFIX = "https://web.archive.org/web/"   # a saved copy's link must start with this to be recorded
 SAVE_TIMEOUT = 180            # seconds to wait on one page (Save Page Now can be slow)
 SAVE_PAUSE = 6                # seconds between requests
 SAVE_BUDGET = 1800            # seconds for the whole archive step; pages left over are recorded as not saved
@@ -168,7 +169,7 @@ def wayback_save(urls: list, opener=urllib.request.urlopen, sleep=time.sleep, lo
                 link = resp.headers.get("Content-Location") or resp.geturl()
             if link.startswith("/"):
                 link = "https://web.archive.org" + link
-            if "/web/" not in link:
+            if not link.startswith(WAYBACK_PREFIX):
                 raise ValueError(f"no archive link came back ({link})")
             links.append(link)
             log(f"OK   archived {url}")

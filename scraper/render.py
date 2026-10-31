@@ -141,12 +141,25 @@ def esc(value) -> str:
     return html.escape(str(value), quote=True)
 
 
+UNSAFE_URL_CHARS = re.compile(r"[\\\s\x00-\x1f\x7f\"'<>`]")
+
+
 def safe_url(url) -> str | None:
-    """Only link to https pages on the two source sites; drop anything else (javascript:, http:, other hosts)."""
-    if not isinstance(url, str):
+    """Only link to https pages on the two source sites; drop anything else (javascript:, http:, other hosts).
+
+    Also dropped: a backslash (a browser reads it as a slash, so https://evil.example\\@depauwtigers.com/ goes to
+    evil.example), any whitespace, control character or quote, a login (user:pass@), a port, and an uppercase
+    scheme or host, none of which a source page uses. A link that passes is returned exactly as given."""
+    if not isinstance(url, str) or UNSAFE_URL_CHARS.search(url) or not url.startswith("https://"):
         return None
-    parts = urlparse(url)
-    if parts.scheme != "https" or parts.hostname not in SOURCE_HOSTS:
+    try:
+        parts = urlparse(url)
+        port = parts.port
+    except ValueError:
+        return None
+    if parts.hostname not in SOURCE_HOSTS or parts.username is not None or parts.password is not None or port is not None:
+        return None
+    if parts.netloc != parts.netloc.lower() or "@" in parts.netloc or ":" in parts.netloc:
         return None
     return url
 
@@ -1411,11 +1424,14 @@ CSV_COLUMNS = ["sport", "date", "season", "location", "site", "depauw_score", "w
 RESULT_WORDS = {"W": "DePauw win", "L": "Wabash win", "T": "Tie"}
 
 
+CSV_FORMULA_STARTS = ("=", "+", "-", "@", "\t", "\r", "\n")
+
+
 def csv_text(value) -> str:
-    """Text for a spreadsheet cell. A value that starts with =, +, - or @ would run as a formula in
-    Excel or Sheets, so it gets a leading apostrophe."""
+    """Text for a spreadsheet cell. A value that starts with =, +, -, @, a tab or a carriage return (or a line
+    feed) would run as a formula in Excel or Sheets, so it gets a leading apostrophe."""
     text = "" if value is None else str(value)
-    return "'" + text if text[:1] in ("=", "+", "-", "@") else text
+    return "'" + text if text[:1] in CSV_FORMULA_STARTS else text
 
 
 def fmt_csv_num(x) -> str:
@@ -1432,13 +1448,13 @@ def render_csv(data: dict) -> str:
         for g in s["games"]:
             v = g.get("wabash_version")
             writer.writerow([csv_text(s["name"]), g["date"] if date_known(g) else "", csv_text(g.get("season")),
-                             g["location"], csv_text(g.get("site")),
+                             csv_text(g["location"]), csv_text(g.get("site")),
                              fmt_csv_num(g["depauw"]) if facts.has_score(g) else "",
                              fmt_csv_num(g["wabash"]) if facts.has_score(g) else "",
                              RESULT_WORDS[g["result"]], csv_text(fmt_note(g.get("note"))),
-                             safe_url(g.get("boxscore")) or "", g.get("source", "depauw"),
+                             safe_url(g.get("boxscore")) or "", csv_text(g.get("source", "depauw")),
                              "yes" if date_known(g) else "no", "yes" if g.get("disputed") else "no",
-                             "yes" if g.get("date_differs") else "no", g.get("wabash_date") or "",
+                             "yes" if g.get("date_differs") else "no", csv_text(g.get("wabash_date")),
                              f"{fmt_csv_num(g['depauw'])}-{fmt_csv_num(g['wabash'])}" if g.get("disputed") and v else "",
                              f"{fmt_csv_num(v['depauw'])}-{fmt_csv_num(v['wabash'])}" if g.get("disputed") and v else ""])
     return buf.getvalue()

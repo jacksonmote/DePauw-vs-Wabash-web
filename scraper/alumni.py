@@ -51,8 +51,8 @@ def _text(value, field):
 def _url(value, field):
     _text(value, field)
     parsed = urlparse(value)
-    if parsed.scheme not in ("http", "https") or not parsed.hostname:
-        _fail(f"{field} must be an absolute HTTP(S) URL with a host")
+    if parsed.scheme != "https" or not parsed.hostname:
+        _fail(f"{field} must be an absolute https URL with a host")
 
 
 def _date(value, field):
