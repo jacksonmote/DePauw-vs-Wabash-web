@@ -44,6 +44,8 @@ def world(tmp_path):
     sh(tmp_path, "init", "--bare", "-b", "main", str(origin))
     work = tmp_path / "work"
     sh(tmp_path, "init", "-b", "main", str(work))
+    sh(work, "config", "user.name", "Test")
+    sh(work, "config", "user.email", "test@example.com")
     sh(work, "config", "core.autocrlf", "false")          # the machine's own setting must not rewrite the CRLF below
     for n in BOT_FILES:                                   # main as it is today: the bot files are still on it
         (work / "data").mkdir(exist_ok=True)
@@ -79,6 +81,7 @@ def test_bootstrap_reuses_mains_blobs_and_holds_only_the_bot_files(world):
     assert branch_files(world, repo=world.work) == sorted(f"data/{n}" for n in BOT_FILES)
     assert sh(world.work, "rev-list", "--parents", "-n1", "refs/heads/data").count(" ") == 0       # a root commit
     assert sh(world.work, "log", "-1", "--format=%s", "refs/heads/data") == "Start the data branch from main's data/"
+    assert sh(world.work, "log", "-1", "--format=%an <%ae>", "refs/heads/data") == "Test <test@example.com>"   # a person, not the bot
 
 
 def test_bootstrap_refuses_to_overwrite_a_branch_and_a_source_without_the_files(world):

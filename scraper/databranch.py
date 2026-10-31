@@ -130,8 +130,10 @@ def write_blob(content: bytes, repo: Path) -> str:
     return text(git("hash-object", "-w", "--no-filters", "--stdin", repo=repo, input=content))
 
 
-def commit_tree(entries: dict, parent: str | None, message: str, repo: Path, when: dt.datetime) -> str:
-    """A commit holding exactly `entries` ({path: blob id}), by the bot, on top of `parent` (or a root commit)."""
+def commit_tree(entries: dict, parent: str | None, message: str, repo: Path, when: dt.datetime,
+                identity: tuple = BOT_IDENTITY) -> str:
+    """A commit holding exactly `entries` ({path: blob id}), by `identity` (the bot unless told otherwise), on top
+    of `parent` (or a root commit)."""
     fd, index = tempfile.mkstemp(prefix="databranch-index-")
     os.close(fd)
     os.unlink(index)   # git wants to create it
@@ -144,8 +146,8 @@ def commit_tree(entries: dict, parent: str | None, message: str, repo: Path, whe
         if os.path.exists(index):
             os.unlink(index)
     stamp = when.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    who = {"GIT_AUTHOR_NAME": BOT_IDENTITY[0], "GIT_AUTHOR_EMAIL": BOT_IDENTITY[1], "GIT_AUTHOR_DATE": stamp,
-           "GIT_COMMITTER_NAME": BOT_IDENTITY[0], "GIT_COMMITTER_EMAIL": BOT_IDENTITY[1], "GIT_COMMITTER_DATE": stamp}
+    who = {"GIT_AUTHOR_NAME": identity[0], "GIT_AUTHOR_EMAIL": identity[1], "GIT_AUTHOR_DATE": stamp,
+           "GIT_COMMITTER_NAME": identity[0], "GIT_COMMITTER_EMAIL": identity[1], "GIT_COMMITTER_DATE": stamp}
     args = ["commit-tree", tree, "-m", message] + (["-p", parent] if parent else [])
     return text(git(*args, repo=repo, env=who))
 
@@ -191,7 +193,8 @@ def push(remote: str = "origin", data_dir: Path = DATA, repo: Path = ROOT, branc
 
 def bootstrap(source: str, repo: Path = ROOT, branch: str = BRANCH, now: dt.datetime | None = None) -> str:
     """Create the local `data` branch as a root commit holding the BOT_FILES exactly as `source` (a ref such as
-    origin/main) has them: the blobs are reused, not copied, so they are identical by construction."""
+    origin/main) has them: the blobs are reused, not copied, so they are identical by construction. The commit is
+    made with the repository's git identity (the person running this), not the bot's."""
     if git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}", repo=repo, check=False).returncode == 0:
         raise DataBranchError(f"a local `{branch}` branch already exists")
     entries = {}
@@ -200,8 +203,12 @@ def bootstrap(source: str, repo: Path = ROOT, branch: str = BRANCH, now: dt.date
         if proc.returncode != 0:
             raise DataBranchError(f"{source} has no data/{name}")
         entries[f"data/{name}"] = text(proc)
+    # A person makes this one commit, so it carries the repository's configured identity, not the bot's.
+    who = tuple(text(git("config", key, repo=repo, check=False)) for key in ("user.name", "user.email"))
+    if not all(who):
+        raise DataBranchError("set git config user.name and user.email first: the first commit is made by a person")
     commit = commit_tree(entries, None, "Start the data branch from main's data/", repo,
-                         now or dt.datetime.now(dt.timezone.utc))
+                         now or dt.datetime.now(dt.timezone.utc), identity=who)
     git("update-ref", f"refs/heads/{branch}", commit, repo=repo)
     return commit
 
