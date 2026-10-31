@@ -636,10 +636,18 @@ def fun_facts(key: str, s: dict) -> list:
     return out
 
 
-def fun_facts_html(items: list) -> str:
-    if not items:
+def bell_heist_fact() -> str:
+    """The football card's last Fun facts bullet: a short blurb and the link to the heist history page."""
+    return ('<li><span class="fun-label">Bell heists:</span> Stealing the Bell from each other is a longstanding '
+            f'tradition between the two schools. <a href="{esc(HEIST_PATH)}">The Bell’s heist history</a></li>')
+
+
+def fun_facts_html(items: list, extra_items: tuple = ()) -> str:
+    """The Fun facts list. extra_items are finished <li> lines (already escaped) that go after the computed facts."""
+    if not items and not extra_items:
         return ""
-    lis = "\n".join(f'<li><span class="fun-label">{esc(k)}:</span> {esc(v)}</li>' for k, v in items)
+    lis = "\n".join([f'<li><span class="fun-label">{esc(k)}:</span> {esc(v)}</li>' for k, v in items]
+                    + list(extra_items))
     return f'<div class="fun-facts">\n<h3>Fun facts</h3>\n<ul>\n{lis}\n</ul>\n</div>'
 
 
@@ -746,8 +754,7 @@ def bell_block(games: list) -> str:
         heading(3, "monon-bell", "The Monon Bell"),
         *rows,
         f'<dl class="facts bell-facts">\n<div><dt>Bell record since {facts.BELL_START}</dt><dd>{record}</dd></div>\n</dl>',
-        f'<p class="bell-history">{esc(BELL_HISTORY)} <a href="{esc(BELL_URL)}">Read more on Wikipedia</a> · '
-        f'<a href="{esc(HEIST_PATH)}">The Bell’s heist history</a></p>',
+        f'<p class="bell-history">{esc(BELL_HISTORY)} <a href="{esc(BELL_URL)}">Read more on Wikipedia</a></p>',
         '<a class="bell-heist-link" href="bell-heist/" aria-label="A little Bell business">'
         '<img src="easter-bell.svg" width="28" height="28" alt=""></a>',
         '</section>',
@@ -820,7 +827,7 @@ def card(key: str, s: dict, ahead: list, pending: list, up: dict | None, today: 
         f'{tiles(rec["depauw_wins"], rec["wabash_wins"], rec["ties"])}\n'
         f'<dl class="facts">\n{dl}\n</dl>\n{source}\n'
         f'{bell_block(games) if key == "football" else ""}\n'
-        f'{fun_facts_html(fun_facts(key, s))}\n'
+        f'{fun_facts_html(fun_facts(key, s), (bell_heist_fact(),) if key == "football" and facts.bell(games) else ())}\n'
         f'{games_table(key, games, words, merged)}\n</article>'
     )
 
