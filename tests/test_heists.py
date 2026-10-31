@@ -118,7 +118,7 @@ def test_the_game_result_comes_from_the_series_data_and_is_skipped_without_a_gam
 
 
 def page(games, data=SAMPLE):
-    return "\n".join(heists.render_main(data, games, back_html="", game_href="../#football", joke_href="../bell-heist/"))
+    return "\n".join(heists.render_main(data, games, back_html="", game_href="../#football"))
 
 
 def test_cards_have_anchors_sources_and_the_bare_years_share_one_compact_card():
@@ -166,7 +166,7 @@ def test_the_page_is_built_with_the_strict_csp_athletics_nav_and_share_tags(site
     assert "<title>The Bell’s heist history | DePauw vs. Wabash</title>" in html
     assert f'<link rel="canonical" href="{render.SITE_URL}heist-details/">' in html
     assert 'property="og:image"' in html
-    assert "Stolen at least" in html and "Please let" in html and 'href="../bell-heist/"' in html
+    assert "Stolen at least" in html and "Please let" not in html
     assert f"{render.SITE_URL}heist-details/" in read(site, "sitemap.xml")
     assert (site / "data" / "bell-heists.json").exists()
 

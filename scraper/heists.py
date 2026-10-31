@@ -292,10 +292,10 @@ def _other_card(bare: list, football_games: list, game_href: str) -> str:
             + f'<ul class="heist-years">{"".join(rows)}</ul></section>')
 
 
-def render_main(data: dict, football_games: list, *, back_html: str, game_href: str, joke_href: str,
+def render_main(data: dict, football_games: list, *, back_html: str, game_href: str,
                 repo_url: str = REPO_URL) -> list:
     """The page's <main> content as lines of HTML. `back_html` is the shared back link, `game_href` points at
-    the football card and `joke_href` at /bell-heist/."""
+    the football card."""
     counts = tally(data)
     timeline = []
     bare = other_thefts(data)
@@ -330,5 +330,4 @@ def render_main(data: dict, football_games: list, *, back_html: str, game_href: 
         *[f"<p>{_esc(p)}</p>" for p in guarding["paragraphs"]],
         _sources_html(guarding["sources"]),
         '</section>',
-        f'<p class="heist-closing">Please let <a href="{_esc(joke_href)}">/bell-heist/</a> be your only heist.</p>',
     ]

@@ -1227,8 +1227,7 @@ def render_heist_details(data: dict, heists_data: dict, now: dt.datetime | None 
     counts = heists_page.tally(heists_data)
     description = f"{heists_page.tally_text(counts)}. A sourced timeline of the attempts on the Monon Bell."
     back = f'<p class="back"><a href="../">{esc(BACK_ATHLETICS)}</a></p>'
-    main = heists_page.render_main(heists_data, football, back_html=back, game_href="../#football",
-                                   joke_href="../bell-heist/")
+    main = heists_page.render_main(heists_data, football, back_html=back, game_href="../#football")
     return "\n".join([
         head(f"{heists_page.TITLE} | DePauw vs. Wabash", description, prefix="../",
              canonical=SITE_URL + HEIST_PATH, preview=athletics_preview(data, now, upcoming or {})),
