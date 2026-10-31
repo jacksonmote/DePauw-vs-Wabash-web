@@ -252,7 +252,7 @@ def test_main_picks_up_the_checked_file(tmp_path):
     out = tmp_path / "site"
     assert render.main(["--data", str(write(tmp_path, series({"football": football()}))), "--out", str(out),
                         "--checked-file", str(f)]) == 0
-    assert "Last checked" in text_of((out / "index.html").read_text())
+    assert "Last checked" in text_of((out / "index.html").read_text(encoding="utf-8"))
 
 
 # ---- loud failures ------------------------------------------------------- #
