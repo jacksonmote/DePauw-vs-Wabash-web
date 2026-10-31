@@ -129,6 +129,12 @@
       "sources": [{"label": "Wabash Athletics History", "url": "https://sports.wabash.edu/sports/2011/8/1/GEN_0801115020.aspx"}]
     },
     {
+      "id": "wabash-mission",
+      "school": "wabash",
+      "text": "Wabash’s mission is to educate men to think critically, act responsibly, lead effectively, and live humanely.",
+      "sources": [{"label": "About Wabash", "url": "https://www.wabash.edu/aboutwabash/"}]
+    },
+    {
       "id": "both-locomotive-bell",
       "school": "both",
       "text": "The Monon Bell is a locomotive bell from the Monon Railroad, and it became the rivalry’s trophy in 1932.",
