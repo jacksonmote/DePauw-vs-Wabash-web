@@ -136,7 +136,7 @@ jobs:
         run: python scraper/render.py
 
       # HTML validation only warns. If Node cannot be set up, validation is skipped and reported; either
-      # way the site is still committed, uploaded and deployed (the report job turns the run red afterward).
+      # way the site is still uploaded and deployed (the report job turns the run red afterward).
       - name: Set up Node for HTML validation
         id: setup_node
         continue-on-error: true

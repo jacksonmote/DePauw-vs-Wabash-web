@@ -275,7 +275,7 @@ Games more than 2 days apart that match no typo pattern are never merged automat
 
 ### Reading and adjusting the logic
 
-**How to explain any one game.** Look it up in `data/series.json` (or `games.csv`):
+**How to explain any one game.** Look it up in `data/series.json` (on the `data` branch; `python scraper/databranch.py fetch` copies it into `data/`) or in `games.csv`:
 
 - `source: both` and no flags: both schools list it the same way.
 - `source: both` with `date_differs` (and `wabash_date`): the same game, listed on different dates.
@@ -316,7 +316,7 @@ A game's window, per sport and date:
 
 - It opens at the first game's scheduled start, or at noon Eastern when no game that day has a time.
 - It closes when the history pages (either school's) list as many games on that date as the schedule did, or at 3 AM Eastern the next day, whichever comes first. A postponed game opens no window.
-- Inside the window the run scrapes, merges, commits data changes and deploys, exactly like a scheduled run.
+- Inside the window the run scrapes, merges, stores data changes on the `data` branch and deploys, exactly like a scheduled run.
 
 A schedule page can post the final score before the history page lists the game, and the scraper normally drops a finished game from `data/upcoming.json`. So that the window does not close early, a game dated today or yesterday that disappears from a schedule stays in the file until the history has it (unless the schedule marks it canceled, and never for more than a day).
 
