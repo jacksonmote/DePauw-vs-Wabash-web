@@ -106,6 +106,15 @@ def test_bell_heist_is_a_discoverable_unindexed_story_not_in_the_sitemap(site):
     assert "bell-heist" not in page(site, "sitemap.xml")
 
 
+def test_the_bell_heist_page_uses_block_flow_so_paragraph_margins_do_not_stack_on_the_grid_gap():
+    css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+    assert re.search(r"^\.bell-heist \{ display: block;", css, re.M)
+    assert re.search(r"^\.bell-heist p \{ margin: 0 0 0\.75rem; \}", css, re.M)
+    assert "gap" not in re.search(r"^\.bell-heist \{[^}]*\}", css, re.M).group(0)
+    # the class is only on that page's <main>; the home page's Bell link is a different class
+    assert '<main class="wrap prose bell-heist">' in (ROOT / "scraper" / "render.py").read_text(encoding="utf-8")
+
+
 def test_each_nonempty_history_gets_one_reward_and_empty_history_gets_none():
     data = render.load(ROOT / "data" / "series.json")
     home = BeautifulSoup(render.render_index(data, now=NOW, upcoming={}), "html.parser")
