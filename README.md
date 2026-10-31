@@ -28,7 +28,7 @@ The site has two halves, joined by a navigation bar at the top of every page (**
 | `/bell-heist/` | A public, unindexed fictional Bell mission page, linked from the Monon Bell block |
 | any missing address | `404.html`: two back links to the halves, root-relative links (GitHub Pages serves it at any depth), not indexed |
 
-The site also publishes `data/series.json`, `data/alumni.json`, `data/endowment.json`, `data/bell-heists.json` and `games.csv` (the downloads linked in the footers), `sitemap.xml`, `robots.txt` and `site.webmanifest`.
+The site also publishes `data/series.json`, `data/alumni.json`, `data/endowment.json`, `data/bell-heists.json` and `games.csv` (the downloads linked in the footers), `sitemap.xml`, `robots.txt`, `site.webmanifest` and `/.well-known/security.txt`.
 
 Unofficial fan site, not affiliated with DePauw University or Wabash College. Only men's head-to-head competition is compared: Wabash is an all-male college, and multi-team events (cross country, track and field, golf, and swimming invitationals and championships) aren't head-to-head.
 
@@ -402,6 +402,7 @@ The logic is in `scraper/snapshot.py` and the tests in `tests/test_snapshot.py`.
 - **Writing rules the generated text follows.** Visible text uses the curly apostrophe (’), including sport names ("Men’s Basketball"), headings, the summary sentence, the banner, page titles, meta descriptions, share-card text and alt text: `render.curly_html` converts each finished page, touching only what a reader sees (text, the title, description and share-card meta tags, and `alt`, `aria-label`, `title` and `placeholder` attributes). The data files, `sources.json`, links, ids and `games.csv` keep the sources' straight apostrophe, and the issue forms and their prefilled sport use the curly one. Locations are AP style ("Ind.", "Ohio"); dates read "Oct 29, 2026"; every generated list of three or more items has a serial comma (`render.join_and`: "lacrosse, tennis, and swimming and diving"); numbers on the pages are read from the data and never typed in.
 - **Link previews and icons** are drawn at every build (see "Preview image and icons").
 - **`sitemap.xml`** lists the six indexed pages above (the heist history's `lastmod` is `verified_at` of `bell-heists.json`); the Bell-heist page and 404 are excluded. Its `lastmod` for the athletics pages is the Eastern date of the newest time those pages state (when the data last changed or was last checked); for the alumni page and its explanation it is the newer `verified_at` of `alumni.json` and `endowment.json`.
+- **Security contact.** `/.well-known/security.txt` (RFC 9116, written by `render_security_txt` in `render.py`) points to GitHub's private vulnerability reporting for this repository, never an email address, and to `SECURITY.md` in the repository root. Its `Expires` date is the build day plus 364 days, so every deploy moves it and it never goes stale. It is left out of the sitemap and robots. Because it lives in a dot folder, the deploy's `upload-pages-artifact` step sets `include-hidden-files: true` (the action drops dot files by default); `tests/test_security_contact.py` pins the only dot entries the site may contain (`.nojekyll` and `.well-known`), so a stray dot file can never be published by accident.
 - **Custom domain.** The site is served by GitHub Pages at depauwvswabash.com (the domain is set in the repository's Pages settings, so there is no `CNAME` file in `site/`).
 
 ## Preview image and icons
@@ -456,7 +457,7 @@ The one npm tool, the HTML validator `html-validate`, is locked the same way: `p
 ## Where things are
 
 ```
-README.md, LICENSE                        this file, the MIT license
+README.md, LICENSE, SECURITY.md           this file, the MIT license, how to report a security problem privately
 requirements.in, requirements.txt         the Python packages: what we need, and the locked versions with hashes (see Dependencies)
 requirements-clock.in, requirements-clock.txt   the same pair for the fake-clock tests only
 package.json, package-lock.json           the one npm tool CI uses, the HTML validator (locked; the site itself ships no npm packages)

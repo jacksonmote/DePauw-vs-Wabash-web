@@ -148,9 +148,12 @@ jobs:
           if [ "$TEST_DATA_COMMIT" = "true" ]; then args="--test-commit"; fi
           python3 scraper/databranch.py push --remote origin $args
 
+      # include-hidden-files: the artifact step drops anything starting with a dot unless told otherwise, and
+      # /.well-known/security.txt lives in a dot folder. A test pins the dot entries the site may contain.
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site
+          include-hidden-files: true
 
       - name: Summarize
         id: summary
