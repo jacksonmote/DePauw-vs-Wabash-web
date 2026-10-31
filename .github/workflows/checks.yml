@@ -27,7 +27,7 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - run: pip install -r requirements.txt
+      - run: pip install --require-hashes -r requirements.txt
 
       # series.json on the data branch is only as new as the last data run; the rulings and the merge code in this
       # change may be newer. Rebuild it offline first (no fetching), so the tests and the render see what the
@@ -100,7 +100,7 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - run: pip install -r requirements.txt -r requirements-clock.txt
+      - run: pip install --require-hashes -r requirements.txt -r requirements-clock.txt
 
       # series.json on the data branch is only as new as the last data run; the rulings and the merge code in this
       # change may be newer. Rebuild it offline first (no fetching), so the tests and the render see what the

@@ -418,11 +418,11 @@ era starts in 1932), in `tests/test_real_data_invariants.py`.
 Python 3.12 or newer (the workflows use 3.12) and, for the HTML and diagram checks only, Node 22.
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt   # the locked set CI uses (hashes checked); on Windows use requirements.in, see Dependencies
 python scraper/databranch.py fetch   # get series.json, depauw.json, wabash.json, upcoming.json and pending-changes.json from the data branch
 python scraper/scrape.py --remerge-only   # rebuild series.json from the saved copies and the rulings (no fetching); PR checks do this too
 python -m pytest -q tests            # scraper and renderer tests (use saved page markup, no network)
-pip install -r requirements-clock.txt   # optional: lets you run the tests as if it were another date
+pip install -r requirements-clock.txt   # optional (also locked): lets you run the tests as if it were another date
 python -m pytest -q tests --fake-now=2026-11-14T13:30:00-05:00   # the whole suite with the clock frozen (needs a UTC offset)
 python scraper/scrape.py --dry-run   # fetch both schools' live pages and report, without writing
 python scraper/scrape.py             # fetch and update data/ (and record the check time); the bot files are git-ignored here
@@ -439,10 +439,18 @@ npx --yes -p @mermaid-js/mermaid-cli@11.17.0 mmdc -i README.md -o <temp folder>/
 
 `site/` is build output and is not committed. Stop the preview server before rebuilding on Windows, which locks the folder it serves.
 
+## Dependencies
+
+`requirements.in` lists the packages the project needs directly (Pillow is pinned exactly because it draws the preview images). `requirements.txt` is generated from it by `pip-compile` and pins every package, including the ones those pull in, to an exact version with its hashes; the same goes for `requirements-clock.in` and `requirements-clock.txt` (the fake-clock tests only). Every workflow installs with `pip install --require-hashes -r requirements.txt`, so a new release (or a tampered download) can never reach a deploy: nothing changes until a pull request changes the lock. Dependabot opens that pull request weekly (the `pip` entry in `.github/dependabot.yml`); the tests run on it like on any other, so a release that breaks the site fails there instead of on a deploy.
+
+To change or refresh the lock by hand, use Python 3.12 (the version the workflows use) and `pip install pip-tools`, then run `pip-compile --generate-hashes requirements.in` (add `--upgrade` to take the newest versions) and the same for `requirements-clock.in`. The lock is for what CI runs, Linux with Python 3.12. `colorama`, which pytest needs only on Windows, is therefore not in it; on a Windows machine install from the `.in` files instead (`pip install -r requirements.in -r requirements-clock.in`). `tests/test_requirements.py` checks the lock's shape (every package pinned with hashes, every `.in` entry satisfied, every workflow installing with `--require-hashes` on the same Python version the lock was made with).
+
 ## Where things are
 
 ```
-README.md, LICENSE, requirements.txt      this file, the MIT license, the Python packages (Pillow is pinned exactly)
+README.md, LICENSE                        this file, the MIT license
+requirements.in, requirements.txt         the Python packages: what we need, and the locked versions with hashes (see Dependencies)
+requirements-clock.in, requirements-clock.txt   the same pair for the fake-clock tests only
 AGENTS.md                                 the short rules for any agent or contributor: checks, invariants, hygiene
 data/                 (main holds only the hand-edited files; the five marked "data branch" are fetched, git-ignored)
   series.json        [data branch] the merged records the athletics pages read (always the merge of the next three)

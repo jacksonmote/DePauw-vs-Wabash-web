@@ -1,0 +1,3 @@
+# Only for `pytest --fake-now=...` (the fake-clock CI job and local date simulations). Not used by production.
+# Locked in requirements-clock.txt: pip-compile --generate-hashes requirements-clock.in
+time-machine==3.6.0
