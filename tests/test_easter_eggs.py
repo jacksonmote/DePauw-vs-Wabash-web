@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / "scraper"))
 import render  # noqa: E402
 
 NOW = dt.datetime(2026, 10, 30, 12, tzinfo=dt.timezone.utc)
-BASE_CSP = "default-src 'none'; style-src 'self'; img-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'"
+BASE_CSP = "default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'"
 HOME_CSP = BASE_CSP + "; script-src 'self'"            # the policy of every page that loads the title script
 SCRIPT_PAGES = {"index.html": "easter-eggs.js", "alumni/index.html": "../easter-eggs.js"}   # page -> script src
 PAGES = (
@@ -112,7 +112,7 @@ def test_the_bell_heist_page_uses_block_flow_so_paragraph_margins_do_not_stack_o
     assert re.search(r"^\.bell-heist p \{ margin: 0 0 0\.75rem; \}", css, re.M)
     assert "gap" not in re.search(r"^\.bell-heist \{[^}]*\}", css, re.M).group(0)
     # the class is only on that page's <main>; the home page's Bell link is a different class
-    assert '<main class="wrap prose bell-heist">' in (ROOT / "scraper" / "render.py").read_text(encoding="utf-8")
+    assert '<main class="wrap prose bell-heist" id="main">' in (ROOT / "scraper" / "render.py").read_text(encoding="utf-8")
 
 
 def test_each_nonempty_history_gets_one_reward_and_empty_history_gets_none():
@@ -197,6 +197,8 @@ def test_title_button_focus_outline_contrasts_with_header_in_light_and_dark_mode
 
     def token(source, name):
         match = re.search(rf"{re.escape(name)}:\s*(#[0-9a-fA-F]{{6}})", source)
+        if not match and source is dark:                      # dark mode keeps a light-mode token it does not redefine
+            match = re.search(rf"{re.escape(name)}:\s*(#[0-9a-fA-F]{{6}})", light)
         assert match, f"missing CSS token {name}"
         return tuple(int(match.group(1)[i:i + 2], 16) / 255 for i in (1, 3, 5))
 
@@ -205,8 +207,8 @@ def test_title_button_focus_outline_contrasts_with_header_in_light_and_dark_mode
                     for value in rgb]
         return sum(weight * value for weight, value in zip((0.2126, 0.7152, 0.0722), channels))
 
-    outline = luminance(token(light, "--color-header-text"))
     for source in (light, dark):
+        outline = luminance(token(source, "--color-header-text"))     # the outline is drawn in the header's own text color
         background = luminance(token(source, "--color-header"))
         assert (max(outline, background) + 0.05) / (min(outline, background) + 0.05) >= 3
 
@@ -229,8 +231,11 @@ def test_new_assets_and_stylesheet_stay_within_the_approved_budgets():
     assert len((ROOT / "static/easter-eggs.js").read_bytes()) <= 4096
     assert sum((ROOT / f"static/{asset}").stat().st_size for asset in
                ("easter-bell.svg", "easter-paw.svg", "easter-tiger.svg")) <= 12288
-    # Baseline stylesheet on c9fcced: 13,666 bytes; feature allowance: 6,144 bytes.
-    assert (ROOT / "static/styles.css").stat().st_size <= 19810
+    # Baseline stylesheet on c9fcced: 13,666 bytes; feature allowance: 6,144 bytes. The front-end polish (design
+    # tokens, compact header, quiet footer) raised the allowance to 24,576 bytes; later polish PRs state their own.
+    assert (ROOT / "static/styles.css").stat().st_size <= 24576
+    # The one web font: a Latin subset of Barlow Condensed Bold, served from this site, license text beside it.
+    assert (ROOT / "static/fonts/BarlowCondensed-Bold-latin.woff2").stat().st_size <= 16384
 
 
 def test_original_art_is_safe_well_formed_svg():

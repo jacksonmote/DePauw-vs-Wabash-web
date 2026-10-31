@@ -108,8 +108,14 @@ BELL_HISTORY = (
     "schools have also stolen and hidden the Bell many times over the years, which is now part of the lore."
 )
 
-CSP = ("default-src 'none'; style-src 'self'; img-src 'self'; manifest-src 'self'; "
+# font-src 'self' lets the one bundled web font (static/fonts, served from this site) load; nothing is fetched
+# from anywhere else.
+CSP = ("default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; manifest-src 'self'; "
        "base-uri 'none'; form-action 'none'; object-src 'none'")
+# The one web font, a Latin subset of Barlow Condensed Bold (SIL OFL; the license text is published beside it).
+# Headings and big numbers use it; all body text is the system font. Preloaded because every page's title shows it.
+WEB_FONT = "fonts/BarlowCondensed-Bold-latin.woff2"
+FONT_LICENSE = "fonts/OFL.txt"
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
           "August", "September", "October", "November", "December"]
@@ -534,6 +540,7 @@ def head(title: str, description: str, *, prefix: str, canonical: str | None, no
         f'<link rel="icon" href="{esc(prefix)}favicon-32.png" type="image/png" sizes="32x32">',
         f'<link rel="apple-touch-icon" href="{esc(prefix)}apple-touch-icon.png" sizes="180x180">',
         f'<link rel="manifest" href="{esc(prefix)}site.webmanifest">',
+        f'<link rel="preload" href="{esc(prefix)}{WEB_FONT}" as="font" type="font/woff2" crossorigin>',
         f'<link rel="stylesheet" href="{esc(prefix)}styles.css">',
         *([f'<script src="{esc(prefix)}easter-eggs.js" defer></script>'] if easter_eggs else []),
         '</head>',
@@ -986,9 +993,11 @@ def athletics_footer_block(now: dt.datetime, prefix: str, data: dict, checked: s
         f'(every game, as JSON) · <a href="{esc(prefix)}games.csv">games.csv</a> (one row per game, for '
         f'spreadsheets).</p>',
         f'<p class="feedback">{report_link()}. {enhancement_link(AREA_ATHLETICS)}.</p>',
+        '<details class="sources-details"><summary>Data sources</summary>',
         '<p>Data from <a href="https://depauwtigers.com/">depauwtigers.com</a> and '
         '<a href="https://sports.wabash.edu/">sports.wabash.edu</a>. Source pages:</p>',
         f'<ul class="sources">\n{sources}\n</ul>',
+        '</details>',
     ]
 
 
@@ -1013,9 +1022,11 @@ def alumni_footer_block(prefix: str, alumni_data: dict, endowment: dict) -> list
         f'(endowment, enrollment and basis).</p>',
         f'<p class="feedback"><a href="{esc(alumni_page.correction_url())}">Suggest a correction</a>. '
         f'{enhancement_link(AREA_ALUMNI)}.</p>',
+        '<details class="sources-details"><summary>Data sources</summary>',
         f'<p>Data from: DePauw and Wabash audited {esc(fy)} financial statements, the U.S. Department of '
         f'Education’s College Navigator (IPEDS), and the sources listed with each name. Source pages:</p>',
         f'<ul class="sources">\n{sources}\n</ul>',
+        '</details>',
     ]
 
 
@@ -1077,6 +1088,24 @@ def site_nav(prefix: str, current: str) -> str:
             f'<a href="{esc(prefix + ALUMNI_PATH)}"{alumni_current}>Alumni</a></nav>')
 
 
+SKIP_LINK = '<a class="skip-link" href="#main">Skip to content</a>'
+
+
+def site_header(prefix: str, current: str, subtitle: str, *, title_html: str = "<h1>DePauw vs. Wabash</h1>") -> str:
+    """The top of every page: the skip link, then the header (title, the two nav links, the subtitle). Pages with
+    the title entrance (home and alumni) pass title_html from title_entrance_html()."""
+    return "\n".join([
+        SKIP_LINK,
+        '<header class="site-header">',
+        '<div class="wrap">',
+        title_html,
+        site_nav(prefix, current),
+        f'<p class="subtitle">{esc(subtitle)}</p>',
+        '</div>',
+        '</header>',
+    ])
+
+
 def render_index(data: dict, checked: str | None = None, now: dt.datetime | None = None,
                  upcoming: dict | None = None) -> str:
     t = data["totals"]
@@ -1108,14 +1137,8 @@ def render_index(data: dict, checked: str | None = None, now: dt.datetime | None
         head(TITLE, description, prefix="", canonical=SITE_URL,
              preview=preview_info(data, game_day_label(today_games)), easter_eggs=True),
         '<body>',
-        '<header class="site-header">',
-        '<div class="wrap">',
-        title_entrance_html(),
-        site_nav("", "athletics"),
-        f'<p class="subtitle">{esc(SUBTITLE)}</p>',
-        '</div>',
-        '</header>',
-        '<main class="wrap">',
+        site_header("", "athletics", SUBTITLE, title_html=title_entrance_html()),
+        '<main class="wrap" id="main">',
         game_day_html(today_games, sports),
         next_meeting_section(ahead, pending, sports, today),
         '<section class="overall" aria-labelledby="overall-h">',
@@ -1147,14 +1170,8 @@ def how_page(title: str, description: str, *, prefix: str, path: str, current: s
     return "\n".join([
         head(title, description, prefix=prefix, canonical=SITE_URL + path, preview=preview),
         '<body>',
-        '<header class="site-header">',
-        '<div class="wrap">',
-        '<h1>DePauw vs. Wabash</h1>',
-        site_nav(prefix, current),
-        f'<p class="subtitle">{esc(subtitle)}</p>',
-        '</div>',
-        '</header>',
-        '<main class="wrap">',
+        site_header(prefix, current, subtitle),
+        '<main class="wrap" id="main">',
         '<p class="back">' + " · ".join(f'<a href="{esc(href)}">{esc(label)}</a>' for href, label in
                                         ([back] if isinstance(back, tuple) else back)) + '</p>',
         *body,
@@ -1213,10 +1230,8 @@ def render_404(now: dt.datetime | None = None) -> str:
         head("Page not found | DePauw vs. Wabash", "That page does not exist.",
              prefix=BASE_PATH, canonical=None, noindex=True),
         '<body>',
-        '<header class="site-header"><div class="wrap"><h1>DePauw vs. Wabash</h1>',
-        site_nav(BASE_PATH, ""),
-        f'<p class="subtitle">{esc(NEUTRAL_SUBTITLE)}</p></div></header>',
-        '<main class="wrap">',
+        site_header(BASE_PATH, "", NEUTRAL_SUBTITLE),
+        '<main class="wrap" id="main">',
         '<h2>Page not found</h2>',
         f'<p class="back"><a href="{esc(BASE_PATH)}">{esc(BACK_ATHLETICS)}</a> · '
         f'<a href="{esc(BASE_PATH + ALUMNI_PATH)}">{esc(BACK_ALUMNI)}</a></p>',
@@ -1241,14 +1256,8 @@ def render_heist_details(data: dict, heists_data: dict, now: dt.datetime | None 
         head(f"{heists_page.TITLE} | DePauw vs. Wabash", description, prefix="../",
              canonical=SITE_URL + HEIST_PATH, preview=athletics_preview(data, now, upcoming or {})),
         '<body>',
-        '<header class="site-header">',
-        '<div class="wrap">',
-        '<h1>DePauw vs. Wabash</h1>',
-        site_nav("../", "athletics"),
-        f'<p class="subtitle">{esc(SUBTITLE)}</p>',
-        '</div>',
-        '</header>',
-        '<main class="wrap prose heist-page">',
+        site_header("../", "athletics", SUBTITLE),
+        '<main class="wrap prose heist-page" id="main">',
         *main,
         '</main>',
         *site_footer(now, prefix="../", heists=heists_data),
@@ -1263,10 +1272,8 @@ def render_bell_heist(now: dt.datetime | None = None) -> str:
         head("Mission accomplished | DePauw vs. Wabash", "An entirely fictional Monon Bell mission.",
              prefix="../", canonical=None, noindex=True),
         '<body>',
-        '<header class="site-header"><div class="wrap"><h1>DePauw vs. Wabash</h1>',
-        site_nav("../", ""),
-        f'<p class="subtitle">{esc(NEUTRAL_SUBTITLE)}</p></div></header>',
-        '<main class="wrap prose bell-heist"><h2>Mission accomplished</h2>',
+        site_header("../", "", NEUTRAL_SUBTITLE),
+        '<main class="wrap prose bell-heist" id="main"><h2>Mission accomplished</h2>',
         '<p>You’ve successfully relocated the Monon Bell to Greencastle. Your alumni association has no knowledge of this operation.</p>',
         '<p>An entirely fictional mission.</p>',
         '<p><a href="../#monon-bell">Check the real Bell holder</a></p>',
@@ -1350,7 +1357,8 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
                         prefix="../", canonical=SITE_URL + ALUMNI_PATH, preview=alumni_preview, easter_eggs=True)
     when = now or dt.datetime.now(dt.timezone.utc)
     alumni_html = alumni_page.render_page(
-        alumni_data, endowment_data, head_html=alumni_head, title_html=title_entrance_html(),
+        alumni_data, endowment_data, head_html=alumni_head,
+        header_html=site_header("../", "alumni", alumni_page.SUBTITLE, title_html=title_entrance_html()),
         footer_html="\n".join(site_footer(when, prefix="../", alumni=(alumni_data, endowment_data))))
     upcoming = meetings.load_upcoming(upcoming_path)
     overrides_path = overrides_path or OVERRIDES
@@ -1378,7 +1386,9 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
     for name, text in pages.items():
         (out / name).parent.mkdir(parents=True, exist_ok=True)
         (out / name).write_text(curly_html(text) if name.endswith(".html") else text, encoding="utf-8", newline="\n")
-    for asset in ("styles.css", "favicon.svg", "easter-eggs.js", "easter-bell.svg", "easter-paw.svg", "easter-tiger.svg"):
+    for asset in ("styles.css", "favicon.svg", "easter-eggs.js", "easter-bell.svg", "easter-paw.svg", "easter-tiger.svg",
+                  WEB_FONT, FONT_LICENSE):
+        (out / asset).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(STATIC / asset, out / asset)
     # Images are drawn at build time from the bundled font, so every deploy has a card that matches the data.
     info = preview_info(data, game_day_label(gameday.todays_games(when, upcoming, data["sports"])))

@@ -1,49 +1,87 @@
-/* DePauw vs. Wabash. Colors are tokens named by job; dark mode redefines them. */
+/* DePauw vs. Wabash. Design tokens are named by job; dark mode redefines the colors. Fills (bars, stripes, edges)
+   need 3:1 against what they sit on; every text role needs 4.5:1. The values were checked in both modes. */
+@font-face {
+  font-family: "Barlow Condensed"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("fonts/BarlowCondensed-Bold-latin.woff2") format("woff2");
+}
+
 :root {
   color-scheme: light dark;
-  --color-page: #f6f4ee;
+
+  /* Color roles */
+  --color-page: #f4f1e8;
   --color-surface: #ffffff;
-  --color-text: #1b1b1b;
-  --color-text-muted: #55524a;
-  --color-border: #d8d3c4;
+  --color-text: #15140f;
+  --color-text-muted: #4f4b40;
+  --color-border: #cfc8b4;
   --color-link: #0b5cad;
   --color-focus: #0b5cad;
-  --color-header: #111111;
-  --color-header-text: #ffffff;
-  --color-header-muted: #d6d2c6;
-  --color-depauw-accent: #a87c00;   /* old gold: borders and stripes */
+  --color-header: #f4f1e8;
+  --color-header-text: #15140f;
+  --color-header-muted: #4f4b40;
+  --color-depauw-accent: #a87c00;   /* old gold: fills, bars, stripes and edges, never text */
   --color-depauw-text: #6b4e00;     /* darkened gold: readable as text */
-  --color-wabash-accent: #a6192e;   /* scarlet */
+  --color-wabash-accent: #a6192e;   /* scarlet: fills */
   --color-wabash-text: #a6192e;
-  --color-tie-accent: #8a867a;
+  --color-tie-accent: #7d796d;
   --color-row-stripe: #faf8f2;
   --color-banner-bg: #fff0b3;
-  --color-banner-text: #1b1b1b;
+  --color-banner-text: #15140f;
+  --color-board: #121212;           /* the dark scoreboard panels, in light and dark mode alike */
+  --color-board-text: #f1efe8;
+  --color-board-muted: #c9c5b8;
+  --color-board-depauw: #f0c23a;
+  --color-board-wabash: #f24c60;
+  --color-board-tie: #d6d2c6;
+  --color-bar-wabash: #d3334b;      /* the scarlet that reaches 3:1 on the board and on the page */
 
+  /* Type scale */
   --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-numbers: ui-rounded, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --font-numbers: var(--font-display);
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-title: clamp(1.25rem, 5vw, 1.75rem);
+
+  /* Spacing, shape and borders */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2.5rem;
   --gutter: 1rem;
-  --radius: 0.5rem;
+  --radius: 0.75rem;
+  --radius-sm: 0.375rem;
+  --border: 1px solid var(--color-border);
+  --tap: 44px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-page: #121212;
-    --color-surface: #1c1c1c;
+    --color-page: #0f0f0f;
+    --color-surface: #1b1b1b;
     --color-text: #f1efe8;
-    --color-text-muted: #b5b1a5;
+    --color-text-muted: #b8b4a8;
     --color-border: #3a3832;
     --color-link: #8ab8f0;
     --color-focus: #8ab8f0;
-    --color-header: #000000;
+    --color-header: #0f0f0f;
+    --color-header-text: #f1efe8;
+    --color-header-muted: #b8b4a8;
     --color-depauw-accent: #e0b020;
     --color-banner-bg: #3d3000;
     --color-banner-text: #fff3c4;
     --color-depauw-text: #f0c23a;
     --color-wabash-accent: #d3334b;
-    --color-wabash-text: #ff8d9b;
-    --color-tie-accent: #8a867a;
+    --color-wabash-text: #f24c60;
+    --color-tie-accent: #8f8b7f;
     --color-row-stripe: #212121;
+    --color-board: #000000;
   }
 }
 
@@ -68,35 +106,54 @@ body {
 a { color: var(--color-link); overflow-wrap: anywhere; }
 a:focus-visible, summary:focus-visible, button:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
 
-h1, h2 { line-height: 1.2; margin: 0; }
+h1, h2, h3 { line-height: 1.2; margin: 0; }
+h1, h2 { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.01em; }
+h2 { font-size: var(--text-xl); }
 
 .sr-only {
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
   overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
 }
 
-/* Header: black band, gold and scarlet stripe underneath */
-.site-header { background: var(--color-header); color: var(--color-header-text); padding-block: 1.75rem 1.5rem; position: relative; }
-.site-header::after {
-  content: ""; position: absolute; inset: auto 0 0 0; height: 6px;
+/* Skip link: first thing in the tab order on every page, visible only when it has focus */
+.skip-link {
+  position: absolute; left: var(--space-2); top: -4rem; z-index: 10; display: inline-flex; align-items: center;
+  min-height: var(--tap); padding-inline: var(--space-4); background: var(--color-text); color: var(--color-page);
+  font-weight: 650; border-radius: var(--radius-sm);
+}
+.skip-link:focus-visible { top: var(--space-2); outline: 3px solid var(--color-focus); outline-offset: 2px; }
+
+/* Header: the compact ledger style. A gold-and-scarlet stripe on top, then the title and the two nav links on one
+   line, the subtitle below. The title, hint, status line and nav keep their order in the markup. */
+.site-header { background: var(--color-header); color: var(--color-header-text); border-bottom: var(--border); }
+.site-header::before {
+  content: ""; display: block; height: 6px;
   background: linear-gradient(90deg, var(--color-depauw-accent) 50%, var(--color-wabash-accent) 50%);
 }
-.site-header h1 { font-size: clamp(1.75rem, 6vw, 2.75rem); letter-spacing: -0.01em; }
-.subtitle { margin: 0.5rem 0 0; color: var(--color-header-muted); font-size: 1.0625rem; }
-.site-nav { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.75rem; }
-.site-nav a { color: var(--color-header-text); font-weight: 650; text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
-.site-nav a[aria-current="page"] { text-decoration-color: var(--color-depauw-accent); text-decoration-thickness: 4px; font-weight: 800; }
+.site-header .wrap {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title nav" "status status" "subtitle subtitle";
+  align-items: center; column-gap: var(--space-3); padding-block: var(--space-1) 0;
+}
+.site-header h1 { grid-area: title; font-size: var(--text-title); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.1; }
+.subtitle { grid-area: subtitle; margin: 0; padding-bottom: var(--space-3); color: var(--color-header-muted); font-size: var(--text-sm); }
+.site-nav { grid-area: nav; display: flex; gap: var(--space-1); }
+.site-nav a {
+  display: inline-flex; align-items: center; min-height: var(--tap); padding-inline: var(--space-2);
+  color: var(--color-header-text); font-weight: 650; text-decoration: none; text-underline-offset: 0.3em;
+}
+.site-nav a:hover { text-decoration: underline; }
+.site-nav a[aria-current="page"] { text-decoration: underline; text-decoration-color: var(--color-depauw-accent); text-decoration-thickness: 4px; font-weight: 800; }
 .entrance-wrap { min-height: 1.2em; }
-.entrance-button { appearance: none; border: 0; padding: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer; position: relative; }
+.entrance-button { appearance: none; border: 0; padding: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; position: relative; }
 .entrance-button::after { content: ""; position: absolute; inset: min(0px, calc((100% - 44px) / 2)) 0; }
 .entrance-button[hidden] { display: none; }
 .site-header .entrance-button:focus-visible { outline-color: var(--color-header-text); }
-.entrance-status { margin: 0; color: var(--color-header-muted); }
+.entrance-status { grid-area: status; margin: 0; color: var(--color-header-muted); }
 .entrance-status:not(:empty) { margin: 0.25rem 0 0; }
 .entrance-unlocked { animation: tiger-glint 700ms ease-out 1; }
 @keyframes tiger-glint { 45% { color: var(--color-depauw-accent); text-shadow: 0 0 0.35em var(--color-depauw-accent); } }
 
-main { padding-block: 1.5rem 2.5rem; display: grid; gap: 1.5rem; }
+main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--space-5); }
 
 /* Cards */
 .overall, .sport, .next-meeting {
@@ -106,9 +163,9 @@ main { padding-block: 1.5rem 2.5rem; display: grid; gap: 1.5rem; }
   padding: 1.25rem var(--gutter);
   min-width: 0;
 }
-.overall h2, .sport h2 { font-size: 1.25rem; margin-bottom: 1rem; }
+.overall h2, .sport h2 { font-size: var(--text-xl); margin-bottom: 1rem; }
 .next-meeting { border-left: 6px solid var(--color-depauw-accent); }
-.next-meeting h2 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+.next-meeting h2 { font-size: var(--text-xl); margin-bottom: 0.5rem; }
 .next-line { margin: 0; font-size: 1.125rem; }
 .next-pending { margin: 0.25rem 0 0; color: var(--color-text-muted); }
 .overall-meta { margin: 0.75rem 0 0; color: var(--color-text-muted); }
@@ -130,9 +187,9 @@ main { padding-block: 1.5rem 2.5rem; display: grid; gap: 1.5rem; }
 .tile-depauw .tile-name { color: var(--color-depauw-text); }
 .tile-wabash .tile-name { color: var(--color-wabash-text); }
 .tile-tie .tile-name { color: var(--color-text-muted); }
-.tile-num { font: 700 clamp(1.625rem, 8vw, 2.25rem)/1.1 var(--font-numbers); font-variant-numeric: tabular-nums; }
+.tile-num { font: 700 clamp(2rem, 10vw, 2.75rem)/1 var(--font-numbers); font-variant-numeric: tabular-nums; }
 .tile-label { color: var(--color-text-muted); font-size: 0.875rem; }
-.tiles-big .tile-num { font-size: clamp(2rem, 9vw, 3.75rem); }
+.tiles-big .tile-num { font-size: clamp(2.75rem, 13vw, 4.5rem); }
 
 /* Fact list */
 .facts { display: grid; gap: 0.5rem 1.5rem; margin: 1.25rem 0 0; }
@@ -182,12 +239,14 @@ main { padding-block: 1.5rem 2.5rem; display: grid; gap: 1.5rem; }
 }
 
 /* Footer */
-.site-footer { border-top: 1px solid var(--color-border); padding-block: 1.5rem 2.5rem; color: var(--color-text-muted); font-size: 0.9375rem; }
-.site-footer p { margin: 0 0 0.5rem; }
-.site-footer details { margin: 0.25rem 0 0.5rem; }
-.site-footer summary { cursor: pointer; width: fit-content; min-height: 44px; padding: 0.4rem 0; }
-.site-footer details p { margin: 0 0 0.5rem; }
-.sources { margin: 0 0 0.5rem; padding-left: 1.25rem; }
+.site-footer { border-top: var(--border); padding-block: var(--space-5) var(--space-6); color: var(--color-text-muted); font-size: var(--text-sm); }
+.site-footer p { margin: 0 0 var(--space-2); }
+.site-footer p a, .sources a { padding-block: 0.5rem; }   /* padding on an inline link grows the tap area, not the line */
+.site-footer details { margin: var(--space-1) 0 var(--space-2); }
+.site-footer summary { cursor: pointer; width: fit-content; min-height: 44px; padding: 0.4rem 0; font-weight: 650; }
+.site-footer details p { margin: 0 0 var(--space-2); }
+.sources { margin: 0 0 var(--space-2); padding-left: 1.25rem; }
+.sources li { margin-block: var(--space-1); }
 
 /* Monon Bell block inside the football card */
 .bell { margin-top: 1.25rem; border: 1px solid var(--color-border); border-left: 6px solid var(--color-depauw-accent); border-radius: var(--radius); padding: 1rem var(--gutter); }
@@ -219,7 +278,7 @@ main { padding-block: 1.5rem 2.5rem; display: grid; gap: 1.5rem; }
 .endowment-value { min-width: 0; }
 .endowment-value .tile-name { margin: 0; }
 .endowment-value p { margin: 0.25rem 0; }
-.endowment-values .tile-num { font-size: clamp(1.375rem, 7vw, 2.25rem); }
+.endowment-values .tile-num { font-size: clamp(1.75rem, 8vw, 2.5rem); }
 .money, .nowrap { white-space: nowrap; }
 .money-line { color: var(--color-text-muted); font-size: 0.875rem; }
 .even-note { color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 400; white-space: nowrap; }
@@ -246,7 +305,7 @@ main { padding-block: 1.5rem 2.5rem; display: grid; gap: 1.5rem; }
 .bell-facts { margin-top: 0.75rem; grid-template-columns: minmax(0, 1fr); }
 .bell-facts .tiles { margin-top: 0.25rem; }
 .tiles-small .tile { padding: 0.375rem 0.5rem; }
-.tiles-small .tile-num { font-size: 1.5rem; }
+.tiles-small .tile-num { font-size: 1.875rem; }
 .bell-history { margin: 0.75rem 0 0; color: var(--color-text-muted); font-size: 0.9375rem; }
 .bell-heist-link { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; vertical-align: middle; }
 .paw-trail { height: 2rem; display: flex; align-items: center; justify-content: flex-end; padding-inline: 0.25rem; }
