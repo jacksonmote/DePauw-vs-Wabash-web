@@ -104,12 +104,13 @@ flowchart LR
   DS --> U["upcoming.py<br/>run by scrape.py, dual meets<br/>only, merges both schedules"]
   WS --> U
   U --> UJ[("upcoming.json")]
-  SJ --> RN["render.py<br/>with facts, meetings, gameday,<br/>howitworks, images"]
+  SJ --> RN["render.py<br/>with facts, meetings, gameday, howitworks,<br/>chart, bars, heists, images"]
   AL["alumni.json<br/>hand-curated, reviewed in PRs"] --> RN
   EN["endowment.json<br/>matched fiscal date, fall<br/>enrollment, common basis"] --> RN
+  HJ["bell-heists.json<br/>hand-curated, sourced,<br/>reviewed in PRs"] --> RN
   UJ --> RN
   OV --> RN
-  RN --> SITE["site/<br/>home, alumni, three how-it-works pages, Bell heist, 404,<br/>JSON data, games.csv, share images, icons, easter-egg art and home script"]
+  RN --> SITE["site/<br/>home, alumni, three how-it-works pages, Bell heist, heist history, 404,<br/>JSON data, games.csv, security.txt, share images, icons, easter-egg art and home script"]
   SITE --> GP["GitHub Pages<br/>depauwvswabash.com"]
   SJ -.-> SN["snapshot.yml (Jul 1, Jan 2)<br/>data files go to a<br/>GitHub Release first"]
   SN -.-> WB["then, best effort:<br/>source pages go to the<br/>Wayback Machine"]
@@ -461,6 +462,7 @@ README.md, LICENSE, SECURITY.md           this file, the MIT license, how to rep
 requirements.in, requirements.txt         the Python packages: what we need, and the locked versions with hashes (see Dependencies)
 requirements-clock.in, requirements-clock.txt   the same pair for the fake-clock tests only
 package.json, package-lock.json           the one npm tool CI uses, the HTML validator (locked; the site itself ships no npm packages)
+.htmlvalidate.json                        the html-validate rules CI and the validate job use
 AGENTS.md                                 the short rules for any agent or contributor: checks, invariants, hygiene
 data/                 (main holds only the hand-edited files; the five marked "data branch" are fetched, git-ignored)
   series.json        [data branch] the merged records the athletics pages read (always the merge of the next three)
@@ -485,8 +487,9 @@ scraper/
   bars.py            the proportional record bar and its whole-percent widths (home page, cards, alumni)
   places.py          AP-style state names for display
   alumni.py          validation, counts, per-student endowment, scoreboard and page for /alumni/
+  heists.py          validation, tally and page content for /heist-details/ (the Monon Bell heist history)
   howitworks.py      the text of the three how-it-works pages
-  render.py          builds site/ (eight HTML pages, footer, nav, sitemap, downloads); images.py draws the PNGs
+  render.py          builds site/ (eight HTML pages, footer, nav, sitemap, downloads, security.txt); images.py draws the PNGs
   snapshot.py        data snapshots and Wayback archiving
   databranch.py      fetch, push and bootstrap for the data branch (where the bot-managed data files live)
 static/              styles.css, favicon.svg, easter-eggs.js, three original easter-egg SVGs, fonts/ (Barlow Condensed TTFs for the
@@ -496,7 +499,7 @@ tests/               one test file per area (scraper, merge, overrides, review, 
                      from both schools' sites and the expected parse of each
 .github/workflows/   update-and-deploy.yml, checks.yml, snapshot.yml
 .github/ISSUE_TEMPLATE/  data-correction.yml, alumni-correction.yml, enhancement.yml, config.yml (blank issues off)
-.github/dependabot.yml   weekly updates of the pinned GitHub Actions
+.github/dependabot.yml   weekly updates of the pinned GitHub Actions, the locked Python packages (pip) and the locked HTML validator (npm)
 docs/                the plan the alumni page was built from (alumni-endowment-implementation-plan.md)
 site/                build output with eight pages, never committed
 ```
@@ -541,6 +544,7 @@ Only meets where DePauw's team swims Wabash's team head to head count toward the
 - **Add or edit an alumni entry.** Edit `data/alumni.json`: a person needs an `id`, `name`, `school` (`depauw` or `wabash`), `degree` and `degree_year` (an earned degree), a `school_source` (label and URL), the `categories` they belong to, and a `qualifications` entry for each category with the `achievement`, `years` (one year, or start and end years; `"present": true` for an office still held) and a `source`. Fortune 500 CEOs also need `company`, `rank_year`, `rank` and a `ranking_source`. Update `verified_at` and the category's review notes, then run the tests and `python scraper/render.py`: validation refuses a missing source, an unknown category or a duplicate. The ten categories are fixed in the validation and in `TILE_LABELS`; adding an eleventh means changing both.
 - **Add or edit a Bell heist story.** Edit `data/bell-heists.json` (see "Monon Bell heist history"): give it a unique lowercase `id`, a `school`, an `outcome`, a `title`, a `summary` in your own words and at least one `sources` entry, set `counted_in_theft_total` to true only for a stolen Bell, update `verified_at`, then run the tests and `python scraper/render.py`.
 - **Update the endowment.** Edit `data/endowment.json`: each school's audited amount and source, the components taken out to reach the common basis (`comparable.excluded`, with a source note), and the fall enrollment that matches the fiscal year (validation refuses any other term). The per-student figures and the "about even" call are calculated at build time and are never stored.
+- **Report a security problem.** Privately, through GitHub's "Report a vulnerability" (see `SECURITY.md` and `/.well-known/security.txt`); never as a public issue or pull request.
 - **Agents and tools.** `AGENTS.md` at the repository root is the short list of rules for any person or coding agent changing this repo: the checks to run, the invariants that must not break, repo hygiene and how to collaborate. Read it before your first change; this README has the detail.
 - **Pull requests.** The scraper commits data to the `data` branch on a schedule (never to `main`) and the repository can have more than one contributor, so `git fetch origin` and bring your branch up to date with `main` before you push. Changes to the five bot-managed data files do not go in pull requests; only the workflow writes them. Run the tests, the render, `html-validate` and the diagram check (see "Run it locally"). Any change to the pipeline, data files, workflows, triggers or game-day behavior also updates the matching diagram in this README.
 
