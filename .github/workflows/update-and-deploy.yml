@@ -74,6 +74,7 @@ jobs:
       problems: ${{ steps.summary.outputs.problems }}
       scrape: ${{ steps.summary.outputs.scrape }}
       validation: ${{ steps.summary.outputs.validation }}
+      commit: ${{ steps.summary.outputs.commit }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -148,7 +149,12 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::warning title=HTML validation::$message"
 
+      # A rejected push (the "Protect main" ruleset has no bypass for the Actions bot) must not stop the deploy:
+      # the site is built from the data this run just scraped, not from what is committed. A failure here only
+      # leaves data/ in the repository stale, and the Summarize step and the report job say so.
       - name: Commit if data changed
+        id: commit
+        continue-on-error: true
         if: ${{ github.ref == 'refs/heads/main' }}
         run: |
           # status, not diff: a data file that is new to the repo is untracked, and diff would not see it
@@ -172,8 +178,10 @@ jobs:
           SCRAPE: ${{ steps.scrape.outcome }}
           SETUP_NODE: ${{ steps.setup_node.outcome }}
           VALIDATE: ${{ steps.validate_html.outcome }}
+          COMMIT: ${{ steps.commit.outcome }}
         run: |
           if [ "$SCRAPE" = "success" ]; then scrape=ok; else scrape=failed; fi
+          if [ "$COMMIT" = "failure" ]; then commit=failed; else commit=ok; fi
           if [ "$SETUP_NODE" != "success" ]; then
             validation=skipped
           elif [ "$VALIDATE" = "success" ]; then
@@ -181,11 +189,21 @@ jobs:
           else
             validation=failed
           fi
-          if [ "$scrape" = "ok" ] && [ "$validation" = "ok" ]; then problems=false; else problems=true; fi
+          if [ "$scrape" = "ok" ] && [ "$validation" = "ok" ] && [ "$commit" = "ok" ]; then problems=false; else problems=true; fi
+          if [ "$commit" = "failed" ]; then
+            message="The data commit to main failed, so data/ in the repository was not updated. Publishing continues with the data this run scraped; review the Commit if data changed step logs and the Protect main ruleset."
+            {
+              echo "## Warning: the data commit failed"
+              echo
+              echo "$message"
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning title=Data commit::$message"
+          fi
           {
             echo "problems=$problems"
             echo "scrape=$scrape"
             echo "validation=$validation"
+            echo "commit=$commit"
           } >> "$GITHUB_OUTPUT"
 
   deploy:
@@ -243,7 +261,8 @@ jobs:
 
   report:
     # A failed test or render stops the build directly. This turns the run red after the deployment attempt for
-    # the problems that do not stop publishing: a scraper failure, or HTML validation that failed or was skipped.
+    # the problems that do not stop publishing: a scraper failure, HTML validation that failed or was skipped,
+    # or a data commit that was rejected.
     needs: [build, deploy]
     if: ${{ !cancelled() && needs.build.outputs.problems == 'true' }}
     runs-on: ubuntu-latest
@@ -252,9 +271,13 @@ jobs:
       - env:
           SCRAPE: ${{ needs.build.outputs.scrape }}
           VALIDATION: ${{ needs.build.outputs.validation }}
+          COMMIT: ${{ needs.build.outputs.commit }}
         run: |
           if [ "$SCRAPE" != "ok" ]; then
             echo "The scraper reported a failure. Check the Scrape step logs and the deployment result."
+          fi
+          if [ "$COMMIT" = "failed" ]; then
+            echo "The data commit to main failed, so data/ in the repository is stale. It does not block publishing. Check the Commit if data changed step logs, the Protect main ruleset and the deployment result."
           fi
           if [ "$VALIDATION" = "failed" ]; then
             echo "HTML validation failed. It does not block publishing. Check the Validate generated HTML step logs and the deployment result."

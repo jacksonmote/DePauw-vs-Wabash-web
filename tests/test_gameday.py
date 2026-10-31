@@ -436,16 +436,30 @@ def test_a_test_failure_blocks_later_build_steps_and_downstream_writes():
     assert "github.ref == 'refs/heads/main'" in job("issues")
 
 
-def test_scraper_failure_remains_tolerated_and_the_summary_takes_only_scrape_and_validation_outcomes():
+def test_scraper_failure_remains_tolerated_and_the_summary_takes_only_the_four_step_outcomes():
     assert named_step("Scrape")["continue-on-error"] is True
     summary = named_step("Summarize")
     assert summary["env"] == {
         "SCRAPE": "${{ steps.scrape.outcome }}",
         "SETUP_NODE": "${{ steps.setup_node.outcome }}",
         "VALIDATE": "${{ steps.validate_html.outcome }}",
+        "COMMIT": "${{ steps.commit.outcome }}",
     }
     outputs = workflow_jobs()["build"]["outputs"]
-    assert set(outputs) == {"problems", "scrape", "validation"}
+    assert set(outputs) == {"problems", "scrape", "validation", "commit"}
+
+
+def test_a_rejected_data_commit_does_not_stop_the_deploy_but_the_commit_itself_is_unchanged():
+    commit = named_step("Commit if data changed")
+    assert commit["id"] == "commit" and commit["continue-on-error"] is True
+    assert commit["if"] == "${{ github.ref == 'refs/heads/main' }}"                  # still main only
+    script = commit["run"]
+    for line in ('git status --porcelain -- data/', "git add data/", 'git commit -m "Update DePauw vs. Wabash series data"',
+                 "git push origin HEAD:main"):
+        assert line in script
+    assert "--force" not in script
+    # the deploy and the issue sync still depend on the build job succeeding, and a failed commit step no longer fails it
+    assert "needs.build.result == 'success'" in job("deploy") and "needs.build.result == 'success'" in job("issues")
 
 
 # The workflow's shell steps run under bash on the Linux runner. A Windows machine without bash on PATH skips
@@ -457,11 +471,11 @@ needs_bash = pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash
 @pytest.mark.parametrize(
     ("scrape_result", "node_result", "validate_result", "expected"),
     [
-        ("success", "success", "success", ["problems=false", "scrape=ok", "validation=ok"]),
-        ("failure", "success", "success", ["problems=true", "scrape=failed", "validation=ok"]),
-        ("success", "success", "failure", ["problems=true", "scrape=ok", "validation=failed"]),
-        ("success", "failure", "skipped", ["problems=true", "scrape=ok", "validation=skipped"]),
-        ("failure", "failure", "skipped", ["problems=true", "scrape=failed", "validation=skipped"]),
+        ("success", "success", "success", ["problems=false", "scrape=ok", "validation=ok", "commit=ok"]),
+        ("failure", "success", "success", ["problems=true", "scrape=failed", "validation=ok", "commit=ok"]),
+        ("success", "success", "failure", ["problems=true", "scrape=ok", "validation=failed", "commit=ok"]),
+        ("success", "failure", "skipped", ["problems=true", "scrape=ok", "validation=skipped", "commit=ok"]),
+        ("failure", "failure", "skipped", ["problems=true", "scrape=failed", "validation=skipped", "commit=ok"]),
     ],
 )
 def test_summary_shell_reports_the_scrape_and_validation_outcomes(
@@ -475,6 +489,7 @@ def test_summary_shell_reports_the_scrape_and_validation_outcomes(
             "SCRAPE": scrape_result,
             "SETUP_NODE": node_result,
             "VALIDATE": validate_result,
+            "COMMIT": "success",
             "GITHUB_OUTPUT": str(output),
         },
         stdin=subprocess.DEVNULL,
@@ -484,6 +499,29 @@ def test_summary_shell_reports_the_scrape_and_validation_outcomes(
     )
     assert result.returncode == 0, result.stderr
     assert output.read_text(encoding="utf-8").splitlines() == expected
+
+
+@needs_bash
+@pytest.mark.parametrize(
+    ("commit_result", "expected_tail", "warns"),
+    [
+        ("success", ["problems=false", "scrape=ok", "validation=ok", "commit=ok"], False),
+        ("skipped", ["problems=false", "scrape=ok", "validation=ok", "commit=ok"], False),   # not on main: nothing to commit
+        ("failure", ["problems=true", "scrape=ok", "validation=ok", "commit=failed"], True),
+    ],
+)
+def test_summary_shell_reports_the_data_commit_outcome(tmp_path, commit_result, expected_tail, warns):
+    output, summary = tmp_path / "github-output", tmp_path / "step-summary"
+    result = subprocess.run(
+        ["bash", "-e", "-c", named_step("Summarize")["run"]],
+        env={"PATH": os.environ["PATH"], "SCRAPE": "success", "SETUP_NODE": "success", "VALIDATE": "success",
+             "COMMIT": commit_result, "GITHUB_OUTPUT": str(output), "GITHUB_STEP_SUMMARY": str(summary)},
+        stdin=subprocess.DEVNULL, capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert output.read_text(encoding="utf-8").splitlines() == expected_tail
+    assert result.stdout.startswith("::warning title=Data commit::") == warns
+    assert summary.exists() == warns
 
 
 def test_bash_is_never_missing_where_ci_runs():
@@ -524,7 +562,9 @@ def test_report_names_the_problem_and_still_fails_the_run_after_the_deploy():
     assert env == {
         "SCRAPE": "${{ needs.build.outputs.scrape }}",
         "VALIDATION": "${{ needs.build.outputs.validation }}",
+        "COMMIT": "${{ needs.build.outputs.commit }}",
     }
+    assert "The data commit to main failed" in report_text
     assert "exit 1" in report_text
     assert "The scraper reported a failure" in report_text
     assert "HTML validation failed" in report_text
