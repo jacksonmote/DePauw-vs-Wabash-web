@@ -141,3 +141,17 @@ def test_every_action_stays_pinned_to_a_full_sha_with_a_version_comment():
 def test_the_workflows_never_name_main_as_a_place_to_push_data():
     for name in ("update-and-deploy.yml", "checks.yml", "snapshot.yml"):
         assert "HEAD:main" not in text(name) and "git add data/" not in text(name)
+
+
+def test_the_readme_and_agents_describe_the_data_branch():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+    for name in databranch.BOT_FILES:
+        assert f"`{name}`" in readme.split("### The `data` branch", 1)[1].split("### Why the merge", 1)[0]
+    for phrase in ("python scraper/databranch.py fetch", "test_data_commit", "data/.commit-test", "Protect data",
+                   "Restrict deletions", "Block force pushes", "--remerge-only", "never forced"):
+        assert phrase in readme, phrase
+    assert "databranch.py" in readme.split("## Where things are", 1)[1]
+    assert "`data` branch" in agents and "never force-pushed" in agents and "never to `main`" in agents
+    assert "commits data to the data branch" in readme                         # the run-flow diagram
+    assert "commits data to main" not in readme and "commits data to `main`" not in readme

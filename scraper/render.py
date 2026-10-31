@@ -1,7 +1,8 @@
 """
 Static site generator for the DePauw vs. Wabash page.
 
-Reads data/series.json (and, if present, data/upcoming.json and the uncommitted .checked-at) plus the
+Reads data/series.json and data/upcoming.json (both fetched from the data branch by databranch.py; the render
+stops with a message if they are missing) and, if present, the uncommitted .checked-at, plus the
 hand-curated data/alumni.json, data/endowment.json and data/bell-heists.json, and writes a finished site to site/:
   index.html                      the athletics home page (one of two pages with a deferred script)
   alumni/index.html               the alumni and endowment page (alumni.py; the other page with the deferred script)

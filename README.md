@@ -74,7 +74,7 @@ The endowment figures use the same audited fiscal date, June 30, 2025, but the a
 
 ## How the data updates
 
-**How the data flows.** GitHub Actions fetches both schools' pages twice a day, and every 30 minutes while a game is being played (see "Game-day mode" below). The dotted line is the twice-a-year snapshot.
+**How the data flows.** GitHub Actions fetches both schools' pages twice a day, and every 30 minutes while a game is being played (see "Game-day mode" below). The files the workflow writes are kept on the `data` branch, not on `main` (see "The `data` branch"). The dotted line is the twice-a-year snapshot.
 
 ```mermaid
 flowchart LR
@@ -97,7 +97,7 @@ flowchart LR
   K --> WJ
   DJ --> M["merge.py<br/>match games, flag disputes,<br/>set aside multi-day sessions"]
   WJ --> M
-  OV[("overrides.json<br/>hand rulings")] --> M
+  OV[("overrides.json<br/>hand rulings, on main")] --> M
   M --> SJ[("series.json")]
   DS --> U["upcoming.py<br/>run by scrape.py, dual meets<br/>only, merges both schedules"]
   WS --> U
@@ -111,6 +111,13 @@ flowchart LR
   SITE --> GP["GitHub Pages<br/>depauwvswabash.com"]
   SJ -.-> SN["snapshot.yml (Jul 1, Jan 2)<br/>data files go to a<br/>GitHub Release first"]
   SN -.-> WB["then, best effort:<br/>source pages go to the<br/>Wayback Machine"]
+  subgraph DB["data branch: only the Actions bot writes these"]
+    PC
+    DJ
+    WJ
+    SJ
+    UJ
+  end
 ```
 
 Each school's page for a sport is accepted only when its parsed wins, losses, ties, home/away records and current streak match that page's own summary, no row is repeated (the same box score on two rows, or three identical games on one date), the page is for the right opponent, and its game count has not shrunk against that school's saved copy. One more check is a warning for now: the page's own "Total Points/Goals/Runs" box is compared with the sum of that page's parsed games (as printed on the page, before any flipping or merging, so disputes between the schools do not matter; results with no score add nothing; half points are exact; a row whose two scores were read in swapped order counts as printed). A mismatch logs a `WARN` line with the school, sport, both figures and the difference, is listed on the workflow run's summary page, and changes nothing else: the page's games are kept and the run stays green. On the pages as of 2026-10-30 all 14 agree. Doubleheaders count as two games. If any check fails, that school keeps its last good games for that sport, the merge is redone from the two saved copies, and the run turns red; everything that passed still updates. A page that passes is then checked for changes to old games, which are held for review (see "Review hold" below). Three things are read specially, in every sport: a score may have a half point (`172.5`; a whole score stays a whole number, so `153`, never `153.0`); a row that lists a result but no score (`L -`, Wabash's 1934 swimming meets) counts in the record, is stored with `score_known: false` and no scores, and is left out of point totals, biggest wins and every score-based fact; and a row whose result letter and two scores disagree (`L 153 - 141`, the score is bigger for the side that lost) is read by trusting the letter, with the scores swapped to match it and `score_order_reversed` recorded, so the other school's matching game is not called a dispute. Requests identify the project in the User-Agent and are spaced a few seconds apart.
@@ -169,13 +176,31 @@ Three GitHub Actions workflows live in `.github/workflows/`:
 
 | Workflow | Runs when | Jobs and permissions |
 |---|---|---|
-| `update-and-deploy.yml` ("Update data and deploy site") | Twice a day, every 30 minutes (ended at once by the gate unless a game is being played), on every push to `main`, and by hand | `gate` (read-only; decides whether a 30-minute run does anything), `build` (`contents: write`; runs required tests, scrapes, renders the candidate site, which must succeed, checks all eight generated pages with `html-validate`, which only warns, then commits changed `data/` as the Actions bot, which is tolerated if the branch ruleset rejects the push, and uploads the site), `deploy` (`pages: write`, `id-token: write`; publishes to GitHub Pages), `issues` (`issues: write`; keeps the `data-review` issue in step), `report` (turns the run red after the deploy if a sport failed to scrape or the HTML validation failed or was skipped, or the data commit was rejected, and says which; test and render failures stop the build instead) |
-| `checks.yml` ("Checks") | On every pull request to `main` | Two read-only jobs. `checks`: the tests, the render, script syntax, `html-validate` on all eight pages and every Mermaid diagram in this README. `fake-clock` (three runs): the whole test suite again with the clock frozen at Nov 14, 2026 1:30 PM ET, Jan 1, 2027 and Oct 30, 2027, so a test that secretly depends on today’s date fails in the pull request. Only `checks` is the required status check |
-| `snapshot.yml` ("Data snapshot") | July 1 and January 2, and by hand | `prepare` (read-only; the change check and the release files), `release` (`contents: write`; the GitHub Release), `archive` (`contents: write`; asks the Wayback Machine to save the source pages, last, and can never fail the run) |
+| `update-and-deploy.yml` ("Update data and deploy site") | Twice a day, every 30 minutes (ended at once by the gate unless a game is being played), on every push to `main`, and by hand | `gate` (read-only; fetches the data from the `data` branch and decides whether a 30-minute run does anything), `build` (`contents: write`; fetches the `data` branch files, re-merges `series.json` offline, runs required tests, scrapes, renders the candidate site, which must succeed, checks all eight generated pages with `html-validate`, which only warns, then commits changed `data/` files to the `data` branch as the Actions bot, which is tolerated if that push is rejected, and uploads the site), `deploy` (`pages: write`, `id-token: write`; publishes to GitHub Pages), `issues` (`issues: write`; fetches the data, then keeps the `data-review` issue in step), `report` (turns the run red after the deploy if a sport failed to scrape or the HTML validation failed or was skipped, or the data commit was rejected, and says which; test and render failures stop the build instead) |
+| `checks.yml` ("Checks") | On every pull request to `main` | Two read-only jobs, each of which first fetches the bot-managed files from the `data` branch (a read-only fetch, no token) and re-merges `series.json` offline. `checks`: the tests, the render, script syntax, `html-validate` on all eight pages and every Mermaid diagram in this README. `fake-clock` (three runs): the whole test suite again with the clock frozen at Nov 14, 2026 1:30 PM ET, Jan 1, 2027 and Oct 30, 2027, so a test that secretly depends on today’s date fails in the pull request. Only `checks` is the required status check |
+| `snapshot.yml` ("Data snapshot") | July 1 and January 2, and by hand | `prepare` (read-only; fetches the data from the `data` branch, then the change check and the release files), `release` (`contents: write`; the GitHub Release), `archive` (`contents: write`; asks the Wayback Machine to save the source pages, last, and can never fail the run) |
 
-To run the update by hand: Actions, "Update data and deploy site", Run workflow, on `main`. The two optional inputs are "Accept a sport whose game count went down" (`allow_shrink`) and "Apply the changes to old games waiting for review" (`apply_reviewed_changes`, see "Review hold"). Scraping and rendering share one `build` job because the "Last checked" time is an uncommitted file that exists only on that runner. A push made with the workflow's own token does not start another run, so scraping on every push to `main` cannot loop. Every run that gets past the gate scrapes first, so every deploy carries a fresh "Last checked". It then renders the candidate site before committing changed data; a render failure stops the build before the data commit, artifact upload, deploy, or issue sync. HTML validation problems are reported as warnings and do not stop publishing. With no data changes, the site is still rendered, checked, and uploaded. A scraper failure remains tolerated when its validated fallback data can render. "Data last changed" is different: it is when `series.json` last changed (`updated_at`), which can be weeks ago because nothing changes between games.
+To run the update by hand: Actions, "Update data and deploy site", Run workflow, on `main`. The three optional inputs are "Accept a sport whose game count went down" (`allow_shrink`), "Apply the changes to old games waiting for review" (`apply_reviewed_changes`, see "Review hold") and "Prove the push to the data branch works" (`test_data_commit`, see "The `data` branch"). Scraping and rendering share one `build` job because the "Last checked" time is an uncommitted file that exists only on that runner. A push made with the workflow's own token does not start another run, so scraping on every push to `main` cannot loop. Every run that gets past the gate scrapes first, so every deploy carries a fresh "Last checked". It then renders the candidate site before committing changed data; a render failure stops the build before the data commit, artifact upload, deploy, or issue sync. HTML validation problems are reported as warnings and do not stop publishing. With no data changes, the site is still rendered, checked, and uploaded. A scraper failure remains tolerated when its validated fallback data can render. "Data last changed" is different: it is when `series.json` last changed (`updated_at`), which can be weeks ago because nothing changes between games.
 
-In `update-and-deploy.yml`, the build runs tests before it scrapes. If tests fail, the build stops and no scrape or later build step runs. A render failure also stops the build before the data commit, artifact upload, deploy, or issue sync. HTML validation never stops the build: setting up Node and running `html-validate` on all eight pages can each fail without blocking anything, and if Node cannot be set up the validation is skipped. The production script syntax check is also skipped if Node setup fails and cannot block publishing; the pull-request check remains the hard syntax gate. A failed or skipped validation writes a warning annotation and a run-summary note, and the site still publishes. If tests pass, a scraper failure is tolerated so validated fallback data can continue through publication. After the deploy, the report job turns the run red for a scraper failure, a failed validation or a skipped validation, says which it was, and points to the build logs and deployment result. A data commit that the "Protect main" ruleset rejects is handled the same way: the step is allowed to fail, the site still publishes from the data that run scraped, `data/` in the repository stays as it was (so the next run starts from the older committed copy, and the `data-review` issue reads the committed pending file), and the report job names the problem. Because the tests gate every run, a failing test stops all updates (scheduled, push and manual alike, since a manual run runs the same tests) until it is fixed.
+### The `data` branch: where the bot-managed files live
+
+`main` is protected (every change needs a pull request and the `checks` status), and GitHub does not let the Actions bot bypass that ruleset, so the files only the update workflow writes live on a separate, unprotected branch called `data`. It holds those files at the same paths (`data/series.json` and so on) and nothing else, no code, so its history is a plain audit trail of every data change.
+
+| On the `data` branch (written only by the workflow) | On `main` (hand-edited, changed only through pull requests) |
+|---|---|
+| `depauw.json`, `wabash.json`, `series.json`, `upcoming.json`, `pending-changes.json` | `overrides.json`, `alumni.json`, `endowment.json`, `bell-heists.json` |
+
+The list is `BOT_FILES` in `scraper/databranch.py`, which also does the work: `python scraper/databranch.py fetch` copies the five files from the `data` branch into `data/` (byte for byte, and it fails loudly if the branch or any file is missing, because reading a missing schedule as "no games" would be worse), and `push` commits the changed ones back. `main` does not track those five files and its `.gitignore` lists them, so a fetched copy can never be committed to `main` by accident.
+
+- **Every job that reads data fetches it first.** The gate, build and issues jobs, the snapshot workflow's `prepare` job and both pull-request check jobs run `fetch` right after checking out `main`. The pull-request fetch is a read-only fetch of this repository, with no token, so a pull request from a fork gets no extra access.
+- **Only the build job writes, and only there.** The commit step runs `python scraper/databranch.py push --remote origin`: it adds a commit by the Actions bot to the `data` branch containing just the changed bot-managed files (a fast-forward push, never forced). It builds the commit from git objects, so it never touches `main`. If the branch moved since the fetch (the `update-and-deploy` concurrency group makes that unlikely), it fetches the new tip, rebuilds the commit on top of it from this run's files and tries once more; if that fails too, the step fails, the deploy still happens, and the report job turns the run red naming the data branch.
+- **`series.json` is rebuilt before the tests.** Rulings (`overrides.json`) and the merge code live on `main`, but `series.json` lives on the `data` branch, so a change to either makes the stored `series.json` stale until it is re-merged. `python scraper/scrape.py --remerge-only` does that offline from the saved `depauw.json` and `wabash.json` (nothing is fetched; `upcoming.json` and the check time are left alone). Pull-request checks run it as a hard step (a ruling that no longer finds its rows fails the pull request); in production it is non-blocking, because a failing merge keeps that sport's last good data, exits non-zero and leaves the decision to the tests, exactly as a scrape does.
+- **Proving the push works.** Run "Update data and deploy site" by hand with **Prove the push to the data branch works** ticked (`test_data_commit`). The run does everything as usual but, instead of committing data, commits only a marker file, `data/.commit-test` (a timestamp), to the `data` branch. Nothing else on the branch changes, and the site deploys normally. The next real data commit removes the marker; a normal run with no data changes leaves it alone. No reader looks at the marker.
+- **Getting the data locally.** After cloning, run `python scraper/databranch.py fetch` (add `--remote origin` to use your own remote instead of the public repository). `render.py` and `pytest` stop with that instruction when the files are missing. A local `scrape.py` run writes the same ignored files; they are never committed.
+- **Settings on GitHub (by hand).** A second ruleset, "Protect data", targets only the `data` branch with **Restrict deletions** and **Block force pushes** and nothing else (no pull request or status-check rule, so the bot can push). "Protect main" keeps targeting only the default branch.
+- **If the branch is ever lost.** Nothing on the site breaks until the next run, which would fail at the fetch. Recreate it from the last release's attachments (`data-YYYY-MM-DD`: `series.json`, `depauw.json`, `wabash.json`, `upcoming.json`; `pending-changes.json` is `{"schema_version": 1, "changes": []}` when nothing was waiting) or from any local copy, as one commit holding the five files under `data/`, and push it as `data`. The next run fills in everything newer.
+
+In `update-and-deploy.yml`, the build runs tests before it scrapes. If tests fail, the build stops and no scrape or later build step runs. A render failure also stops the build before the data commit, artifact upload, deploy, or issue sync. HTML validation never stops the build: setting up Node and running `html-validate` on all eight pages can each fail without blocking anything, and if Node cannot be set up the validation is skipped. The production script syntax check is also skipped if Node setup fails and cannot block publishing; the pull-request check remains the hard syntax gate. A failed or skipped validation writes a warning annotation and a run-summary note, and the site still publishes. If tests pass, a scraper failure is tolerated so validated fallback data can continue through publication. After the deploy, the report job turns the run red for a scraper failure, a failed validation or a skipped validation, says which it was, and points to the build logs and deployment result. A push to the `data` branch that is rejected (twice, see "The `data` branch") is handled the same way: the step is allowed to fail, the site still publishes from the data that run scraped, the `data` branch stays as it was (so the next run starts from the older stored copy, and the `data-review` issue reads the stored pending file), and the report job names the problem. Because the tests gate every run, a failing test stops all updates (scheduled, push and manual alike, since a manual run runs the same tests) until it is fixed.
 
 What each run of `update-and-deploy.yml` does:
 
@@ -185,9 +210,10 @@ flowchart TD
   T2["Every 30 minutes"] --> G
   T3["Push to main"] --> G
   T4["Manual run<br/>(options: allow shrink,<br/>apply reviewed changes)"] --> G
-  G{"gate job<br/>30-minute run with no<br/>game-day window open?"}
+  G{"gate job (reads the data branch)<br/>30-minute run with no<br/>game-day window open?"}
   G -- "yes" --> X["Stop here:<br/>no scrape, no commit, no deploy"]
-  G -- "no" --> B["build: run required tests"]
+  G -- "no" --> F["build: fetch the data branch files,<br/>re-merge series.json<br/>(failure tolerated)"]
+  F --> B["run required tests"]
   B -- "tests fail" --> TF["build stops:<br/>no scrape or publication"]
   B -- "tests pass" --> S["Scrape<br/>(failure tolerated)"]
   S --> R["render site/"]
@@ -199,9 +225,9 @@ flowchart TD
   V -- "passes" --> C
   V -- "fails" --> W["warning annotation and<br/>run-summary note"]
   W --> C{"data/ changed?"}
-  C -- "yes" --> CM["github-actions bot<br/>commits data to main"]
+  C -- "yes" --> CM["github-actions bot<br/>commits data to the data branch"]
   C -- "no" --> U
-  CM -- "a rejected push is tolerated:<br/>warning, data/ not updated" --> U["upload site artifact"]
+  CM -- "a rejected push is tolerated:<br/>warning, data branch not updated" --> U["upload site artifact"]
   U --> D["deploy to GitHub Pages<br/>(the site still publishes)"]
   U --> IS["issues: open, update or close<br/>the data-review issue"]
   D -- "scraper failed, validation failed<br/>or skipped, or data commit rejected" --> RP["report: run turns red<br/>names the problem, check the logs"]
@@ -219,7 +245,7 @@ The two pages are two independent hand-kept records of the same games, so the me
 2. **Nothing is hidden.** Every disagreement (score, winner, date, one-school game) is flagged on the page and in `games.csv`, and every match made on weaker evidence is logged by the scraper (`REVIEW`).
 3. **People decide the hard cases, in writing.** A judgement call becomes a ruling in `data/overrides.json` with a reason, so it is repeatable and reviewable instead of buried in code.
 4. **Each page must first be right about itself.** A page is accepted only when its games add up to its own summary. Merging never loosens that check, and one page failing never blocks the other.
-5. **The merge is a pure function** of the two saved lists plus the rulings. `data/series.json` can always be rebuilt from `data/depauw.json`, `data/wabash.json` and `data/overrides.json`, and a test checks that the committed files agree.
+5. **The merge is a pure function** of the two saved lists plus the rulings. `data/series.json` can always be rebuilt from `data/depauw.json`, `data/wabash.json` and `data/overrides.json` (`scrape.py --remerge-only`), and a test checks that the files agree.
 
 **Why each pass is there**
 
@@ -284,7 +310,7 @@ The schedule pages are separate: the yearless URL (`/sports/<sport>/schedule`) a
 
 Locations are shown in one style, AP style ("Ind.", "Ohio", "Ill."), wherever the page shows one, because the two schools write states differently (DePauw "Greencastle, Ind.", Wabash "Greencastle, IN"). This is display only (`scraper/places.py`): the data files and `games.csv` keep each source's own spelling, and a location that does not end in a recognised state is left exactly as it was.
 
-**Game-day mode** (`scraper/gameday.py`, `.github/workflows/update-and-deploy.yml`). Besides the two daily runs, the workflow starts every 30 minutes (at :07 and :37). A first, fast `gate` job reads only the committed `data/upcoming.json` and `data/series.json` with the runner's own Python (nothing is installed) and decides whether a game is being played. On almost every run it says no and the run ends there: no scrape, no commit, no deploy, and "Last checked" does not change. Only runs started by the 30-minute schedule can be skipped; the two daily runs, pushes to `main` and manual runs always run in full.
+**Game-day mode** (`scraper/gameday.py`, `.github/workflows/update-and-deploy.yml`). Besides the two daily runs, the workflow starts every 30 minutes (at :07 and :37). A first, fast `gate` job fetches `data/upcoming.json` and `data/series.json` from the `data` branch and reads only those with the runner's own Python (nothing is installed) and decides whether a game is being played. On almost every run it says no and the run ends there: no scrape, no commit, no deploy, and "Last checked" does not change. Only runs started by the 30-minute schedule can be skipped; the two daily runs, pushes to `main` and manual runs always run in full.
 
 A game's window, per sport and date:
 
@@ -325,8 +351,8 @@ Checking a page against its own summary does not catch a school quietly editing 
 
 - **What counts as old.** A game is historical when its season is before the sport's current season, and the current season is the newest season present in either school's saved or newly read games for that sport. (A calendar rule would hold a score fix made the week after a season ends; this does not.) In the off-season the last season played is still current, so its fixes go straight through.
 - **What is held.** Any difference between a school's newly read page and that school's saved copy (`data/depauw.json` or `data/wabash.json`) for historical games: an edited score, result, date, site or note, a newly added old game, or a removed old game. Games are compared whole with styling removed: spacing, capitalization and the state style in a location ("Greencastle, IN" and "Greencastle, Ind." are the same place) are not changes, so a school restyling its pages holds nothing. A different place, score, result, date or note is a change. `--allow-shrink` only lifts the game-count check; a removed old game is still held.
-- **What happens to a held change.** The saved version of that game stays (so the merge, `series.json` and the page keep showing it), current-season changes apply as usual, and the change is recorded in `data/pending-changes.json` (school, sport, kind, old version, new version, source page, first-seen time), committed with the data. It stays there, unchanged, while the school's page keeps the new version.
-- **The issue.** A separate `issues` job (the only one with `issues: write`, in its own concurrency group) keeps one open GitHub issue labeled `data-review` (the label is created if missing) in step with the pending file: it lists every change as was/now with a link to the source page, edits the same issue on later runs (never opens a second, and skips the edit when nothing changed), and is capped per sport at 25 entries with "and N more, see `data/pending-changes.json`" so it always fits GitHub's size limit. A held change to a game that a `same_game` or `different_games` ruling names is marked with a warning, because approving it makes that ruling stale and the sport's merge then fails loudly until the ruling is fixed.
+- **What happens to a held change.** The saved version of that game stays (so the merge, `series.json` and the page keep showing it), current-season changes apply as usual, and the change is recorded in `data/pending-changes.json` (school, sport, kind, old version, new version, source page, first-seen time), stored on the `data` branch with the rest of the data. It stays there, unchanged, while the school's page keeps the new version.
+- **The issue.** A separate `issues` job (the only one with `issues: write`, in its own concurrency group) keeps one open GitHub issue labeled `data-review` (the label is created if missing) in step with the pending file: it lists every change as was/now with a link to the source page, edits the same issue on later runs (never opens a second, and skips the edit when nothing changed), and is capped per sport at 25 entries with "and N more, see `data/pending-changes.json` on the `data` branch" so it always fits GitHub's size limit. A held change to a game that a `same_game` or `different_games` ruling names is marked with a warning, because approving it makes that ruling stale and the sport's merge then fails loudly until the ruling is fixed.
 - **Approve.** Run the "Update data and deploy site" workflow (Actions tab, Run workflow) with **Apply the changes to old games waiting for review** ticked (the `apply_reviewed_changes` input). The run applies only changes that still match a pending entry exactly (a page that changed again is held afresh), clears them from `data/pending-changes.json`, merges and renders, and the issue gets a closing comment and is closed once nothing is left. If a school's page fails to load during that run, its pending entries stay and the issue stays open. Whether the input can be set from the GitHub mobile app is not confirmed (GitHub's announcement says the app can start a manual workflow but does not say it shows inputs); the Actions page in a phone's web browser shows the input form.
 - **Reject.** Add a `keep_previous` ruling to `data/overrides.json`, under `sports` and the sport's key; the issue shows a ready-to-paste one under each change:
 
@@ -354,6 +380,7 @@ Tests are in `tests/test_review.py`; the logic is in `scraper/review.py` and `sc
 - **Job order.** Three jobs, one after the other: `prepare` (checks for changes and builds the release files, with no calls to the Internet Archive), `release` (creates the GitHub Release; its notes say "Wayback Machine copies: being saved") and `archive`. A slow Internet Archive can therefore never delay or block the data release.
 - **Internet Archive.** The `archive` job sends each of the 14 source history pages (7 DePauw, 7 Wabash) to the Wayback Machine's Save Page Now (`https://web.archive.org/save/<url>`), about 6 seconds apart, then edits the release notes in place (`gh release edit`) to list the archive links and any pages it could not save ("Wayback Machine copies: none could be saved this time." if there were none). It is best effort and never fails the run: every error is caught and logged as a warning, the script always exits 0, and the job is also `continue-on-error`. Limits, named constants in `scraper/snapshot.py`: `SAVE_BUDGET` (30 minutes for the whole step; pages not reached are listed as not saved), `SAVE_TIMEOUT` (180 seconds per page; Save Page Now often needs a minute or more) and `SAVE_PAUSE` (6 seconds between requests), plus a 40-minute job `timeout-minutes` as a backstop. The per-page limit is a socket timeout, so the budget and the job timeout are the real bounds.
 - **Manual runs.** Actions, "Data snapshot", Run workflow has two inputs. `archive` (default on): turn it off to make a snapshot without archiving; the notes then say the copies were not requested. `archive_release_tag`: to retry archiving for a release that already exists, for example after some pages were not saved, enter its tag (such as `data-2026-10-29`). That run makes no new snapshot. It only tries the pages that do not already have an archive link in the release notes, adds any new links to the archive section and never removes an existing one; "Not saved" lists only the pages still missing. The rest of the notes is left alone, and a retry that saves nothing changes nothing (a release with a link for every page is not touched at all).
+- **Where the data comes from.** The `prepare` job fetches `series.json`, `depauw.json`, `wabash.json` and `upcoming.json` from the `data` branch and uses `overrides.json` from `main`. The `archive` job reads no data files.
 - **Permissions.** The `prepare` job is read-only; the `release` and `archive` jobs are the only ones with `contents: write`. Every action is pinned to a full commit SHA.
 
 The logic is in `scraper/snapshot.py` and the tests in `tests/test_snapshot.py`.
@@ -377,6 +404,8 @@ After the first deploy of a change to the preview, test it by texting yourself t
 
 ## Run it locally
 
+The bot-managed data files live on the `data` branch, so on a fresh clone run `python scraper/databranch.py fetch` first (see "The `data` branch"); `render.py` and `pytest` stop and say so when they are missing.
+
 Tests never read the real clock, the network or the bot-updated files in `data/` for an exact count. They use
 fixtures (`tests/fixtures/`, including a frozen copy of `series.json`), a fixed `now` passed to the code, and
 `tests/conftest.py`, which fails any test that opens a connection or runs `gh`, `npm`, `node` or `curl`. The
@@ -387,11 +416,13 @@ Python 3.12 or newer (the workflows use 3.12) and, for the HTML and diagram chec
 
 ```bash
 pip install -r requirements.txt
+python scraper/databranch.py fetch   # get series.json, depauw.json, wabash.json, upcoming.json and pending-changes.json from the data branch
+python scraper/scrape.py --remerge-only   # rebuild series.json from the saved copies and the rulings (no fetching); PR checks do this too
 python -m pytest -q tests            # scraper and renderer tests (use saved page markup, no network)
 pip install -r requirements-clock.txt   # optional: lets you run the tests as if it were another date
 python -m pytest -q tests --fake-now=2026-11-14T13:30:00-05:00   # the whole suite with the clock frozen (needs a UTC offset)
 python scraper/scrape.py --dry-run   # fetch both schools' live pages and report, without writing
-python scraper/scrape.py             # fetch and update data/ (and record the check time)
+python scraper/scrape.py             # fetch and update data/ (and record the check time); the bot files are git-ignored here
 python scraper/scrape.py --apply-reviewed   # also accept the old-game changes already waiting in data/pending-changes.json
 python scraper/render.py             # build the eight HTML pages and static assets into site/
 python scraper/render.py --now 2026-11-14T13:30   # preview game-day mode as if it were this Eastern time
@@ -410,13 +441,13 @@ npx --yes -p @mermaid-js/mermaid-cli@11.17.0 mmdc -i README.md -o <temp folder>/
 ```
 README.md, LICENSE, requirements.txt      this file, the MIT license, the Python packages (Pillow is pinned exactly)
 AGENTS.md                                 the short rules for any agent or contributor: checks, invariants, hygiene
-data/
-  series.json        the merged records the athletics pages read (always the merge of the next three)
-  depauw.json        DePauw's page for each sport as read, in DePauw's point of view
-  wabash.json        Wabash's page for each sport as read, flipped into DePauw's point of view
+data/                 (main holds only the hand-edited files; the five marked "data branch" are fetched, git-ignored)
+  series.json        [data branch] the merged records the athletics pages read (always the merge of the next three)
+  depauw.json        [data branch] DePauw's page for each sport as read, in DePauw's point of view
+  wabash.json        [data branch] Wabash's page for each sport as read, flipped into DePauw's point of view
   overrides.json     hand rulings: same_game, different_games, session_of, keep_previous
-  pending-changes.json  changes to old games waiting for review ({"changes": []} when none)
-  upcoming.json      the other school's games not yet played, from both schedules
+  pending-changes.json  [data branch] changes to old games waiting for review ({"changes": []} when none)
+  upcoming.json      [data branch] the other school's games not yet played, from both schedules
   alumni.json        hand-curated graduates, categories and sources (alumni page)
   endowment.json     hand-curated endowment amounts, enrollment and common basis (alumni page)
   bell-heists.json   hand-curated, sourced Monon Bell heist stories (heist history page)
@@ -434,6 +465,7 @@ scraper/
   howitworks.py      the text of the three how-it-works pages
   render.py          builds site/ (eight HTML pages, footer, nav, sitemap, downloads); images.py draws the PNGs
   snapshot.py        data snapshots and Wayback archiving
+  databranch.py      fetch, push and bootstrap for the data branch (where the bot-managed data files live)
 static/              styles.css, favicon.svg, easter-eggs.js, three original easter-egg SVGs, fonts/ (Barlow Condensed, SIL OFL)
 tests/               one test file per area (scraper, merge, overrides, review, snapshot, game day, render,
                      footer, how-it-works pages, alumni, swimming ...); fixtures/ holds page markup captured
@@ -463,7 +495,7 @@ Only meets where DePauw's team swims Wabash's team head to head count toward the
 
 ## Data format
 
-`data/series.json` is the merged record the site reads. It holds `updated_at`, overall `totals`, and one entry per sport with its record, total points/goals/runs (`points`, labelled by `total_label`), `sources` (how many games both schools list, only DePauw, only Wabash, disputed, with different dates, and with no recorded date), and every game (`date`, `season`, `location`, `site`, `result`, `depauw`, `wabash`, `note`, `boxscore`). Games are stored oldest first, and games with no usable date come first within their season, in the order the school's page listed them. Each game also has a `source` (`both`, `depauw` or `wabash`), and, only when they apply, `date_known: false` (the date was a placeholder or fell outside the sport's season, so `date` must not be shown; show the `season`), `disputed` with `wabash_version` (Wabash's result and scores), and `date_differs` with `wabash_date` (or `depauw_date`, when DePauw's date was the unusable one). A game can be both disputed and have different dates. Scores can be half points (`147.5`) in swimming. Also only when they apply: `score_known: false` (the school lists the result but no score; `depauw` and `wabash` are null), `score_order_reversed` (the schools whose page printed the scores in the opposite order from the result, which was trusted) and `sessions` (the running scores a `session_of` ruling set aside, kept on the meet they belong to); `sources` gains `session_rows` when a ruling set rows aside. Results and locations are from DePauw's point of view. Football's neutral-site games (1916 to 1922, Indianapolis) are why its home and away records don't add up to the total.
+`data/series.json` (on the `data` branch, like `depauw.json`, `wabash.json`, `pending-changes.json` and `upcoming.json`) is the merged record the site reads. It holds `updated_at`, overall `totals`, and one entry per sport with its record, total points/goals/runs (`points`, labelled by `total_label`), `sources` (how many games both schools list, only DePauw, only Wabash, disputed, with different dates, and with no recorded date), and every game (`date`, `season`, `location`, `site`, `result`, `depauw`, `wabash`, `note`, `boxscore`). Games are stored oldest first, and games with no usable date come first within their season, in the order the school's page listed them. Each game also has a `source` (`both`, `depauw` or `wabash`), and, only when they apply, `date_known: false` (the date was a placeholder or fell outside the sport's season, so `date` must not be shown; show the `season`), `disputed` with `wabash_version` (Wabash's result and scores), and `date_differs` with `wabash_date` (or `depauw_date`, when DePauw's date was the unusable one). A game can be both disputed and have different dates. Scores can be half points (`147.5`) in swimming. Also only when they apply: `score_known: false` (the school lists the result but no score; `depauw` and `wabash` are null), `score_order_reversed` (the schools whose page printed the scores in the opposite order from the result, which was trusted) and `sessions` (the running scores a `session_of` ruling set aside, kept on the meet they belong to); `sources` gains `session_rows` when a ruling set rows aside. Results and locations are from DePauw's point of view. Football's neutral-site games (1916 to 1922, Indianapolis) are why its home and away records don't add up to the total.
 
 `data/depauw.json` and `data/wabash.json` hold each school's games for each sport as they were read, both in DePauw's point of view (Wabash's page is flipped: wins and losses, scores, and home and away swap). `series.json` is always the merge of these two files, so a run can re-merge without fetching.
 
@@ -486,7 +518,7 @@ Only meets where DePauw's team swims Wabash's team head to head count toward the
 - **Add or edit a Bell heist story.** Edit `data/bell-heists.json` (see "Monon Bell heist history"): give it a unique lowercase `id`, a `school`, an `outcome`, a `title`, a `summary` in your own words and at least one `sources` entry, set `counted_in_theft_total` to true only for a stolen Bell, update `verified_at`, then run the tests and `python scraper/render.py`.
 - **Update the endowment.** Edit `data/endowment.json`: each school's audited amount and source, the components taken out to reach the common basis (`comparable.excluded`, with a source note), and the fall enrollment that matches the fiscal year (validation refuses any other term). The per-student figures and the "about even" call are calculated at build time and are never stored.
 - **Agents and tools.** `AGENTS.md` at the repository root is the short list of rules for any person or coding agent changing this repo: the checks to run, the invariants that must not break, repo hygiene and how to collaborate. Read it before your first change; this README has the detail.
-- **Pull requests.** The scraper commits data to `main` on a schedule and the repository can have more than one contributor, so `git fetch origin` and bring your branch up to date with `main` before you push. Run the tests, the render, `html-validate` and the diagram check (see "Run it locally"). Any change to the pipeline, data files, workflows, triggers or game-day behavior also updates the matching diagram in this README.
+- **Pull requests.** The scraper commits data to the `data` branch on a schedule (never to `main`) and the repository can have more than one contributor, so `git fetch origin` and bring your branch up to date with `main` before you push. Changes to the five bot-managed data files do not go in pull requests; only the workflow writes them. Run the tests, the render, `html-validate` and the diagram check (see "Run it locally"). Any change to the pipeline, data files, workflows, triggers or game-day behavior also updates the matching diagram in this README.
 
 ## License
 
