@@ -17,6 +17,8 @@ Safety rules, so a bad night never wipes good data:
     empty commits.
   * A page whose own total ("Total Points/Goals/Runs") disagrees with its parsed games only gets a warning
     (total_warning): its games are kept and the exit code is unchanged.
+  * A page that redirects to another site or to plain http, or is over MAX_PAGE_BYTES (10 MB), counts as failed to
+    load (see fetch), so the same rule applies: that school's previous games are kept.
   * Exit code is non-zero if any page failed, so the GitHub Action shows red.
   * The "last checked" time (.checked-at, uncommitted) is written only after a live run in which
     at least one page loaded and validated. A run where every page failed leaves it alone.
