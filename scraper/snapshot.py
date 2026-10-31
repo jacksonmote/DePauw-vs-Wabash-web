@@ -10,8 +10,9 @@ Internet Archive to save each source page. Used by .github/workflows/snapshot.ym
   python scraper/snapshot.py archive --tag TAG  ask the Internet Archive to save the source pages, then edit the
                                                 release notes of TAG in place; always exits 0
 
-The change check compares a hash of series.json, depauw.json, wabash.json and overrides.json with the hash
-the last release recorded in its notes. data/upcoming.json is attached to every release but does not count
+The data comes from data/: the workflow fetches series.json, depauw.json, wabash.json and upcoming.json from the
+data branch first (databranch.py); overrides.json is on main. The change check compares a hash of series.json,
+depauw.json, wabash.json and overrides.json with the hash the last release recorded in its notes. data/upcoming.json is attached to every release but does not count
 as a change, because it changes with every schedule update.
 
 The Wayback Machine part runs after the release exists and is best effort: it has a total time budget and a
