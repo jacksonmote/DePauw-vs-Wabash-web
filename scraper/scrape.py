@@ -369,11 +369,37 @@ def now_utc() -> dt.datetime:
     return dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
 
 
+MAX_PAGE_BYTES = 10_000_000   # the largest real page is about 1 MB (men's basketball history); 10 MB is far past any real one
+
+
+def _site(url: str) -> str:
+    """The host with a leading www. removed, so https://example.com and https://www.example.com count as the same site."""
+    from urllib.parse import urlparse
+    host = (urlparse(url).hostname or "").lower()
+    return host[4:] if host.startswith("www.") else host
+
+
 def fetch(url: str) -> str:
+    """One page as text. Refuses a page that redirects to another site or to plain http, and one bigger than
+    MAX_PAGE_BYTES (checked while reading, so a huge body is never held in memory). The real pages do neither."""
     import requests  # imported here so fixture runs and tests don't need it
-    resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=30)
-    resp.raise_for_status()
-    return resp.text
+    resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=30, stream=True)
+    try:
+        resp.raise_for_status()
+        for hop in [*resp.history, resp]:
+            if not hop.url.startswith("https://") or _site(hop.url) != _site(url):
+                raise ValueError(f"{url} redirected to {hop.url}; only the same site over https is accepted")
+        declared = resp.headers.get("Content-Length", "")
+        if declared.isdigit() and int(declared) > MAX_PAGE_BYTES:
+            raise ValueError(f"{url} is {declared} bytes, over the {MAX_PAGE_BYTES} limit")
+        body = bytearray()
+        for chunk in resp.iter_content(chunk_size=65536):
+            body += chunk
+            if len(body) > MAX_PAGE_BYTES:
+                raise ValueError(f"{url} is over the {MAX_PAGE_BYTES} byte limit")
+        return bytes(body).decode(resp.encoding or "utf-8", errors="replace")
+    finally:
+        resp.close()
 
 
 class Pacer:

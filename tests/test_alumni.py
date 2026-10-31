@@ -79,7 +79,7 @@ def test_zero_zero_categories_are_hidden_but_one_sided_zero_is_kept():
 @pytest.mark.parametrize("mutation, message", [
     (lambda x: x.update(schema_version=2), "schema_version 1"),
     (lambda x: x["people"][0].update(school="other"), "invalid school"),
-    (lambda x: x["people"][0]["school_source"].update(url="javascript:alert(1)"), r"HTTP\(S\) URL"),
+    (lambda x: x["people"][0]["school_source"].update(url="javascript:alert(1)"), r"https URL"),
     (lambda x: x["people"][0]["qualifications"].clear(), "qualifications must document"),
 ])
 def test_invalid_curated_data_is_rejected(mutation, message):
@@ -94,7 +94,7 @@ def test_invalid_curated_data_is_rejected(mutation, message):
     (lambda x: x.update(as_of="20250630"), "ISO date"),
     (lambda x: x["schools"]["wabash"].update(amount_usd=True), "non-negative integer"),
     (lambda x: x["schools"].pop("depauw"), "exactly depauw and wabash"),
-    (lambda x: x["schools"]["depauw"].update(source_url="file:///tmp/a"), r"HTTP\(S\) URL"),
+    (lambda x: x["schools"]["depauw"].update(source_url="file:///tmp/a"), r"https URL"),
     (lambda x: x.update(as_of="2024-06-30"), "match the fiscal-year end date"),
 ])
 def test_invalid_endowment_data_is_rejected(mutation, message):
@@ -269,7 +269,7 @@ def test_per_student_is_never_stored_in_the_data():
     (lambda x: x["schools"]["wabash"]["enrollment"].update(count=True), "positive integer"),
     (lambda x: x["schools"]["wabash"]["enrollment"].update(count=866.5), "positive integer"),
     (lambda x: x["schools"]["wabash"]["enrollment"].update(term="Fall 2023"), "must be Fall 2024"),
-    (lambda x: x["schools"]["wabash"]["enrollment"].update(source_url="ftp://nces.ed.gov/x"), r"HTTP\(S\) URL"),
+    (lambda x: x["schools"]["wabash"]["enrollment"].update(source_url="ftp://nces.ed.gov/x"), r"https URL"),
     (lambda x: x["schools"]["depauw"]["enrollment"].update(source_label=" "), "source_label"),
     (lambda x: x["schools"]["depauw"]["enrollment"].update(verified_at="10/29/2026"), "ISO date"),
 ])
@@ -522,7 +522,7 @@ def test_when_the_figures_differ_by_more_than_five_percent_the_higher_one_is_mar
     (lambda x: x["schools"]["depauw"]["comparable"].update(excluded="none"), "excluded must be a list"),
     (lambda x: x["schools"]["depauw"]["comparable"]["excluded"][0].update(amount_usd=0), "positive integer"),
     (lambda x: x["schools"]["depauw"]["comparable"]["excluded"][0].update(amount_usd=1.5), "positive integer"),
-    (lambda x: x["schools"]["depauw"]["comparable"]["excluded"][1].update(label=" "), "excluded\[1\].label"),
+    (lambda x: x["schools"]["depauw"]["comparable"]["excluded"][1].update(label=" "), r"excluded\[1\].label"),
     (lambda x: x["schools"]["depauw"]["comparable"]["excluded"][0].update(amount_usd=2_000_000_000),
      "total less than amount_usd"),
     (lambda x: x["schools"]["wabash"]["comparable"].update(source_note=""), "comparable.source_note"),
