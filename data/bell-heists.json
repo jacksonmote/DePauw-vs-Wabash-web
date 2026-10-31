@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-30",
+  "intro": "The Monon Bell has been the target of pranks, plots and a few genuine thefts for decades. Here is what is on the record, oldest first.",
+  "method": [
+    "These stories come from news reports, school publications and Wikipedia’s account of the Bell, retold here in our own words with a link to every source. Rivalry stories grow in the telling, so anything the sources present as lore is marked as lore.",
+    "The record is incomplete. Several thefts are known only by their year, and the sources don’t always agree on details. This page is written by hand and reviewed in the open, so it changes only when someone finds a source. If you have one, use “Suggest a correction” at the bottom of the page."
+  ],
+  "guarding": {
+    "paragraphs": [
+      "After the 1998 incidents, the schools tightened game-day security: the two fan groups now sit in separate sections, and if a game is still close late in the fourth quarter the Bell is moved to a neutral spot.",
+      "Students help too. A Wabash news story from 2006 describes pledge classes and freshmen taking turns guarding the campus and the Bell in the days before the game. And when the Bell sits in its display case at DePauw’s Lilly Center, a sensor underneath it is what alerted police during the 2017 attempt."
+    ],
+    "sources": [
+      {"label": "Wikipedia: Monon Bell", "url": "https://en.wikipedia.org/wiki/Monon_Bell"},
+      {"label": "Wabash College News, Nov 8, 2006: Bell Week", "url": "https://www.wabash.edu/news/story/4064"},
+      {"label": "WRTV, Oct 25, 2017", "url": "https://www.wrtv.com/news/local-news/putnam-county/wabash-students-accused-of-trying-to-steal-the-monon-bell-from-depauw"}
+    ]
+  },
+  "incidents": [
+    {
+      "id": "1941-recorded-theft", "year": 1941, "school": "not-recorded", "outcome": "stolen", "bare_record": true,
+      "title": "Recorded theft, 1941",
+      "summary": "Recorded as a theft of the Bell. No further details have been documented.",
+      "counted_in_theft_total": true,
+      "sources": [{"label": "Wikipedia: Monon Bell", "url": "https://en.wikipedia.org/wiki/Monon_Bell"}]
+    },
+    {
+      "id": "1959-recorded-theft", "year": 1959, "school": "not-recorded", "outcome": "stolen", "bare_record": true,
+      "title": "Recorded theft, 1959",
+      "summary": "Recorded as a theft of the Bell. No further details have been added here yet.",
+      "counted_in_theft_total": true,
+      "sources": [
+        {"label": "Wikipedia", "url": "https://en.wikipedia.org/wiki/Monon_Bell"},
+        {"label": "The DePauw, Nov 10, 2011", "url": "https://thedepauw.com/18703/news/bell-thefts-covered-by-the-depauw/"}
+      ]
+    },
+    {
+      "id": "1965-operation-frijoles", "year": 1965, "school": "wabash", "outcome": "stolen",
+      "title": "Operation Frijoles",
+      "summary": "A Wabash student posed as a visiting official from Mexico, charmed his way into a meeting with DePauw’s president and left knowing where the Bell was kept. Wabash students then took it to Crawfordsville. It is the best-known Bell heist, and Wabash’s favorite.",
+      "details": [
+        "Jim Shanks ’67 introduced himself to DePauw as a representative of the U.S. Information Service in Mexico City. In a meeting with DePauw’s president, he got an offer of scholarships for students from Mexico, then asked to photograph campus sites, the Bell among them, so he could learn where it was kept.",
+        "Back in Crawfordsville, his notes went to other Wabash students, who sent two groups to Greencastle. The first was spotted on campus and talked its way out of trouble when the dates it had brought along vouched for it. The second got through unnoticed and took the Bell from a Quonset hut near the football field.",
+        "Wabash’s administration then “found” the Bell and returned it the day before the game. Wabash won, and its fans celebrated in Mexican-themed costumes and with tortillas. Sports Illustrated later counted the prank among the great rivalry pranks."
+      ],
+      "consequences": "The Bell went home the day before the game. Wabash won 16–6.",
+      "counted_in_theft_total": true,
+      "sources": [
+        {"label": "Wabash Magazine, Fall 1998: The Great Bell Heist of 1965", "url": "https://www.wabash.edu/magazine/1998/fall/features/mononbell.htm"},
+        {"label": "Wabash College News, Dec 9, 2005 (on the Sports Illustrated story)", "url": "https://www.wabash.edu/news/story/3071"},
+        {"label": "The DePauw, Nov 10, 2011", "url": "https://thedepauw.com/18703/news/bell-thefts-covered-by-the-depauw/"},
+        {"label": "Wikipedia: Monon Bell", "url": "https://en.wikipedia.org/wiki/Monon_Bell"}
+      ]
+    },
+    {
+      "id": "1966-recorded-theft", "year": 1966, "school": "not-recorded", "outcome": "stolen", "bare_record": true,
+      "title": "Recorded theft, 1966",
+      "summary": "Recorded as a theft of the Bell. No further details have been documented.",
+      "counted_in_theft_total": true,
+      "sources": [{"label": "Wikipedia: Monon Bell", "url": "https://en.wikipedia.org/wiki/Monon_Bell"}]
+    },
+    {
+      "id": "1967-the-burial", "year": 1967, "school": "depauw", "outcome": "hidden",
+      "title": "The burial",
+      "summary": "To keep the Bell safe from Wabash, DePauw students buried it in the north end zone of their own stadium. Hardly anyone knew where it was, and many assumed Wabash had taken it.",
+      "details": [
+        "The plan nearly backfired when a hard freeze threatened to lock the Bell in the ground. It was dug up on game day in time for the game.",
+        "Wabash won 7–0 on a muddy field, and the Bell left with the winners. Sources disagree on the exact year, and some retellings put the burial in 1966; the 1967 game is the one that matches the muddy 7–0 Wabash win described in the accounts, so it is placed here."
+      ],
+      "counted_in_theft_total": false,
+      "sources": [
+        {"label": "Wikipedia: Monon Bell", "url": "https://en.wikipedia.org/wiki/Monon_Bell"},
+        {"label": "DePauw Athletics: Monon Bell History", "url": "https://depauwtigers.com/sports/2022/6/28/monon-bell-history.aspx"},
+        {"label": "Wabash College News, Nov 8, 2006", "url": "https://www.wabash.edu/news/story/4064"}
+      ]
+    },
+    {
+      "id": "1973-recorded-theft", "year": 1973, "school": "not-recorded", "outcome": "stolen", "bare_record": true,
+      "title": "Recorded theft, 1973",
+      "summary": "Recorded as a theft of the Bell. No further details have been added here yet.",
+      "counted_in_theft_total": true,
+      "sources": [
+        {"label": "Wikipedia", "url": "https://en.wikipedia.org/wiki/Monon_Bell"},
+        {"label": "The DePauw, Nov 10, 2011", "url": "https://thedepauw.com/18703/news/bell-thefts-covered-by-the-depauw/"}
+      ]
+    },
+    {
+      "id": "1978-recorded-theft", "year": 1978, "school": "not-recorded", "outcome": "stolen", "bare_record": true,
+      "title": "Recorded theft, 1978",
+      "summary": "Recorded as a theft of the Bell. No further details have been added here yet.",
+      "counted_in_theft_total": true,
+      "sources": [
+        {"label": "Wikipedia", "url": "https://en.wikipedia.org/wiki/Monon_Bell"},
+        {"label": "The DePauw, Nov 10, 2011", "url": "https://thedepauw.com/18703/news/bell-thefts-covered-by-the-depauw/"}
+      ]
+    },
+    {
+      "id": "1979-recorded-theft", "year": 1979, "school": "not-recorded", "outcome": "stolen", "bare_record": true,
+      "title": "Recorded theft, 1979",
+      "summary": "Recorded as a theft of the Bell. No further details have been documented.",
+      "counted_in_theft_total": true,
+      "sources": [{"label": "Wikipedia: Monon Bell", "url": "https://en.wikipedia.org/wiki/Monon_Bell"}]
+    },
+    {
+      "id": "1988-recorded-theft", "year": 1988, "school": "not-recorded", "outcome": "stolen", "bare_record": true,
+      "title": "Recorded theft, 1988",
+      "summary": "Recorded as a theft of the Bell. No further details have been documented.",
+      "counted_in_theft_total": true,
+      "sources": [{"label": "Wikipedia: Monon Bell", "url": "https://en.wikipedia.org/wiki/Monon_Bell"}]
+    },
+    {
+      "id": "1998-halloween", "year": 1998, "date": "1998-10-31", "date_note": "Halloween", "school": "wabash", "outcome": "stolen",
+      "title": "Halloween",
+      "summary": "Wabash students took the Bell on Halloween night. DePauw had it back by game day, and the game ended in a fight on the field.",
+      "details": [
+        "After the game, a goal post came down and police used pepper spray to break up the crowd. The scene led both schools to tighten security: separate fan sections at the game, and a rule that the Bell is moved to a neutral spot late in the fourth quarter of a close game."
+      ],
+      "consequences": "Tighter game-day security, still in place (see “How the Bell is guarded now”).",
+      "counted_in_theft_total": true,
+      "sources": [
+        {"label": "Wikipedia: Monon Bell", "url": "https://en.wikipedia.org/wiki/Monon_Bell"},
+        {"label": "Wabash Magazine, Fall 1998 (editor’s note on that fall’s heist)", "url": "https://www.wabash.edu/magazine/1998/fall/features/mononbell.htm"}
+      ]
+    },
+    {
+      "id": "2012-sleeping-guards", "year": 2012, "school": "depauw", "outcome": "foiled",
+      "title": "The guards who fell asleep",
+      "summary": "DePauw students nearly got the Bell from Wabash Sigma Chi members who were guarding it, until the guards dozed off. The Bell rang during the attempt, and the ringing woke them.",
+      "details": [
+        "A scuffle followed, the Bell’s handle broke, and Wabash kept the Bell. Only Wikipedia tells this story, so treat the details as campus lore."
+      ],
+      "counted_in_theft_total": false,
+      "sources": [{"label": "Wikipedia: Monon Bell", "url": "https://en.wikipedia.org/wiki/Monon_Bell"}]
+    },
+    {
+      "id": "2017-masked-attempt", "year": 2017, "date_note": "During fall break", "school": "wabash", "outcome": "foiled",
+      "title": "The masked attempt",
+      "summary": "During fall break, three Wabash students wearing Barack Obama and Donald Trump masks got into DePauw’s Lilly Center and tried to take the Bell from its display case. Police caught them before they reached their truck.",
+      "details": [
+        "According to news reports, the group had scouted the building a week earlier, unbolted the Bell from its pedestal and hid in the closed building for hours; a fourth person waited in a pickup outside. A sensor under the Bell alerted campus police. The student paper’s account stresses that an officer stopped the group outside, so the reports differ on exactly how they were caught."
+      ],
+      "consequences": "Misdemeanor trespassing charges that would stay off their records if they helped clean Blackstock Stadium after the November game, which many Wabash students and alumni joined in.",
+      "counted_in_theft_total": false,
+      "sources": [
+        {"label": "WRTV, Oct 25, 2017", "url": "https://www.wrtv.com/news/local-news/putnam-county/wabash-students-accused-of-trying-to-steal-the-monon-bell-from-depauw"},
+        {"label": "The DePauw, Oct 25, 2017", "url": "https://thedepauw.com/25371/news/little-giants-fail-lift-monon-bell/"},
+        {"label": "Wikipedia: Monon Bell", "url": "https://en.wikipedia.org/wiki/Monon_Bell"}
+      ]
+    },
+    {
+      "id": "date-unknown-car-wont-start", "year": null, "date_note": "Date not recorded", "school": "depauw", "outcome": "foiled",
+      "title": "The car that wouldn’t start",
+      "summary": "DePauw students got the Bell into their car, but the car wouldn’t start and they were caught.",
+      "details": [
+        "As the story goes, the sentence was 1,000 hours of community service in Montgomery County. Wikipedia adds, as part of the lore, that nearly all the judges there are Wabash alumni. Nobody has pinned down when this happened."
+      ],
+      "consequences": "1,000 hours of community service (as the story is told).",
+      "counted_in_theft_total": false,
+      "sources": [{"label": "Wikipedia: Monon Bell", "url": "https://en.wikipedia.org/wiki/Monon_Bell"}]
+    }
+  ]
+}
