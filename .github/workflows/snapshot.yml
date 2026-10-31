@@ -73,7 +73,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           ARCHIVE: ${{ github.event.inputs.archive || 'true' }}
         run: |
-          pip install -r requirements.txt
+          pip install --require-hashes -r requirements.txt
           python scraper/snapshot.py build --out release --archive "$ARCHIVE"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

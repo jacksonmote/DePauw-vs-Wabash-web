@@ -113,7 +113,8 @@ def test_png_files_carry_no_metadata():
 def test_the_font_and_its_license_ship_with_the_repo_and_pillow_is_pinned():
     assert images.BOLD.exists() and images.MEDIUM.exists()
     assert "SIL Open Font License" in (ROOT / "static" / "fonts" / "OFL.txt").read_text(encoding="utf-8")
-    assert re.search(r"(?m)^Pillow==\d+\.\d+\.\d+$", (ROOT / "requirements.txt").read_text())
+    assert re.search(r"(?m)^Pillow==\d+\.\d+\.\d+$", (ROOT / "requirements.in").read_text())      # pinned where it is chosen
+    assert re.search(r"(?m)^pillow==\d+\.\d+\.\d+ \\$", (ROOT / "requirements.txt").read_text())    # and in the lock
 
 
 def test_text_is_laid_out_with_the_basic_engine_so_every_platform_agrees():

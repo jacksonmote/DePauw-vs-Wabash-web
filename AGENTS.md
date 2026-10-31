@@ -57,6 +57,7 @@ Site
 
 - Commit only the project's own files. No plans, working notes, credentials, personal details or local file paths. Do not add files that are not part of the project unless the maintainer asks. `docs/` holds one older plan; do not add to it.
 - Pin every GitHub Action to a full commit SHA with a version comment, or the workflow fails.
+- Python packages are locked. Change `requirements.in` or `requirements-clock.in`, regenerate the matching `.txt` with `pip-compile --generate-hashes` on Python 3.12 (the version the workflows use), and keep every workflow installing with `--require-hashes -r requirements.txt`. Never install from the `.in` files in a workflow or loosen the pins; `tests/test_requirements.py` checks this. README "Dependencies" has the detail.
 - Workflows use `pull_request`, never `pull_request_target`, request the minimum permissions per job and use no secrets.
 - Tests that run the committed rulings against `tests/fixtures/` fail if a fixture is refreshed with changed rows. Refresh them together with the rulings.
 

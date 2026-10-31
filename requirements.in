@@ -1,0 +1,8 @@
+# What the project needs directly. The exact versions and hashes that CI and production install are in
+# requirements.txt, generated from this file (see "Dependencies" in README.md):
+#   pip-compile --generate-hashes requirements.in
+beautifulsoup4>=4.12
+requests>=2.31
+pytest>=8
+pyyaml>=6
+Pillow==13.0.0
