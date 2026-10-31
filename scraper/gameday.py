@@ -1,7 +1,7 @@
 """
 Game-day mode: when is a DePauw vs. Wabash game being played, and has its result arrived?
 
-Two things use this, and both need only the committed data (data/upcoming.json and data/series.json):
+Two things use this, and both need only the stored data (data/upcoming.json and data/series.json, fetched from the data branch):
 
   * the gate (`python scraper/gameday.py gate`), the first and fastest job of the workflow. The workflow
     also runs every 30 minutes, and on almost every one of those runs the gate says "nothing to do" and

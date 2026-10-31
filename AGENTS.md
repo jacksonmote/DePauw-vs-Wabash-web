@@ -10,7 +10,7 @@ Read the README sections you touch: "How the data updates", "Reading and adjusti
 
 ## Before you call a change done
 
-Commands are in README "Run it locally". Run them from the repo root.
+Commands are in README "Run it locally". Run them from the repo root. The bot-managed data files are not on `main`: run `python scraper/databranch.py fetch` first (and `python scraper/scrape.py --remerge-only` if you changed `overrides.json` or the merge code), or `pytest` and `render.py` stop and say so.
 
 1. `python -m pytest -q tests`
 2. `python scraper/render.py`
@@ -40,13 +40,13 @@ Data
 Pipeline
 - Every job that reads `data/` runs `databranch.py fetch --remote origin` right after checking out `main` (pull-request checks too, read-only and without a token); `scrape.py --remerge-only` rebuilds `series.json` before the tests (a hard step in `checks.yml`, non-blocking in production). Only the build job's "Commit if data changed" step writes, through `databranch.py push`, to `data` and never to `main`, never with `--force`; a failed push still deploys and turns the run red. `test_data_commit` commits only a marker.
 - Tests run before the scrape in `update-and-deploy.yml`. A scraper failure is tolerated (validated fallback data publishes) and the `report` job turns the run red after the deploy. A push made with the workflow's token does not start another run.
-- Render is a hard gate: `render.py` runs after the scrape and before the data commit, and a failure stops the build before any commit, upload or deploy. The HTML validation then runs in production after the render, with the same pinned `setup-node`, `html-validate` version and seven-page list as `checks.yml`; it, the Node setup, and the production script syntax check are non-blocking. The syntax check runs only if Node setup succeeds; pull-request checks remain the hard syntax gate. A failed or skipped validation writes a `::warning` annotation and a run-summary note, the site still publishes, and the `report` job turns the run red after the deploy and says which problem it was.
+- Render is a hard gate: `render.py` runs after the scrape and before the data commit, and a failure stops the build before any commit, upload or deploy. The HTML validation then runs in production after the render, with the same pinned `setup-node`, `html-validate` version and eight-page list as `checks.yml`; it, the Node setup, and the production script syntax check are non-blocking. The syntax check runs only if Node setup succeeds; pull-request checks remain the hard syntax gate. A failed or skipped validation writes a `::warning` annotation and a run-summary note, the site still publishes, and the `report` job turns the run red after the deploy and says which problem it was.
 - The frequent cron (`7,37 * * * *`) must equal `gameday.FREQUENT_CRON`. GitHub can delay or skip scheduled runs and switches them off after 60 days without repo activity.
 - Snapshots: the Wayback calls stay in the last `archive` job, which can never fail the run. A retry merges links and never overwrites them. The limits are the `SAVE_*` constants in `scraper/snapshot.py`.
 - `render.py --now` is for previews and tests; no workflow may use it.
 
 Site
-- No inline JavaScript or styles and no third-party requests. The one currently approved client-side exception is the deferred, same-origin `static/easter-eggs.js` title entrance on `/` and `/alumni/`; it opts into `script-src 'self'` only on those two pages. All five other generated pages remain script-free under the base CSP (`default-src 'none'`). Do not add other client-side code without a maintainer decision. No diagrams on the public site.
+- No inline JavaScript or styles and no third-party requests. The one currently approved client-side exception is the deferred, same-origin `static/easter-eggs.js` title entrance on `/` and `/alumni/`; it opts into `script-src 'self'` only on those two pages. All six other generated pages remain script-free under the base CSP (`default-src 'none'`). Do not add other client-side code without a maintainer decision. No diagrams on the public site.
 - Every number on a page comes from the data or a named constant. Never hardcode a count, year or size word ("twice").
 - No school logos, wordmarks, seals or official mascot art, on pages or in generated images. The one approved original generic tiger drawing is a small easter egg in `static/easter-tiger.svg`; it is not official mascot art and does not appear in generated images. Keep the site non-commercial (no ads, affiliate links, donations or sales) and not official-looking. Every page keeps the "unofficial fan site, not affiliated" note.
 - Text rules: curly apostrophe (’) in visible text, serial comma in lists of three or more, AP-style locations (display only), dates like "Oct 29, 2026". Each page's footer comes from `site_footer()`; add footer content as a block there, never as page HTML.

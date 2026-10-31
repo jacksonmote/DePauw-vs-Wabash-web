@@ -1,8 +1,8 @@
 """
 Keep one GitHub issue (label data-review) in step with pending-changes.json (fetched from the data branch).
 
-Runs in its own workflow job with only `issues: write`, after the build job has committed the pending
-file. Uses the `gh` CLI that every runner has (GH_TOKEN and GITHUB_REPOSITORY come from the environment).
+Runs in its own workflow job with only `issues: write`, after the build job has pushed the pending
+file to the data branch. Uses the `gh` CLI that every runner has (GH_TOKEN and GITHUB_REPOSITORY come from the environment).
   - pending changes and no open issue: create one (and the label, if missing);
   - pending changes and an open issue: edit the oldest open one, but only when the text actually changed
     (the text carries a hash of itself);

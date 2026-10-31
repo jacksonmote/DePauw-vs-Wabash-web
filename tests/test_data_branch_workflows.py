@@ -153,5 +153,5 @@ def test_the_readme_and_agents_describe_the_data_branch():
         assert phrase in readme, phrase
     assert "databranch.py" in readme.split("## Where things are", 1)[1]
     assert "`data` branch" in agents and "never force-pushed" in agents and "never to `main`" in agents
-    assert "commits data to the data branch" in readme                         # the run-flow diagram
+    assert "commits data<br/>to the data branch" in readme                         # the run-flow diagram
     assert "commits data to main" not in readme and "commits data to `main`" not in readme

@@ -111,7 +111,7 @@ flowchart LR
   SITE --> GP["GitHub Pages<br/>depauwvswabash.com"]
   SJ -.-> SN["snapshot.yml (Jul 1, Jan 2)<br/>data files go to a<br/>GitHub Release first"]
   SN -.-> WB["then, best effort:<br/>source pages go to the<br/>Wayback Machine"]
-  subgraph DB["data branch: only the Actions bot writes these"]
+  subgraph DB["data branch: only the Actions bot writes these;<br/>every job fetches them with databranch.py"]
     PC
     DJ
     WJ
@@ -209,7 +209,7 @@ flowchart TD
   T1["Twice daily<br/>(about 6:19 AM and 11:47 PM ET)"] --> G
   T2["Every 30 minutes"] --> G
   T3["Push to main"] --> G
-  T4["Manual run<br/>(options: allow shrink,<br/>apply reviewed changes)"] --> G
+  T4["Manual run (options: allow shrink,<br/>apply reviewed changes,<br/>test data commit)"] --> G
   G{"gate job (reads the data branch)<br/>30-minute run with no<br/>game-day window open?"}
   G -- "yes" --> X["Stop here:<br/>no scrape, no commit, no deploy"]
   G -- "no" --> F["build: fetch the data branch files,<br/>re-merge series.json<br/>(failure tolerated)"]
@@ -225,11 +225,11 @@ flowchart TD
   V -- "passes" --> C
   V -- "fails" --> W["warning annotation and<br/>run-summary note"]
   W --> C{"data/ changed?"}
-  C -- "yes" --> CM["github-actions bot<br/>commits data to the data branch"]
+  C -- "yes" --> CM["github-actions bot commits data<br/>to the data branch (a test data<br/>commit adds only a marker file)"]
   C -- "no" --> U
   CM -- "a rejected push is tolerated:<br/>warning, data branch not updated" --> U["upload site artifact"]
   U --> D["deploy to GitHub Pages<br/>(the site still publishes)"]
-  U --> IS["issues: open, update or close<br/>the data-review issue"]
+  U --> IS["issues: fetch the data branch, then open,<br/>update or close the data-review issue"]
   D -- "scraper failed, validation failed<br/>or skipped, or data commit rejected" --> RP["report: run turns red<br/>names the problem, check the logs"]
 ```
 
@@ -275,7 +275,7 @@ Games more than 2 days apart that match no typo pattern are never merged automat
 
 ### Reading and adjusting the logic
 
-**How to explain any one game.** Look it up in `data/series.json` (or `games.csv`):
+**How to explain any one game.** Look it up in `data/series.json` (on the `data` branch; `python scraper/databranch.py fetch` copies it into `data/`) or in `games.csv`:
 
 - `source: both` and no flags: both schools list it the same way.
 - `source: both` with `date_differs` (and `wabash_date`): the same game, listed on different dates.
@@ -287,12 +287,12 @@ To see why a pair was matched, run `python scraper/scrape.py --dry-run` and read
 
 **When a school fixes its page.** The next scrape reads the corrected page and the merge changes by itself (a disputed game becomes agreed, a one-school game becomes matched). If a ruling named a row that changed, the run goes red with `overrides.json ... no longer finds ...`: check both pages, then update the ruling's date or score, or delete it if the pages now agree.
 
-**When you decide a pair is the same (or different) game.** Check a box score or the schools' pages, add a `same_game` or `different_games` ruling with a reason (format above), and run `python scraper/scrape.py --dry-run` to see the new counts. Prefer a ruling over changing a rule, because a rule change affects every sport and season.
+**When you decide a pair is the same (or different) game.** Check a box score or the schools' pages, add a `same_game` or `different_games` ruling with a reason (format above), then run `python scraper/databranch.py fetch` and `python scraper/scrape.py --remerge-only` to see the new counts offline (the re-merge also fails loudly if a ruling finds no rows). The pull request carries only the ruling: `series.json` lives on the `data` branch, so pull-request checks re-merge it themselves and the first run after the merge stores the new `series.json` there. Prefer a ruling over changing a rule, because a rule change affects every sport and season.
 
 **When you want to change a rule or number.** They all live in `scraper/merge.py` (the passes, `MAX_DATE_GAP_DAYS`, `SCORE_TOLERANCE`, `PLACEHOLDER_DAYS`, `NEAR_MISS_DAYS`) and `season_months` in `scraper/sources.json`. Change one, then:
 
 1. Run the tests. `tests/test_merge.py` covers the passes, and `tests/test_overrides.py` pins the real-data totals, so a change that moves any sport's record fails loudly.
-2. Run `python scraper/scrape.py --dry-run` on the live pages and compare the per-sport counts and `REVIEW` lines with the previous run.
+2. Fetch the stored data (`python scraper/databranch.py fetch`), then run `python scraper/scrape.py --remerge-only` and compare the per-sport counts and `REVIEW` lines with the previous run (add `--dry-run` runs on the live pages to check the parsing too). The pull request will not contain the regenerated `series.json`: pull-request checks re-merge it, and the first update run after the merge stores it on the `data` branch.
 3. Update the pinned totals in `tests/test_overrides.py` only after confirming each changed game is right, never just to make a test pass.
 4. Update this section and the `merge.py` docstring to match.
 
@@ -316,7 +316,7 @@ A game's window, per sport and date:
 
 - It opens at the first game's scheduled start, or at noon Eastern when no game that day has a time.
 - It closes when the history pages (either school's) list as many games on that date as the schedule did, or at 3 AM Eastern the next day, whichever comes first. A postponed game opens no window.
-- Inside the window the run scrapes, merges, commits data changes and deploys, exactly like a scheduled run.
+- Inside the window the run scrapes, merges, stores data changes on the `data` branch and deploys, exactly like a scheduled run.
 
 A schedule page can post the final score before the history page lists the game, and the scraper normally drops a finished game from `data/upcoming.json`. So that the window does not close early, a game dated today or yesterday that disappears from a schedule stays in the file until the history has it (unless the schedule marks it canceled, and never for more than a day).
 
@@ -512,7 +512,7 @@ Only meets where DePauw's team swims Wabash's team head to head count toward the
 - **Suggest a correction.** Every sport card and the footer link to the data-error form (`data-correction.yml`); every alumni card and the alumni footer link to the alumni form (`alumni-correction.yml`). Both open a public issue, so they ask for nothing personal, only what looks wrong and a link to a source.
 - **Suggest an enhancement.** Every footer has a "Suggest an enhancement" link to the `enhancement.yml` issue form (label `enhancement`, title prefix "Enhancement: "): which part of the site it is about (prefilled from the page: Athletics, Alumni and endowment, or Whole site on the 404, how-it-works landing and Bell-heist pages), what you would like added or changed, why it would help, and an optional example or link. It sits on its own line with "Report a data error" on athletics pages and with "Suggest a correction" on alumni pages (between the downloads and the "Data from" line), and on a line of its own at the top of the footer on the neutral pages (the 404, how-it-works landing and Bell-heist pages). It is not on the sport or category cards. The issue is public, so the form asks for nothing personal.
 - **Writing.** Use the curly apostrophe (’) in any text you add to a page or an issue form; the build converts straight ones in rendered pages, but not in the data files.
-- **Fix a game the schools disagree on or one only one school lists.** Add a ruling to `data/overrides.json` with a reason (see "Rulings"), then run `python scraper/scrape.py --dry-run` and the tests. Prefer a ruling to changing a merge rule.
+- **Fix a game the schools disagree on or one only one school lists.** Add a ruling to `data/overrides.json` with a reason (see "Rulings"), then run `python scraper/databranch.py fetch`, `python scraper/scrape.py --remerge-only` and the tests. Prefer a ruling to changing a merge rule.
 - **Add a sport.** See "Adding a sport" below. Only head-to-head sports qualify.
 - **Add or edit an alumni entry.** Edit `data/alumni.json`: a person needs an `id`, `name`, `school` (`depauw` or `wabash`), `degree` and `degree_year` (an earned degree), a `school_source` (label and URL), the `categories` they belong to, and a `qualifications` entry for each category with the `achievement`, `years` (one year, or start and end years; `"present": true` for an office still held) and a `source`. Fortune 500 CEOs also need `company`, `rank_year`, `rank` and a `ranking_source`. Update `verified_at` and the category's review notes, then run the tests and `python scraper/render.py`: validation refuses a missing source, an unknown category or a duplicate. The ten categories are fixed in the validation and in `TILE_LABELS`; adding an eleventh means changing both.
 - **Add or edit a Bell heist story.** Edit `data/bell-heists.json` (see "Monon Bell heist history"): give it a unique lowercase `id`, a `school`, an `outcome`, a `title`, a `summary` in your own words and at least one `sources` entry, set `counted_in_theft_total` to true only for a stolen Bell, update `verified_at`, then run the tests and `python scraper/render.py`.
