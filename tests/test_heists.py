@@ -108,13 +108,13 @@ def test_incidents_run_oldest_to_newest_with_date_unknown_last():
 
 
 def test_the_game_result_comes_from_the_series_data_and_is_skipped_without_a_game():
-    assert heists.game_line(heists.bell_game(GAMES, 1965)) == "Associated game: Wabash 16, DePauw 6"
-    assert heists.game_line(heists.bell_game(GAMES, 2012)) == "Associated game: DePauw 7, Wabash 7 (tie)"
+    assert heists.game_line(heists.bell_game(GAMES, 1965)) == "That year’s Bell game: Wabash 16, DePauw 6"
+    assert heists.game_line(heists.bell_game(GAMES, 2012)) == "That year’s Bell game: DePauw 7, Wabash 7 (tie)"
     assert heists.bell_game(GAMES, 1941) is None                       # before the Bell game
     assert heists.bell_game(GAMES, 1999) is None
     assert heists.bell_game([game("1965-01-01", "L", 6, 16, date_known=False)], 1965) is None
     changed = [game("1965-11-13", "W", 21, 14)]
-    assert heists.game_line(heists.bell_game(changed, 1965)) == "Associated game: DePauw 21, Wabash 14"
+    assert heists.game_line(heists.bell_game(changed, 1965)) == "That year’s Bell game: DePauw 21, Wabash 14"
 
 
 def page(games, data=SAMPLE):
@@ -130,7 +130,7 @@ def test_cards_have_anchors_sources_and_the_bare_years_share_one_compact_card():
     assert html.count("Sources: ") == 4 + 1                              # four cards, plus the guarding section
     assert html.count('<details class="heist-details">') == 1            # only the story with details
     assert "Aftermath" in html and "It went home." in html
-    assert "Associated game: Wabash 16, DePauw 6" in html
+    assert "That year’s Bell game: Wabash 16, DePauw 6" in html
     assert 'href="../#football"' in html
 
 
@@ -180,7 +180,7 @@ def test_the_football_card_and_the_joke_page_link_to_the_history(site):
     football = home[home.index('id="football"'):home.index("</article>", home.index('id="football"'))]
     start = football.index('<div class="fun-facts">')
     last_item = football[start:football.index("</ul>", start)].split("<li>")[-1]
-    assert last_item.startswith('<span class="fun-label">Bell heists:</span> Stealing the Bell from each other is a longstanding tradition')
+    assert last_item.startswith('<span class="fun-label">Bell heists:</span> Students from both schools have tried to steal the Bell for decades.')
     assert '<a href="heist-details/">The Bell’s heist history</a>' in last_item
     assert football.index("Read more on Wikipedia") < football.index("heist-details/")   # the Bell block still comes first
     joke = read(site, "bell-heist/index.html")
@@ -212,3 +212,17 @@ def test_no_internal_link_on_the_new_pages_points_to_a_missing_page(site):
 def test_the_athletics_how_it_works_page_mentions_the_curated_heist_history(site):
     html = read(site, "how-it-works/athletics/index.html")
     assert 'href="../../heist-details/"' in html and "not updated automatically" in html
+
+
+def test_the_page_says_the_record_is_incomplete_once_and_the_intro_note_does_not_repeat_it():
+    real_data = real()
+    html = page(GAMES, real_data)
+    assert html.lower().count("record is incomplete") == 1             # the method paragraph; the tally note adds no second
+    assert 'class="heist-note">Who took the Bell is unknown' in html
+    assert "Associated game" not in html
+
+
+def test_no_aftermath_line_only_repeats_that_years_game_score():
+    for incident in real()["incidents"]:
+        text = incident.get("consequences", "")
+        assert not re.search(r"\b(won|lost|beat|tied)\b[^.]*\d+\s*[–-]\s*\d+", text), incident["id"]

@@ -84,7 +84,7 @@ def test_the_title_entrance_leaves_no_gap_between_the_title_and_the_nav(site):
     assert "min-height" not in status and re.search(r"margin:\s*0\s*;", status)   # empty until the message appears
     button = re.search(r"\.entrance-button\s*\{([^}]*)\}", css).group(1)
     assert "height" not in button                                             # nothing taller than a plain title
-    assert re.search(r"\.entrance-button::after\s*\{[^}]*inset:[^}]*44px", css)  # the 44px tap area is not layout
+    assert re.search(r"\.entrance-button\s*\{[^}]*inset:[^}]*44px", css)  # the 44px tap area is not layout
     for name in SCRIPT_PAGES:
         soup = BeautifulSoup(page(site, name), "html.parser")
         status_line = soup.find(id="entrance-status")
@@ -169,8 +169,8 @@ def test_alumni_disclosure_is_scoped_and_native(site):
 def test_title_entrance_is_progressive_and_uses_one_native_click_handler(site):
     home = page(site, "index.html")
     script = (site / "easter-eggs.js").read_text(encoding="utf-8")
-    assert 'id="entrance-fallback">DePauw vs. Wabash</span>' in home
-    assert 'id="tiger-entrance" class="entrance-button" type="button" hidden' in home
+    assert '<div class="entrance-wrap"><h1>DePauw vs. Wabash</h1><button id="tiger-entrance" class="entrance-button" type="button" hidden aria-label="Tiger entrance"' in home
+    assert "entrance-fallback" not in home and "entrance-fallback" not in script
     assert 'id="entrance-status" class="entrance-status" role="status" aria-live="polite"' in home
     assert 'id="entrance-hint"' in home and "five times" in home
     assert script.count('addEventListener("click"') == 1
@@ -331,3 +331,14 @@ def test_published_inputs_are_unchanged_and_two_fixed_time_builds_match(tmp_path
     assert {name for name in outputs[0] if name.startswith("data/") and name.endswith(".json")} == {
         "data/series.json", "data/alumni.json", "data/endowment.json", "data/bell-heists.json"}
     assert all(path.read_bytes() == content for path, content in source_files.items())
+
+
+def test_the_title_is_a_plain_heading_and_the_entrance_button_sits_beside_it(site):
+    for name in SCRIPT_PAGES:
+        soup = BeautifulSoup(page(site, name), "html.parser")
+        h1 = soup.find("h1")
+        assert h1.get_text() == "DePauw vs. Wabash" and h1.find(True) is None     # plain text, no button or span inside
+        button = soup.find(id="tiger-entrance")
+        assert button.find_parent("h1") is None and button.parent is h1.parent
+        assert button["aria-label"] == "Tiger entrance" and button.has_attr("hidden")   # hidden until the script runs
+        assert button["aria-describedby"] == "entrance-hint"

@@ -352,7 +352,7 @@ def test_name_lists_stack_below_600px_while_the_count_tiles_stay_side_by_side():
 
 def test_header_subtitle_and_page_heading_match_the_athletics_page_structure():
     page = committed_page()
-    assert '<p class="subtitle">DePauw University vs. Wabash College: Notable graduates and endowments, side by side.</p>' in page
+    assert '<p class="subtitle">DePauw University vs. Wabash College: notable graduates and endowments, side by side.</p>' in page
     assert alumni.SUBTITLE.startswith("DePauw University vs. Wabash College: ")           # the athletics subtitle's wording style
     assert "Verified named graduates and endowment comparison" not in page
     main = page[page.index("<main"):]
@@ -568,3 +568,28 @@ def test_the_note_is_in_the_page_for_changed_data():
     endowment["schools"]["depauw"]["enrollment"]["count"] = 2600
     page = page_for(alumni.validate_alumni(read_data()), alumni.validate_endowment(endowment))
     assert "today enrolls about 3 times as many students" in page and "twice" not in page[:page.index("</table>") + 400]
+
+
+def test_a_source_that_is_both_the_school_and_the_qualification_source_is_listed_once():
+    data = read_data()
+    person = next(p for p in data["people"] if p["id"] == "ferid-murad")
+    cid = next(iter(person["qualifications"]))
+    person["school_source"] = dict(person["qualifications"][cid]["source"])
+    html = page_for(alumni.validate_alumni(data), alumni.validate_endowment(read_endowment()))
+    url = person["school_source"]["url"]
+    item = next(li for li in re.findall(r"<li><strong>.*?</li>", html, re.S) if "Ferid Murad" in li)
+    assert item.count(f'href="{url}"') == 1
+    other = dict(person["qualifications"][cid]["source"], url="https://example.com/other")
+    assert alumni._sources(person["school_source"], other).count("<a ") == 2
+    assert alumni._sources(person["school_source"], person["school_source"]).count("<a ") == 1
+
+
+def test_the_higher_count_underline_is_on_the_number_not_the_cell():
+    css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+    assert re.search(r"^\.scoreboard \.lead strong \{ box-shadow: inset 0 -3px 0 currentColor;", css, re.M)
+    assert not re.search(r"^\.scoreboard \.lead \{[^}]*box-shadow", css, re.M)
+
+
+def test_the_alumni_subtitle_matches_the_athletics_capitalization_after_the_colon():
+    after = lambda text: text.split(": ", 1)[1]
+    assert after(alumni.SUBTITLE)[0].islower() and after(render.SUBTITLE)[0].islower()

@@ -32,7 +32,7 @@ import bars
 
 
 SCHOOLS = {"depauw": "DePauw", "wabash": "Wabash"}
-SUBTITLE = "DePauw University vs. Wabash College: Notable graduates and endowments, side by side."
+SUBTITLE = "DePauw University vs. Wabash College: notable graduates and endowments, side by side."
 
 
 class AlumniError(ValueError):
@@ -360,6 +360,17 @@ def _esc(value):
     return html.escape(str(value), quote=True)
 
 
+def _sources(*sources):
+    """Source links joined with ' · ', each URL once: a school source and a qualification source that point at the
+    same page show a single link (the first label)."""
+    seen, links = set(), []
+    for source in sources:
+        if source["url"] not in seen:
+            seen.add(source["url"])
+            links.append(_source(source))
+    return " · ".join(links)
+
+
 def _source(source):
     return f'<a href="{_esc(source["url"])}">{_esc(source["label"])}</a>'
 
@@ -480,11 +491,11 @@ def render_page(data: dict, endowment: dict, *, head_html: str, footer_html: str
                 rows = []
                 for p in people:
                     q = p["qualifications"][cid]
-                    evidence = _source(q["source"])
+                    extra = []
                     if cid == "fortune-500-ceos":
                         # the year is the Fortune ranking year, not a tenure, so say so
                         what = f'{_esc(q["achievement"])} · ranked #{q["rank"]} in the {q["rank_year"]} Fortune 500'
-                        evidence += f' · {_source(q["ranking_source"])}'
+                        extra = [q["ranking_source"]]
                     else:
                         years = (", ".join(str(year) for year in q["years"]) if cid == "astronauts"
                                  else _format_years(q["years"], q.get("present", False)))
@@ -492,7 +503,7 @@ def render_page(data: dict, endowment: dict, *, head_html: str, footer_html: str
                     rows.append(
                         f'<li><strong>{_esc(p["name"])}</strong> · {_esc(degree_label(p))}'
                         f'<br>{what}'
-                        f'<br>Sources: {_source(p["school_source"])} · {evidence}</li>')
+                        f'<br>Sources: {_sources(p["school_source"], q["source"], *extra)}</li>')
                 details = f'<details><summary>Names and sources</summary><ul>{"".join(rows)}</ul></details>'
             else:
                 details = '<p class="alumni-zero">No qualifying graduates found in the reviewed sources.</p>'

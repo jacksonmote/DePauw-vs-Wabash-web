@@ -100,7 +100,7 @@ def test_next_meeting_sits_under_the_totals_board_and_names_sport_day_time_and_p
     html = page(tmp_path, {"football": entry(sched("2026-11-14"))})
     assert html.index('id="overall-h"') < html.index('id="next-meeting"') < html.index('id="jump-h"')   # board, Bell, next meeting, jump list
     top = text_of(html[html.index('id="next-meeting"'):html.index('id="jump-h"')])
-    assert "Next meeting 4 days to the Bell game Football, Sat, Nov 14 · 1:07 PM · Scheumann Stadium, Muncie, Ind." in top   # Nov 10 to Nov 14
+    assert "Next meeting 4 days to the Bell game Football, Sat, Nov 14 · 1:07 PM · Neutral site · Scheumann Stadium, Muncie, Ind." in top   # Nov 10 to Nov 14
     assert '<time datetime="2026-11-14">' in html
 
 
