@@ -455,7 +455,8 @@ def scoreboard(categories: list, counts_by_id: dict, per: dict, even: bool = Fal
 
 
 def render_page(data: dict, endowment: dict, *, head_html: str, footer_html: str,
-                repo_url: str = REPO_URL, title_html: str = "<h1>DePauw vs. Wabash</h1>") -> str:
+                repo_url: str = REPO_URL, title_html: str = "<h1>DePauw vs. Wabash</h1>",
+                header_html: str | None = None) -> str:
     """The page. head_html, footer_html and title_html come from render.py, so the head, the footer and the
     title (the same one the home page has) are the same functions every other page uses."""
     counts_by_id = counts(data)
@@ -519,10 +520,9 @@ def render_page(data: dict, endowment: dict, *, head_html: str, footer_html: str
             f'<a href="{_esc(enrolled["source_url"])}">Enrollment source</a></p></div>')
     return "\n".join([
         head_html, '<body>',
-        f'<header class="site-header"><div class="wrap">{title_html}',
-        '<nav class="site-nav" aria-label="Main navigation"><a href="../">Athletics</a> <a href="./" aria-current="page">Alumni</a></nav>',
-        f'<p class="subtitle">{_esc(SUBTITLE)}</p></div></header>',
-        '<main class="wrap alumni-main">',
+        header_html if header_html is not None else
+        f'<header class="site-header"><div class="wrap">{title_html}<p class="subtitle">{_esc(SUBTITLE)}</p></div></header>',
+        '<main class="wrap alumni-main" id="main">',
         '<section class="overall alumni-overview" aria-labelledby="alumni-h">',
         '<h2 id="alumni-h">Alumni and endowment</h2>',
         '<p class="alumni-lede">Named graduates in award and public-service categories, and endowment per student, '
