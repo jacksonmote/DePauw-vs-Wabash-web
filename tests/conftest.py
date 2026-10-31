@@ -24,6 +24,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scraper"))
 import fakeclock  # noqa: E402
+import databranch  # noqa: E402
 import scrape  # noqa: E402
 
 OUTSIDE_TOOLS = {"gh", "npm", "npx", "node", "curl", "wget"}
@@ -48,6 +49,14 @@ def pytest_unconfigure(config):
     if _fake_clock is not None:
         _fake_clock.stop()
         _fake_clock = None
+
+
+def pytest_sessionstart(session):
+    """Several tests check rules on the real data files, which live on the data branch and not on main. Stop with
+    the fix instead of a FileNotFoundError from deep inside a test module."""
+    gone = databranch.missing_files()
+    if gone:
+        pytest.exit(f"{databranch.missing_message(gone)}", returncode=3)
 
 
 def pytest_report_header(config):

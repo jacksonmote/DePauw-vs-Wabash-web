@@ -1,7 +1,8 @@
 """
 Static site generator for the DePauw vs. Wabash page.
 
-Reads data/series.json (and, if present, data/upcoming.json and the uncommitted .checked-at) plus the
+Reads data/series.json and data/upcoming.json (both fetched from the data branch by databranch.py; the render
+stops with a message if they are missing) and, if present, the uncommitted .checked-at, plus the
 hand-curated data/alumni.json, data/endowment.json and data/bell-heists.json, and writes a finished site to site/:
   index.html                      the athletics home page (one of two pages with a deferred script)
   alumni/index.html               the alumni and endowment page (alumni.py; the other page with the deferred script)
@@ -39,6 +40,7 @@ import sys
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
+import databranch
 import facts
 import gameday
 import howitworks
@@ -1420,6 +1422,11 @@ def main(argv=None) -> int:
                                   "the workflow): an ISO time, with an offset or, without one, Eastern, "
                                   "e.g. 2026-11-14T09:00")
     args = ap.parse_args(argv)
+    # series.json and upcoming.json live on the data branch (see databranch.py): say so, not "file not found".
+    gone = [p.name for p in (args.data, args.upcoming) if p in (DATA, UPCOMING) and not p.is_file()]
+    if gone:
+        print(f"render failed: {databranch.missing_message(gone)}", file=sys.stderr)
+        return 1
     try:
         build(args.data, args.out, checked_at=read_checked(args.checked_file),
               upcoming_path=args.upcoming, now=parse_now(args.now), overrides_path=args.overrides,

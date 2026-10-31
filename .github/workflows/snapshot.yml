@@ -49,6 +49,10 @@ jobs:
           ref: main
           persist-credentials: false
 
+      # series.json, depauw.json, wabash.json and upcoming.json live on the data branch; overrides.json is on main.
+      - name: Get the data files from the data branch
+        run: python3 scraper/databranch.py fetch --remote origin
+
       - name: Has the data changed since the last snapshot?
         id: check
         env:

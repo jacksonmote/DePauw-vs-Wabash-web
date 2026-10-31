@@ -4,6 +4,15 @@ __pycache__/
 .venv/
 node_modules/
 
+# the files only the update workflow writes live on the data branch (scraper/databranch.py), never on main;
+# `python scraper/databranch.py fetch` puts them here, and git must not pick them up
+data/depauw.json
+data/wabash.json
+data/series.json
+data/upcoming.json
+data/pending-changes.json
+data/.commit-test
+
 # build output, never committed
 site/
 .checked-at
