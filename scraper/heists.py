@@ -190,16 +190,16 @@ def bell_game(football_games: list, year: int) -> dict | None:
 
 
 def game_line(game: dict) -> str:
-    """"Associated game: Wabash 16, DePauw 6", winner first; "DePauw 7, Wabash 7" for a tie; just the result when
+    """"That year’s Bell game: Wabash 16, DePauw 6", winner first; "DePauw 7, Wabash 7" for a tie; just the result when
     the score is unknown."""
     month = MONTHS[int(game["date"][5:7]) - 1]
     result = game["result"]
     if not facts.has_score(game):
         outcome = {"W": "DePauw won", "L": "Wabash won", "T": "a tie"}[result]
-        return f"Associated game: {outcome}"
+        return f"That year’s Bell game: {outcome}"
     d, w = facts.num(game["depauw"]), facts.num(game["wabash"])
     first, second = (("Wabash", w), ("DePauw", d)) if result == "L" else (("DePauw", d), ("Wabash", w))
-    return f"Associated game: {first[0]} {first[1]:,}, {second[0]} {second[1]:,}" + (" (tie)" if result == "T" else "")
+    return f"That year’s Bell game: {first[0]} {first[1]:,}, {second[0]} {second[1]:,}" + (" (tie)" if result == "T" else "")
 
 
 def correction_url(title: str | None = None, repo_url: str = REPO_URL) -> str:
@@ -317,8 +317,8 @@ def render_main(data: dict, football_games: list, *, back_html: str, game_href: 
         f'<h2 class="heist-title">{_esc(TITLE)}</h2>',
         f'<p class="heist-intro">{_esc(data["intro"])}</p>',
         f'<p class="heist-tally" id="tally"><strong>{_esc(tally_text(counts))}</strong></p>',
-        '<p class="heist-note">At least, because the record is incomplete. Who took the Bell is unknown for many '
-        'of the thefts, so there is no scoreboard here.</p>',
+        '<p class="heist-note">Who took the Bell is unknown for many of the thefts, so there is no scoreboard '
+        'here.</p>',
         '<section class="heist-method" aria-label="About these stories">'
         + "".join(f"<p>{_esc(p)}</p>" for p in data["method"]) + '</section>',
         '<div class="heist-timeline">',

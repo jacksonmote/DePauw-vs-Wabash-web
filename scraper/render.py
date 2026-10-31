@@ -349,9 +349,12 @@ def fmt_when(g: dict, today: dt.date) -> str:
     return f"{day} · {g.get('time') or g.get('time_note') or 'Time TBA'}"
 
 
-def meeting_site(g: dict) -> str:
+def meeting_site(g: dict, *, mark_neutral: bool = True) -> str:
+    """Where the next meeting is played; a neutral-site game says so before the stadium: 'Neutral site · Lucas Oil'."""
     site = places.ap_place(g.get("site")) or {"home": HOME_SITE, "away": AWAY_SITE}.get(g.get("location"))
-    return site or ("Neutral site" if g.get("location") == "neutral" else "Site TBA")
+    if g.get("location") == "neutral":
+        return f"Neutral site · {site}" if site and mark_neutral else site or "Neutral site"
+    return site or "Site TBA"
 
 
 def join_and(items: list) -> str:
@@ -573,12 +576,14 @@ def head(title: str, description: str, *, prefix: str, canonical: str | None, no
 
 
 def title_entrance_html() -> str:
-    """The h1 of the home and alumni pages, with the pieces the title script needs (static/easter-eggs.js).
-    Without the script only the plain title shows, and the empty status line takes no room."""
+    """The title block of the home and alumni pages. The h1 is plain text, so a screen reader announces the title as
+    a heading; the tiger-entrance button sits after it, hidden until the script (static/easter-eggs.js) runs, and
+    covers the title as a transparent tap target. Without the script only the plain title shows, and the empty
+    status line takes no room."""
     return "\n".join([
-        '<h1 class="entrance-wrap"><span id="entrance-fallback">DePauw vs. Wabash</span>'
-        '<button id="tiger-entrance" class="entrance-button" type="button" hidden aria-describedby="entrance-hint">'
-        'DePauw vs. Wabash<span class="sr-only">, Tiger entrance</span></button></h1>',
+        '<div class="entrance-wrap"><h1>DePauw vs. Wabash</h1>'
+        '<button id="tiger-entrance" class="entrance-button" type="button" hidden aria-label="Tiger entrance" '
+        'aria-describedby="entrance-hint"></button></div>',
         '<span id="entrance-hint" class="sr-only">Activate five times, with no speed requirement, to unlock a message.</span>',
         '<p id="entrance-status" class="entrance-status" role="status" aria-live="polite"></p>',
     ])
@@ -659,8 +664,8 @@ def fun_facts(key: str, s: dict) -> list:
 
 def bell_heist_fact() -> str:
     """The football card's last Fun facts bullet: a short blurb and the link to the heist history page."""
-    return ('<li><span class="fun-label">Bell heists:</span> Stealing the Bell from each other is a longstanding '
-            f'tradition between the two schools. <a href="{esc(HEIST_PATH)}">The Bell’s heist history</a></li>')
+    return ('<li><span class="fun-label">Bell heists:</span> Students from both schools have tried to steal the '
+            f'Bell for decades. <a href="{esc(HEIST_PATH)}">The Bell’s heist history</a></li>')
 
 
 def fun_facts_html(items: list, extra_items: tuple = ()) -> str:
@@ -1046,7 +1051,7 @@ def game_day_text(e: dict, sports: dict, several: bool) -> str:
         return (f"{name} vs. Wabash is underway or just finished. "
                 "The result will appear here soon after it's posted.")
     games = e["games"]
-    sites = " / ".join(dict.fromkeys(meeting_site(g) for g in games))
+    sites = " / ".join(dict.fromkeys(meeting_site(g, mark_neutral=False) for g in games))
     if len(games) == 1:
         when = games[0].get("time") or "time TBA"
         what = ""

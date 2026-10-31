@@ -135,7 +135,7 @@ h2 { font-size: var(--text-xl); }
   display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title nav" "status status" "subtitle subtitle";
   align-items: center; column-gap: var(--space-3); padding-block: var(--space-1) 0;
 }
-.site-header h1 { grid-area: title; font-size: var(--text-title); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.1; }
+.site-header h1 { font-size: var(--text-title); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.1; }
 .subtitle { grid-area: subtitle; margin: 0; padding-bottom: var(--space-3); color: var(--color-header-muted); font-size: var(--text-sm); }
 .site-nav { grid-area: nav; display: flex; gap: var(--space-1); }
 .site-nav a {
@@ -144,9 +144,8 @@ h2 { font-size: var(--text-xl); }
 }
 .site-nav a:hover { text-decoration: underline; }
 .site-nav a[aria-current="page"] { text-decoration: underline; text-decoration-color: var(--color-depauw-accent); text-decoration-thickness: 4px; font-weight: 800; }
-.entrance-wrap { min-height: 1.2em; }
-.entrance-button { appearance: none; border: 0; padding: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; position: relative; }
-.entrance-button::after { content: ""; position: absolute; inset: min(0px, calc((100% - 44px) / 2)) 0; }
+.site-header .entrance-wrap { grid-area: title; position: relative; min-height: 1.2em; }
+.entrance-button { appearance: none; border: 0; padding: 0; margin: 0; background: none; color: inherit; cursor: pointer; position: absolute; inset: min(0px, calc((100% - 44px) / 2)) 0; width: 100%; }
 .entrance-button[hidden] { display: none; }
 .site-header .entrance-button:focus-visible { outline-color: var(--color-header-text); }
 .entrance-status { grid-area: status; margin: 0; color: var(--color-header-muted); }
@@ -263,7 +262,7 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .scoreboard thead th:first-child, .scoreboard tbody th { text-align: left; }
 .scoreboard tbody th { font-weight: 600; overflow-wrap: anywhere; }
 .scoreboard .score { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; width: 1%; }   /* as narrow as its figure, so the category name gets the room */
-.scoreboard .lead { box-shadow: inset 0 -3px 0 currentColor; }
+.scoreboard .lead strong { box-shadow: inset 0 -3px 0 currentColor; }   /* the underline sits under the number itself, not the whole cell */
 .scoreboard .lead-depauw { color: var(--color-depauw-text); }
 .scoreboard .lead-wabash { color: var(--color-wabash-text); }
 .alumni-report { margin: 0.25rem 0 0; font-size: 0.9375rem; }

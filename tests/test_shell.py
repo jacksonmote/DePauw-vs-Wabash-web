@@ -100,7 +100,9 @@ def test_every_header_comes_from_one_helper_with_title_nav_and_subtitle_in_order
     header = soup(site, name).find("header", class_="site-header")
     wrap = header.find("div", class_="wrap")
     tags = [c.name for c in wrap.children if getattr(c, "name", None)]
-    assert tags[0] == "h1" and tags[-2:] == ["nav", "p"]
+    assert tags[0] in ("h1", "div") and tags[-2:] == ["nav", "p"]
+    assert wrap.find("h1") is not None and wrap.find("h1").get_text() == "DePauw vs. Wabash"
+    assert wrap.find("h1").find("button") is None             # the title is a plain heading, never a button
     assert wrap.find("nav")["aria-label"] == "Main navigation"
     links = wrap.find("nav").find_all("a")
     assert [a.get_text() for a in links] == ["Athletics", "Alumni"]
@@ -149,7 +151,7 @@ def test_the_alumni_footer_source_list_is_in_the_same_kind_of_disclosure(site):
 
 # --- anchors and structure that must survive ------------------------------------------------------------------------
 
-HOME_IDS = {"entrance-fallback", "tiger-entrance", "entrance-hint", "entrance-status",
+HOME_IDS = {"tiger-entrance", "entrance-hint", "entrance-status",
             "overall-h", "monon-bell", "monon-bell-h", "main"}
 
 

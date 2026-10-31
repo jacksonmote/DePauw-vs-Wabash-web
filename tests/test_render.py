@@ -389,7 +389,7 @@ def test_full_school_names_are_in_the_tab_title_and_subtitle_but_the_headline_st
     out, page = build(tmp_path, {"football": football()})
     assert "<title>DePauw University vs. Wabash College: All-Time Head-to-Head Records</title>" in page
     assert 'class="subtitle">DePauw University vs. Wabash College: all-time' in page
-    assert 'id="entrance-fallback">DePauw vs. Wabash</span>' in page
+    assert '<h1>DePauw vs. Wabash</h1><button id="tiger-entrance"' in page
     assert json.loads((out / "site.webmanifest").read_text())["name"] == "DePauw vs. Wabash"
 
 
@@ -415,3 +415,14 @@ def test_every_page_ends_its_footer_with_exactly_one_copyright_line(tmp_path, no
         assert re.findall(r"<p[^>]*>.*?</p>", footer, re.S)[-1] == f'<p class="copyright">{line}</p>', name
         assert footer.index("Unofficial fan site") < footer.index("©"), name
         assert "Mote Technology" not in page
+
+
+def test_a_neutral_site_next_meeting_says_so_before_the_stadium():
+    base = {"date": "2026-11-14", "time": "1:07 PM", "location": "neutral", "site": "Lucas Oil Stadium; Indianapolis, Ind."}
+    today = dt.date(2026, 11, 1)
+    text = render.meeting_site(base)
+    assert text.startswith("Neutral site · ") and "Lucas Oil Stadium" in text
+    assert render.meeting_site({**base, "site": None}) == "Neutral site"
+    assert not render.meeting_site({**base, "location": "home", "site": None}).startswith("Neutral")
+    assert "Neutral site · " in render.meeting_html([base], today)
+    assert "Neutral" not in render.meeting_html([{**base, "location": "away", "site": "Wabash, Ind."}], today)
