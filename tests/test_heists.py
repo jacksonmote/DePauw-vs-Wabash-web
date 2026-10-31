@@ -174,7 +174,15 @@ def test_the_page_is_built_with_the_strict_csp_athletics_nav_and_share_tags(site
 def test_the_football_card_and_the_joke_page_link_to_the_history(site):
     home = read(site, "index.html")
     assert '<a href="heist-details/">The Bell’s heist history</a>' in home
-    assert home.index("Read more on Wikipedia") < home.index("The Bell’s heist history")
+    assert home.count("The Bell’s heist history") == 1                       # one link, in the Fun facts list
+    bell = home[home.index('id="monon-bell"'):home.index("</section>", home.index('id="monon-bell"'))]
+    assert "heist-details" not in bell and "Read more on Wikipedia" in bell   # no longer in the Monon Bell block
+    football = home[home.index('id="football"'):home.index("</article>", home.index('id="football"'))]
+    start = football.index('<div class="fun-facts">')
+    last_item = football[start:football.index("</ul>", start)].split("<li>")[-1]
+    assert last_item.startswith('<span class="fun-label">Bell heists:</span> Stealing the Bell from each other is a longstanding tradition')
+    assert '<a href="heist-details/">The Bell’s heist history</a>' in last_item
+    assert football.index("Read more on Wikipedia") < football.index("heist-details/")   # the Bell block still comes first
     joke = read(site, "bell-heist/index.html")
     assert '<a href="../heist-details/">Read the real heist history</a>' in joke
     assert "Mission accomplished" in joke and "An entirely fictional mission." in joke
