@@ -2,15 +2,16 @@
 Static site generator for the DePauw vs. Wabash page.
 
 Reads data/series.json (and, if present, data/upcoming.json and the uncommitted .checked-at) plus the
-hand-curated data/alumni.json and data/endowment.json, and writes a finished site to site/:
+hand-curated data/alumni.json, data/endowment.json and data/bell-heists.json, and writes a finished site to site/:
   index.html                      the athletics home page (one of two pages with a deferred script)
   alumni/index.html               the alumni and endowment page (alumni.py; the other page with the deferred script)
   how-it-works/index.html         landing page; how-it-works/athletics/ and how-it-works/alumni/ (howitworks.py)
   bell-heist/index.html           public, unindexed fictional story
-  404.html                        root-relative URLs, noindex
+  heist-details/index.html        the sourced Monon Bell heist history (heists.py)
+  404.html                       root-relative URLs, noindex
   styles.css, the icons, easter-eggs.js (home and alumni only), three original easter-egg SVGs,
   og-image.png and alumni-og-image.png (drawn by images.py), site.webmanifest,
-  games.csv, data/series.json, data/alumni.json, data/endowment.json, robots.txt, sitemap.xml, .nojekyll
+  games.csv, data/series.json, data/alumni.json, data/endowment.json, data/bell-heists.json, robots.txt, sitemap.xml, .nojekyll
 Every page gets its header and nav (site_nav), head tags and footer (site_footer: a page-specific data block,
 then shared lines) here. Only the home and alumni pages load the optional deferred easter-eggs script; Pillow is needed only for images.
 
@@ -47,6 +48,7 @@ import merge
 import places
 import review
 import alumni as alumni_page
+import heists as heists_page
 from timeutil import from_eastern, to_eastern
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -65,6 +67,8 @@ BASE_PATH = urlparse(SITE_URL).path  # "/" on the custom domain
 ALUMNI_PATH = "alumni/"
 ALUMNI_DATA = ROOT / "data" / "alumni.json"
 ENDOWMENT_DATA = ROOT / "data" / "endowment.json"
+HEIST_PATH = "heist-details/"
+HEISTS_DATA = ROOT / "data" / "bell-heists.json"
 REPO_URL = "https://github.com/jacksonmote/DePauw-vs-Wabash-web"
 SOURCE_HOST = "depauwtigers.com"
 WABASH_HOST = "sports.wabash.edu"
@@ -742,7 +746,8 @@ def bell_block(games: list) -> str:
         heading(3, "monon-bell", "The Monon Bell"),
         *rows,
         f'<dl class="facts bell-facts">\n<div><dt>Bell record since {facts.BELL_START}</dt><dd>{record}</dd></div>\n</dl>',
-        f'<p class="bell-history">{esc(BELL_HISTORY)} <a href="{esc(BELL_URL)}">Read more on Wikipedia</a></p>',
+        f'<p class="bell-history">{esc(BELL_HISTORY)} <a href="{esc(BELL_URL)}">Read more on Wikipedia</a> · '
+        f'<a href="{esc(HEIST_PATH)}">The Bell’s heist history</a></p>',
         '<a class="bell-heist-link" href="bell-heist/" aria-label="A little Bell business">'
         '<img src="easter-bell.svg" width="28" height="28" alt=""></a>',
         '</section>',
@@ -1005,8 +1010,22 @@ def alumni_footer_block(prefix: str, alumni_data: dict, endowment: dict) -> list
     ]
 
 
+def heists_footer_block(prefix: str, heists_data: dict) -> list:
+    """The heist page's part of the footer: when the stories were last verified, the download, the correction link."""
+    verified = heists_data["verified_at"]
+    return [
+        f'<p>Stories last verified <time datetime="{esc(verified)}">{esc(fmt_date(verified))}</time>.</p>',
+        f'<p class="downloads">Download the data: <a href="{esc(prefix)}data/bell-heists.json">bell-heists.json</a> '
+        f'(every story and its sources).</p>',
+        f'<p class="feedback"><a href="{esc(heists_page.correction_url())}">Suggest a correction</a>. '
+        f'{enhancement_link(AREA_ATHLETICS)}.</p>',
+        '<p>Data from: the sources listed with each story.</p>',
+    ]
+
+
 def site_footer(now: dt.datetime, *, prefix: str = "", data: dict | None = None, checked: str | None = None,
-                upcoming: dict | None = None, alumni: tuple | None = None, link_how: bool = True) -> list:
+                upcoming: dict | None = None, alumni: tuple | None = None, link_how: bool = True,
+                heists: dict | None = None) -> list:
     """The footer of every page: one function with a page-specific data block and the same structure and
     lines after it. `prefix` reaches the site root from the page ("" on the home page, "../" one folder
     down, the root path on 404.html). With `data` the block is the athletics one, with `alumni` (the alumni
@@ -1015,7 +1034,9 @@ def site_footer(now: dt.datetime, *, prefix: str = "", data: dict | None = None,
     only on the athletics pages (it is about athletics, so the alumni and the neutral pages leave it out). The
     how-it-works landing page passes link_how=False: a link from that page to itself would go nowhere."""
     block, how, men_note = [], HOW_PATH, False
-    if alumni:
+    if heists:                                      # athletics-side, but its data block is the curated stories
+        block, how, men_note = heists_footer_block(prefix, heists), HOW_ATHLETICS_PATH, True
+    elif alumni:
         block, how = alumni_footer_block(prefix, *alumni), HOW_ALUMNI_PATH
     elif data:
         block, how, men_note = athletics_footer_block(now, prefix, data, checked, upcoming), HOW_ATHLETICS_PATH, True
@@ -1198,6 +1219,37 @@ def render_404(now: dt.datetime | None = None) -> str:
     ])
 
 
+def render_heist_details(data: dict, heists_data: dict, now: dt.datetime | None = None,
+                         upcoming: dict | None = None) -> str:
+    """/heist-details/: the curated, sourced history of attempts on the Monon Bell. One folder down."""
+    now = now or dt.datetime.now(dt.timezone.utc)
+    football = data["sports"].get("football", {}).get("games", [])
+    counts = heists_page.tally(heists_data)
+    description = f"{heists_page.tally_text(counts)}. A sourced timeline of the attempts on the Monon Bell."
+    back = f'<p class="back"><a href="../">{esc(BACK_ATHLETICS)}</a></p>'
+    main = heists_page.render_main(heists_data, football, back_html=back, game_href="../#football",
+                                   joke_href="../bell-heist/")
+    return "\n".join([
+        head(f"{heists_page.TITLE} | DePauw vs. Wabash", description, prefix="../",
+             canonical=SITE_URL + HEIST_PATH, preview=athletics_preview(data, now, upcoming or {})),
+        '<body>',
+        '<header class="site-header">',
+        '<div class="wrap">',
+        '<h1>DePauw vs. Wabash</h1>',
+        site_nav("../", "athletics"),
+        f'<p class="subtitle">{esc(SUBTITLE)}</p>',
+        '</div>',
+        '</header>',
+        '<main class="wrap prose heist-page">',
+        *main,
+        '</main>',
+        *site_footer(now, prefix="../", heists=heists_data),
+        '</body>',
+        '</html>',
+        '',
+    ])
+
+
 def render_bell_heist(now: dt.datetime | None = None) -> str:
     return "\n".join([
         head("Mission accomplished | DePauw vs. Wabash", "An entirely fictional Monon Bell mission.",
@@ -1210,13 +1262,15 @@ def render_bell_heist(now: dt.datetime | None = None) -> str:
         '<p>You’ve successfully relocated the Monon Bell to Greencastle. Your alumni association has no knowledge of this operation.</p>',
         '<p>An entirely fictional mission.</p>',
         '<p><a href="../#monon-bell">Check the real Bell holder</a></p>',
+        f'<p><a href="../{HEIST_PATH}">Read the real heist history</a></p>',
         f'<p class="back"><a href="../">{esc(BACK_ATHLETICS)}</a> · <a href="../alumni/">{esc(BACK_ALUMNI)}</a></p>',
         '</main>', *site_footer(now or dt.datetime.now(dt.timezone.utc), prefix="../"),
         '</body>', '</html>', '',
     ])
 
 
-def render_sitemap(data: dict, checked: str | None = None, alumni_verified: str | None = None) -> str:
+def render_sitemap(data: dict, checked: str | None = None, alumni_verified: str | None = None,
+                   heists_verified: str | None = None) -> str:
     """lastmod is the Eastern date of the newest time the page states: when the data last changed or,
     when there is one, when they were last checked."""
     newest = max(dt.datetime.fromisoformat(s) for s in (data["updated_at"], checked) if s)
@@ -1229,6 +1283,8 @@ def render_sitemap(data: dict, checked: str | None = None, alumni_verified: str 
             + (f'  <url><loc>{esc(SITE_URL + ALUMNI_PATH)}</loc><lastmod>{esc(alumni_verified)}</lastmod></url>\n'
                f'  <url><loc>{esc(SITE_URL + HOW_ALUMNI_PATH)}</loc><lastmod>{esc(alumni_verified)}</lastmod></url>\n'
                if alumni_verified else '') +
+            (f'  <url><loc>{esc(SITE_URL + HEIST_PATH)}</loc><lastmod>{esc(heists_verified)}</lastmod></url>\n'
+             if heists_verified else '') +
             '</urlset>\n')
 
 
@@ -1274,8 +1330,9 @@ def render_csv(data: dict) -> str:
 def build(data_path: Path, out: Path, *, checked_at: str | None = None,
           now: dt.datetime | None = None, upcoming_path: Path | None = None,
           overrides_path: Path | None = None, alumni_path: Path | None = None,
-          endowment_path: Path | None = None) -> None:
+          endowment_path: Path | None = None, heists_path: Path | None = None) -> None:
     data = load(data_path)
+    heists_data = heists_page.validate(heists_page.load_json(heists_path or HEISTS_DATA))
     # Validate all curated input and render every page before removing the previous output.
     alumni_data = alumni_page.validate_alumni(alumni_page.load_json(alumni_path or ALUMNI_DATA, "alumni"))
     endowment_data = alumni_page.validate_endowment(alumni_page.load_json(endowment_path or ENDOWMENT_DATA, "endowment"))
@@ -1299,9 +1356,11 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
         ALUMNI_PATH + "index.html": alumni_html,
         "404.html": render_404(now),
         "bell-heist/index.html": render_bell_heist(now),
+        HEIST_PATH + "index.html": render_heist_details(data, heists_data, now, upcoming),
         "games.csv": render_csv(data),
         "site.webmanifest": render_manifest(),
-        "sitemap.xml": render_sitemap(data, checked_at, alumni_verified_date(alumni_data, endowment_data)),
+        "sitemap.xml": render_sitemap(data, checked_at, alumni_verified_date(alumni_data, endowment_data),
+                                   heists_data["verified_at"]),
         "robots.txt": f"User-agent: *\nAllow: /\n\nSitemap: {SITE_URL}sitemap.xml\n",
         ".nojekyll": "",
     }
@@ -1326,6 +1385,7 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
     shutil.copyfile(data_path, out / "data" / "series.json")  # the data file as-is
     shutil.copyfile(alumni_path or ALUMNI_DATA, out / "data" / "alumni.json")
     shutil.copyfile(endowment_path or ENDOWMENT_DATA, out / "data" / "endowment.json")
+    shutil.copyfile(heists_path or HEISTS_DATA, out / "data" / "bell-heists.json")
 
 
 def parse_now(text: str | None) -> dt.datetime | None:
@@ -1347,6 +1407,7 @@ def main(argv=None) -> int:
                     help="the rulings file, for the counts on the how-it-works page")
     ap.add_argument("--alumni", type=Path, default=ALUMNI_DATA, help="curated alumni records")
     ap.add_argument("--endowment", type=Path, default=ENDOWMENT_DATA, help="matched-year endowment records")
+    ap.add_argument("--heists", type=Path, default=HEISTS_DATA, help="curated Monon Bell heist history")
     ap.add_argument("--checked-file", type=Path, default=CHECKED_AT,
                     help="file holding the time of the last successful scrape (optional)")
     ap.add_argument("--now", help="pretend it is this time, for local previews and tests only (never used by "
@@ -1356,7 +1417,7 @@ def main(argv=None) -> int:
     try:
         build(args.data, args.out, checked_at=read_checked(args.checked_file),
               upcoming_path=args.upcoming, now=parse_now(args.now), overrides_path=args.overrides,
-              alumni_path=args.alumni, endowment_path=args.endowment)
+              alumni_path=args.alumni, endowment_path=args.endowment, heists_path=args.heists)
     except (merge.MergeError, DataError, KeyError, TypeError, ValueError, AttributeError) as exc:
         print(f"render failed: {exc!r}", file=sys.stderr)
         return 1
