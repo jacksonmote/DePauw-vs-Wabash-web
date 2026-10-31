@@ -30,6 +30,7 @@ Usage:
   python scraper/scrape.py --fixtures DIR       # parse saved HTML instead: DIR/<sport-key>.html for
                                                 # DePauw, DIR/wabash-<sport-key>.html for Wabash
   python scraper/scrape.py --dry-run            # parse and report, don't write
+  python scraper/scrape.py --remerge-only       # no fetching: rebuild series.json from the saved copies and rulings
 """
 
 from __future__ import annotations
@@ -673,6 +674,10 @@ def main(argv=None) -> int:
     ap.add_argument("--upcoming-output", type=Path, default=UPCOMING)
     ap.add_argument("--checked-file", type=Path, default=CHECKED_AT,
                     help="where to record the time of a successful live check")
+    ap.add_argument("--remerge-only", action="store_true",
+                    help="fetch nothing: rebuild series.json from the saved depauw.json, wabash.json and the "
+                         "rulings, the way a normal run merges (a merge that fails keeps that sport's last good "
+                         "data and the run exits non-zero). Leaves upcoming.json and the check time alone.")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--allow-shrink", action="store_true",
                     help="accept a sport whose game count went down")
@@ -702,7 +707,7 @@ def main(argv=None) -> int:
     total_warnings: list = []               # pages whose own total disagrees with their parsed games (warning only)
     loaded = 0
     parsed: dict = {}                       # (school, sport key) -> a page that passed its own checks
-    for sport in cfg["sports"]:
+    for sport in ([] if args.remerge_only else cfg["sports"]):
         key = sport["key"]
         for school in ("depauw", "wabash"):
             sc = school_cfg(cfg, school)
@@ -759,6 +764,9 @@ def main(argv=None) -> int:
         if changed:
             out["updated_at"] = now_utc().isoformat()
             write_if_changed(args.output, out)
+
+    if args.remerge_only:   # no schedule fetch, no check time: nothing was read from the schools
+        return 1 if failures else 0
 
     old_upcoming = json.loads(args.upcoming_output.read_text(encoding="utf-8")) if args.upcoming_output.exists() else {}
     history = {k: [g["date"] for g in v["games"] if g.get("date_known", True)] for k, v in out["sports"].items()}
