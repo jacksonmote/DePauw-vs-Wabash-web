@@ -449,15 +449,13 @@ def test_scraper_failure_remains_tolerated_and_the_summary_takes_only_the_four_s
     assert set(outputs) == {"problems", "scrape", "validation", "commit"}
 
 
-def test_a_rejected_data_commit_does_not_stop_the_deploy_but_the_commit_itself_is_unchanged():
+def test_a_rejected_data_commit_does_not_stop_the_deploy_and_goes_to_the_data_branch_only():
     commit = named_step("Commit if data changed")
     assert commit["id"] == "commit" and commit["continue-on-error"] is True
     assert commit["if"] == "${{ github.ref == 'refs/heads/main' }}"                  # still main only
     script = commit["run"]
-    for line in ('git status --porcelain -- data/', "git add data/", 'git commit -m "Update DePauw vs. Wabash series data"',
-                 "git push origin HEAD:main"):
-        assert line in script
-    assert "--force" not in script
+    assert "python3 scraper/databranch.py push --remote origin" in script
+    assert "--force" not in script and "HEAD:main" not in script and "git push" not in script
     # the deploy and the issue sync still depend on the build job succeeding, and a failed commit step no longer fails it
     assert "needs.build.result == 'success'" in job("deploy") and "needs.build.result == 'success'" in job("issues")
 
@@ -564,7 +562,7 @@ def test_report_names_the_problem_and_still_fails_the_run_after_the_deploy():
         "VALIDATION": "${{ needs.build.outputs.validation }}",
         "COMMIT": "${{ needs.build.outputs.commit }}",
     }
-    assert "The data commit to main failed" in report_text
+    assert "The data commit to the data branch failed" in report_text
     assert "exit 1" in report_text
     assert "The scraper reported a failure" in report_text
     assert "HTML validation failed" in report_text

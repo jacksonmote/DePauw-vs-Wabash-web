@@ -21,6 +21,10 @@ on:
         description: "Apply the changes to old games waiting for review (see the data-review issue)"
         type: boolean
         default: false
+      test_data_commit:
+        description: "Prove the push to the data branch works: commit only a marker file there (no real data)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,12 +35,19 @@ permissions:
 # Concurrency is set on the jobs that change things (build, deploy), not on the whole workflow, so a
 # frequent run that the gate ends at once never queues behind or replaces a waiting push or scheduled run.
 # Nothing is ever cancelled once it is running.
+#
+# Where the data lives: main holds the code and the hand-curated data files (overrides, alumni, endowment,
+# heists); the files only this workflow writes (series, depauw, wabash, upcoming, pending-changes) live on the
+# unprotected `data` branch, because the "Protect main" ruleset rejects the Actions bot. Every job that needs
+# them runs `scraper/databranch.py fetch` first; only the build job pushes to that branch, and the build
+# job's concurrency group keeps two runs from pushing at once (scraper/databranch.py explains the rest).
 
 jobs:
   gate:
     # Decides whether this run does the real work. Only the frequent game-day schedule can say no; every
     # other trigger (the two daily schedules, a push to main, a manual run) always runs. Reads only the
-    # committed data files with the runner's own Python: no dependencies, no scrape, no commit, no deploy.
+    # data files (fetched from the data branch) with the runner's own Python: no dependencies, no scrape, no
+    # commit, no deploy. A fetch that fails fails the job; it never reads a missing schedule as "no games".
     runs-on: ubuntu-latest
     timeout-minutes: 3
     permissions:
@@ -48,8 +59,10 @@ jobs:
         with:
           ref: main
           sparse-checkout: |
-            data
             scraper
+
+      - name: Get the data files from the data branch
+        run: python3 scraper/databranch.py fetch --remote origin
 
       - name: Is a game being played?
         id: gate
@@ -80,12 +93,24 @@ jobs:
         with:
           ref: main # the push and schedule triggers are already on main
 
+      - name: Get the data files from the data branch
+        run: python3 scraper/databranch.py fetch --remote origin
+
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
           cache: pip
 
       - run: pip install -r requirements.txt
+
+      # series.json lives on the data branch but is the merge of the saved copies and the rulings (main), so a
+      # change to a ruling or to the merge code makes it stale until it is rebuilt. This does it without
+      # fetching. It may not stop the deploy: a ruling that finds nothing keeps that sport's last good data and
+      # exits non-zero, as in a normal scrape, and the tests below say so if it matters.
+      - name: Re-merge series.json from the saved copies
+        id: remerge
+        continue-on-error: true
+        run: python scraper/scrape.py --remerge-only
 
       # Tests must pass before any source or publication step runs. Scraper failures remain tolerated
       # so validated fallback data can be published; the "report" job marks those runs red afterward,
@@ -149,24 +174,19 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::warning title=HTML validation::$message"
 
-      # A rejected push (the "Protect main" ruleset has no bypass for the Actions bot) must not stop the deploy:
-      # the site is built from the data this run just scraped, not from what is committed. A failure here only
-      # leaves data/ in the repository stale, and the Summarize step and the report job say so.
+      # A rejected push to the data branch must not stop the deploy: the site is built from the data this run
+      # just scraped, not from what is stored. A failure here only leaves the data branch stale, and the
+      # Summarize step and the report job say so. test_data_commit commits only a marker file (no real data).
       - name: Commit if data changed
         id: commit
         continue-on-error: true
         if: ${{ github.ref == 'refs/heads/main' }}
+        env:
+          TEST_DATA_COMMIT: ${{ inputs.test_data_commit }}
         run: |
-          # status, not diff: a data file that is new to the repo is untracked, and diff would not see it
-          if [ -z "$(git status --porcelain -- data/)" ]; then
-            echo "No data changes."
-            exit 0
-          fi
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/
-          git commit -m "Update DePauw vs. Wabash series data"
-          git push origin HEAD:main
+          args=""
+          if [ "$TEST_DATA_COMMIT" = "true" ]; then args="--test-commit"; fi
+          python3 scraper/databranch.py push --remote origin $args
 
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
@@ -191,7 +211,7 @@ jobs:
           fi
           if [ "$scrape" = "ok" ] && [ "$validation" = "ok" ] && [ "$commit" = "ok" ]; then problems=false; else problems=true; fi
           if [ "$commit" = "failed" ]; then
-            message="The data commit to main failed, so data/ in the repository was not updated. Publishing continues with the data this run scraped; review the Commit if data changed step logs and the Protect main ruleset."
+            message="The data commit to the data branch failed, so the stored data was not updated. Publishing continues with the data this run scraped; review the Commit if data changed step logs and the Protect data ruleset."
             {
               echo "## Warning: the data commit failed"
               echo
@@ -227,7 +247,7 @@ jobs:
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
   issues:
-    # Keeps the data-review issue in step with data/pending-changes.json (scraper/review_issue.py). It is
+    # Keeps the data-review issue in step with pending-changes.json on the data branch (scraper/review_issue.py). It is
     # its own job so that only it holds issues: write, and it has its own concurrency group so two runs
     # can never open two issues at once.
     needs: build
@@ -243,10 +263,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main # after the build job's data commit
+          ref: main
           sparse-checkout: |
-            data
             scraper
+
+      - name: Get the data files from the data branch (after the build job's data commit)
+        run: python3 scraper/databranch.py fetch --remote origin
 
       - name: Sync the data-review issue
         env:
@@ -277,7 +299,7 @@ jobs:
             echo "The scraper reported a failure. Check the Scrape step logs and the deployment result."
           fi
           if [ "$COMMIT" = "failed" ]; then
-            echo "The data commit to main failed, so data/ in the repository is stale. It does not block publishing. Check the Commit if data changed step logs, the Protect main ruleset and the deployment result."
+            echo "The data commit to the data branch failed, so the stored data is stale. It does not block publishing. Check the Commit if data changed step logs, the Protect data ruleset and the deployment result."
           fi
           if [ "$VALIDATION" = "failed" ]; then
             echo "HTML validation failed. It does not block publishing. Check the Validate generated HTML step logs and the deployment result."
