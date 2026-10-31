@@ -1,5 +1,5 @@
 """
-Keep one GitHub issue (label data-review) in step with data/pending-changes.json.
+Keep one GitHub issue (label data-review) in step with pending-changes.json (fetched from the data branch).
 
 Runs in its own workflow job with only `issues: write`, after the build job has committed the pending
 file. Uses the `gh` CLI that every runner has (GH_TOKEN and GITHUB_REPOSITORY come from the environment).

@@ -39,6 +39,7 @@ import sys
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
+import databranch
 import facts
 import gameday
 import howitworks
@@ -1420,6 +1421,11 @@ def main(argv=None) -> int:
                                   "the workflow): an ISO time, with an offset or, without one, Eastern, "
                                   "e.g. 2026-11-14T09:00")
     args = ap.parse_args(argv)
+    # series.json and upcoming.json live on the data branch (see databranch.py): say so, not "file not found".
+    gone = [p.name for p in (args.data, args.upcoming) if p in (DATA, UPCOMING) and not p.is_file()]
+    if gone:
+        print(f"render failed: {databranch.missing_message(gone)}", file=sys.stderr)
+        return 1
     try:
         build(args.data, args.out, checked_at=read_checked(args.checked_file),
               upcoming_path=args.upcoming, now=parse_now(args.now), overrides_path=args.overrides,

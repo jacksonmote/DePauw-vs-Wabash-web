@@ -76,13 +76,16 @@ def missing_files(data_dir: Path = DATA, names: tuple = BOT_FILES) -> list:
     return [n for n in names if not (Path(data_dir) / n).is_file()]
 
 
+def missing_message(gone: list) -> str:
+    return (f"missing {', '.join('data/' + n for n in gone)}. These files live on the `{BRANCH}` branch, not on "
+            f"main. Get them with: python scraper/databranch.py fetch")
+
+
 def require(data_dir: Path = DATA, names: tuple = BOT_FILES) -> None:
     """Raise a clear error when files that live on the data branch are not in `data_dir`."""
     gone = missing_files(data_dir, names)
     if gone:
-        raise DataBranchError(
-            f"missing {', '.join('data/' + n for n in gone)}. These files live on the `{BRANCH}` branch, not on "
-            f"main. Get them with: python scraper/databranch.py fetch")
+        raise DataBranchError(missing_message(gone))
 
 
 # ---- fetch ------------------------------------------------------------------------------------- #

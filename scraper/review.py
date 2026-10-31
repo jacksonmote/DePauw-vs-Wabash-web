@@ -8,7 +8,7 @@ current season is the newest season present in either school's saved or newly pa
 (not a calendar rule, so a score fix in the week after a season ends still goes straight through).
 
 A historical change is an edited score, result, date, site or note, a newly added old game, or a removed
-old game. Those are held: the saved version stays, the change is recorded in data/pending-changes.json,
+old game. Those are held: the saved version stays, the change is recorded in pending-changes.json (on the data branch),
 and a GitHub issue lists it (review_issue.py). Current-season changes are applied as always.
 
   approve  run the workflow with apply_reviewed_changes: a change that still matches a pending entry
@@ -333,7 +333,7 @@ def _body(pending: list, cap: int) -> str:
            f"**Approve all:** {APPROVE_HELP}", "",
            "**Reject one:** add the `keep_previous` ruling shown under it to `data/overrides.json` "
            "(under `sports` → the sport's key); the change is then ignored from then on and stops being "
-           "raised. The full list is in `data/pending-changes.json`.", ""]
+           "raised. The full list is in `data/pending-changes.json` on the `data` branch.", ""]
     sports = []
     for e in pending:
         if e["sport"] not in sports:
@@ -344,6 +344,6 @@ def _body(pending: list, cap: int) -> str:
         for e in mine[:cap]:
             out.extend(_entry_lines(e))
         if len(mine) > cap:
-            out.append(f"- …and {len(mine) - cap} more, see `data/pending-changes.json`")
+            out.append(f"- …and {len(mine) - cap} more, see `data/pending-changes.json` on the `data` branch")
         out.append("")
     return "\n".join(out)
