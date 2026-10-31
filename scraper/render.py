@@ -608,7 +608,7 @@ def tiger_note_html(facts_data: dict, today: dt.date) -> str:
                      f'{esc(fact["text"])} <span class="tiger-fact-source">{links}</span></li>')
     return ('<details class="tiger-note"><summary><img src="easter-tiger.svg" width="80" height="80" alt="">'
             '<span>A tiger with something to say</span></summary>'
-            f'<ul class="tiger-facts">{"".join(items)}</ul><p>No further questions.</p></details>')
+            f'<ul class="tiger-facts">{"".join(items)}</ul></details>')
 
 
 def heading(level: int, anchor: str, text: str) -> str:

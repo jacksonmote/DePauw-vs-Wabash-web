@@ -11,7 +11,7 @@ differ by at most one ("both" facts count toward neither). No statistic the athl
                       non-empty text under MAX_TEXT characters, balanced school counts)
   school_counts       how many facts each school has
   fallback_index      which fact is shown without JavaScript, from the Eastern calendar date (never random)
-  SCHOOL_LABELS       the label printed before each fact
+  SCHOOL_LABELS       the label printed before each fact (ends with a colon)
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from urllib.parse import urlparse
 MAX_TEXT = 200
 MAX_IMBALANCE = 1
 SCHOOLS = ("depauw", "wabash", "both")
-SCHOOL_LABELS = {"depauw": "DePauw", "wabash": "Wabash", "both": "Both schools"}
+SCHOOL_LABELS = {"depauw": "DePauw:", "wabash": "Wabash:", "both": "Both Schools:"}
 _BAD_URL_CHARS = " \t\r\n\"'<>\\"
 
 

@@ -69,12 +69,24 @@ def test_every_fact_is_in_the_page_with_its_school_label_and_source_links():
     assert items[0].select_one("a")["aria-label"] == "Source: Source 0"
 
 
-def test_the_summary_art_and_closing_line_are_kept():
+def test_the_disclosure_is_the_summary_the_art_and_the_facts_with_no_closing_line():
     tiger = note(home(at("2026-11-14")))
     assert tiger.summary.get_text(" ", strip=True) == "A tiger with something to say"
     assert tiger.summary.find("img")["src"] == "easter-tiger.svg"
-    assert tiger.find_all("p", recursive=False)[-1].get_text() == "No further questions."
-    assert tiger.find("ul").find_next_sibling("p") is not None          # the line comes after the fact
+    assert [child.name for child in tiger.find_all(True, recursive=False)] == ["summary", "ul"]
+    assert tiger.find("p") is None and "No further questions" not in str(tiger)
+
+
+def test_each_school_label_ends_with_a_colon_and_both_facts_say_both_schools():
+    facts = {"schema_version": 1, "verified_at": "2026-10-31", "facts": [
+        {"id": "a", "school": "depauw", "text": "One.", "sources": [{"label": "S", "url": "https://example.com/a"}]},
+        {"id": "b", "school": "wabash", "text": "Two.", "sources": [{"label": "S", "url": "https://example.com/b"}]},
+        {"id": "c", "school": "both", "text": "Three.", "sources": [{"label": "S", "url": "https://example.com/c"}]}]}
+    tiger = note(home(at("2026-11-14"), facts))
+    assert [s.get_text() for s in tiger.select(".tiger-fact-school")] == ["DePauw:", "Wabash:", "Both Schools:"]
+    assert funfacts.SCHOOL_LABELS == {"depauw": "DePauw:", "wabash": "Wabash:", "both": "Both Schools:"}
+    first = tiger.select_one("li.tiger-fact").get_text(" ", strip=True)
+    assert first.startswith("DePauw: One.")                           # the label stays a separate element before the text
 
 
 def test_exactly_one_fact_is_visible_without_javascript_and_the_rest_use_the_hidden_attribute():
@@ -130,6 +142,8 @@ def test_the_built_site_has_the_committed_facts_and_no_new_files(tmp_path):
         for source in fact_["sources"]:
             assert tiger.find("a", href=source["url"]) is not None
     assert not (out / "fun-facts.json").exists()
+    for built in out.rglob("*.html"):                              # the closing line is gone from every page
+        assert "No further questions" not in built.read_text(encoding="utf-8"), built
 
 
 def test_a_bad_facts_file_fails_the_build_before_any_output(tmp_path):
