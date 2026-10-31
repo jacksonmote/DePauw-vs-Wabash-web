@@ -190,16 +190,16 @@ def bell_game(football_games: list, year: int) -> dict | None:
 
 
 def game_line(game: dict) -> str:
-    """"That November: Wabash 16, DePauw 6", winner first; "DePauw 7, Wabash 7" for a tie; just the result when
+    """"Associated game: Wabash 16, DePauw 6", winner first; "DePauw 7, Wabash 7" for a tie; just the result when
     the score is unknown."""
     month = MONTHS[int(game["date"][5:7]) - 1]
     result = game["result"]
     if not facts.has_score(game):
         outcome = {"W": "DePauw won", "L": "Wabash won", "T": "a tie"}[result]
-        return f"That {month}: {outcome}"
+        return f"Associated game: {outcome}"
     d, w = facts.num(game["depauw"]), facts.num(game["wabash"])
     first, second = (("Wabash", w), ("DePauw", d)) if result == "L" else (("DePauw", d), ("Wabash", w))
-    return f"That {month}: {first[0]} {first[1]:,}, {second[0]} {second[1]:,}" + (" (tie)" if result == "T" else "")
+    return f"Associated game: {first[0]} {first[1]:,}, {second[0]} {second[1]:,}" + (" (tie)" if result == "T" else "")
 
 
 def correction_url(title: str | None = None, repo_url: str = REPO_URL) -> str:

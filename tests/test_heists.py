@@ -108,13 +108,13 @@ def test_incidents_run_oldest_to_newest_with_date_unknown_last():
 
 
 def test_the_game_result_comes_from_the_series_data_and_is_skipped_without_a_game():
-    assert heists.game_line(heists.bell_game(GAMES, 1965)) == "That November: Wabash 16, DePauw 6"
-    assert heists.game_line(heists.bell_game(GAMES, 2012)) == "That November: DePauw 7, Wabash 7 (tie)"
+    assert heists.game_line(heists.bell_game(GAMES, 1965)) == "Associated game: Wabash 16, DePauw 6"
+    assert heists.game_line(heists.bell_game(GAMES, 2012)) == "Associated game: DePauw 7, Wabash 7 (tie)"
     assert heists.bell_game(GAMES, 1941) is None                       # before the Bell game
     assert heists.bell_game(GAMES, 1999) is None
     assert heists.bell_game([game("1965-01-01", "L", 6, 16, date_known=False)], 1965) is None
     changed = [game("1965-11-13", "W", 21, 14)]
-    assert heists.game_line(heists.bell_game(changed, 1965)) == "That November: DePauw 21, Wabash 14"
+    assert heists.game_line(heists.bell_game(changed, 1965)) == "Associated game: DePauw 21, Wabash 14"
 
 
 def page(games, data=SAMPLE):
@@ -130,7 +130,7 @@ def test_cards_have_anchors_sources_and_the_bare_years_share_one_compact_card():
     assert html.count("Sources: ") == 4 + 1                              # four cards, plus the guarding section
     assert html.count('<details class="heist-details">') == 1            # only the story with details
     assert "Aftermath" in html and "It went home." in html
-    assert "That November: Wabash 16, DePauw 6" in html
+    assert "Associated game: Wabash 16, DePauw 6" in html
     assert 'href="../#football"' in html
 
 
