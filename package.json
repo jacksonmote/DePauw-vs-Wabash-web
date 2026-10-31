@@ -1,0 +1,8 @@
+{
+  "name": "depauw-vs-wabash-web-tools",
+  "private": true,
+  "description": "Build tooling only (the HTML validator CI runs on the generated pages). The site itself ships no JavaScript dependencies.",
+  "devDependencies": {
+    "html-validate": "11.17.0"
+  }
+}
