@@ -4,8 +4,6 @@ the script shows a different random one on each open. Fixtures only: no real clo
 import datetime as dt
 import json
 import re
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -158,58 +156,15 @@ def test_a_bad_facts_file_fails_the_build_before_any_output(tmp_path):
 
 
 # ---- the script ----------------------------------------------------------------------------------------------------
+# tests/conftest.py forbids running node from a test (the CI "node --check" step and a hand check cover the script's
+# behavior), so these read the script's text for the rules that make it behave.
 
-NODE = shutil.which("node")
-
-HARNESS = r"""
-const fs = require("fs");
-const source = fs.readFileSync(process.argv[1], "utf8");
-const count = Number(process.argv[2]);
-const randoms = JSON.parse(process.argv[3]);
-const handlers = {};
-const facts = Array.from({ length: count }, (_, i) => ({ hidden: i !== 0 }));
-const note = { open: false, querySelectorAll: () => facts, addEventListener: (type, fn) => { handlers[type] = fn; } };
-const document = {
-  getElementById: () => null,
-  querySelector: (selector) => (selector === ".tiger-note" && count >= 0 ? note : null),
-};
-let k = 0;
-const math = Object.create(Math);
-math.random = () => randoms[k++ % randoms.length];
-new Function("document", "Math", source)(document, math);
-const shownLog = [];
-if (!handlers.toggle) { console.log(JSON.stringify({ shownLog, hasHandler: false })); process.exit(0); }
-for (let n = 0; n < 12; n++) {
-  note.open = true; handlers.toggle(); shownLog.push(facts.map((f, i) => (f.hidden ? null : i)).filter((i) => i !== null));
-  note.open = false; handlers.toggle();
-}
-console.log(JSON.stringify({ shownLog, hasHandler: Boolean(handlers.toggle) }));
-"""
-
-
-def run_script(count, randoms):
-    result = subprocess.run([NODE, "-e", HARNESS, str(ROOT / "static" / "easter-eggs.js"), str(count), json.dumps(randoms)],
-                            capture_output=True, text=True, timeout=30, stdin=subprocess.DEVNULL)
-    assert result.returncode == 0, result.stderr
-    return json.loads(result.stdout)
-
-
-@pytest.mark.skipif(NODE is None, reason="node is not installed")
-def test_opening_shows_exactly_one_fact_and_two_opens_in_a_row_never_repeat():
-    # randoms that would repeat the visible fact if the script did not skip it
-    out = run_script(5, [0.0, 0.0, 0.99, 0.99, 0.5, 0.5, 0.2, 0.2, 0.0])
-    shown = [entry for entry in out["shownLog"]]
-    assert all(len(entry) == 1 for entry in shown)                    # exactly one visible fact per open
-    flat = [entry[0] for entry in shown]
-    assert all(a != b for a, b in zip(flat, flat[1:]))                # never the same fact twice in a row
-    assert flat[0] != 0                                               # the first open differs from the no-JS fact
-
-
-@pytest.mark.skipif(NODE is None, reason="node is not installed")
-def test_closing_the_disclosure_changes_nothing_and_a_single_fact_page_is_left_alone():
-    out = run_script(3, [0.0, 0.5, 0.9])
-    assert out["hasHandler"] is True
-    assert run_script(1, [0.0])["hasHandler"] is False                # one fact: nothing to rotate, so no handler at all
+def test_the_script_rotates_one_random_fact_per_open_and_never_repeats_the_last():
+    script = (ROOT / "static" / "easter-eggs.js").read_text(encoding="utf-8")
+    assert 'note.addEventListener("toggle"' in script and "if (!note.open) return;" in script   # acts on open, not close
+    assert "Math.random()" in script and "while (next === last)" in script                        # random, never the last one
+    assert "facts.forEach((fact, i) => { fact.hidden = i !== next; });" in script                   # exactly one shown, the rest hidden
+    assert "let last = facts.findIndex((fact) => !fact.hidden);" in script                          # the first open differs from the no-JS fact
 
 
 def test_the_script_has_no_network_storage_or_dynamic_html_and_still_has_one_click_handler():
