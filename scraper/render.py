@@ -12,7 +12,7 @@ hand-curated data/alumni.json, data/endowment.json and data/bell-heists.json, an
   404.html                       root-relative URLs, noindex
   styles.css, the icons, easter-eggs.js (home and alumni only), three original easter-egg SVGs,
   og-image.png and alumni-og-image.png (drawn by images.py), site.webmanifest,
-  games.csv, data/series.json, data/alumni.json, data/endowment.json, data/bell-heists.json, robots.txt, sitemap.xml, .nojekyll
+  games.csv, data/series.json, data/alumni.json, data/endowment.json, data/bell-heists.json, robots.txt, sitemap.xml, .nojekyll, .well-known/security.txt
 Every page gets its header and nav (site_nav), head tags and footer (site_footer: a page-specific data block,
 then shared lines) here. Only the home and alumni pages load the optional deferred easter-eggs script; Pillow is needed only for images.
 
@@ -64,6 +64,8 @@ OVERRIDES = ROOT / "data" / "overrides.json"
 CHECKED_AT = ROOT / ".checked-at"  # written by scrape.py after a live run; never committed
 
 SITE_URL = "https://depauwvswabash.com/"
+SECURITY_TXT_PATH = ".well-known/security.txt"
+SECURITY_TXT_DAYS = 364        # RFC 9116 wants Expires less than a year ahead; every deploy moves it, so it never goes stale
 HOW_PATH = "how-it-works/"      # the landing page for the two plain-language pages, relative to the site root
 HOW_ATHLETICS_PATH = HOW_PATH + "athletics/"
 HOW_ALUMNI_PATH = HOW_PATH + "alumni/"
@@ -1497,6 +1499,7 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
                                    heists_data["verified_at"]),
         "robots.txt": f"User-agent: *\nAllow: /\n\nSitemap: {SITE_URL}sitemap.xml\n",
         ".nojekyll": "",
+        SECURITY_TXT_PATH: render_security_txt(when),
     }
     if out.exists():
         shutil.rmtree(out)
@@ -1522,6 +1525,20 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
     shutil.copyfile(alumni_path or ALUMNI_DATA, out / "data" / "alumni.json")
     shutil.copyfile(endowment_path or ENDOWMENT_DATA, out / "data" / "endowment.json")
     shutil.copyfile(heists_path or HEISTS_DATA, out / "data" / "bell-heists.json")
+
+
+def render_security_txt(now: dt.datetime) -> str:
+    """/.well-known/security.txt (RFC 9116): where to report a security problem. The contact is GitHub's private
+    vulnerability reporting for the repo, never an email address; the policy is SECURITY.md."""
+    expires = (now.astimezone(dt.timezone.utc).date() + dt.timedelta(days=SECURITY_TXT_DAYS)).isoformat()
+    return (
+        "# Security contact for depauwvswabash.com, an unofficial fan site (not affiliated with DePauw or Wabash).\n"
+        f"Contact: {REPO_URL}/security/advisories/new\n"
+        f"Expires: {expires}T00:00:00Z\n"
+        "Preferred-Languages: en\n"
+        f"Canonical: {SITE_URL}{SECURITY_TXT_PATH}\n"
+        f"Policy: {REPO_URL}/blob/main/SECURITY.md\n"
+    )
 
 
 def parse_now(text: str | None) -> dt.datetime | None:
