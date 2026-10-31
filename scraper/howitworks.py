@@ -200,6 +200,12 @@ def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_includ
         + (f' ({kept:,} rejected so far)' if kept else '')
         + '. Results from the current season update as soon as the school’s page does.</p>',
 
+        '<h3>The Monon Bell heist history</h3>',
+        '<p>The <a href="../../heist-details/">heist history page</a> is not part of the scraped records. Its '
+        'stories are curated by hand from news reports, school publications and Wikipedia, each with its sources '
+        'linked, and they are not updated automatically: they change only when someone finds a source and the '
+        'change is reviewed.</p>',
+
         '<h3>Full technical details</h3>',
         f'<p>The exact matching rules, the numbers behind them and how to change them are written up in the '
         f'<a href="{esc(repo_url)}#readme">README on GitHub</a>.</p>',

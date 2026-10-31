@@ -600,6 +600,7 @@ def test_production_html_validation_matches_pull_request_checks():
         "site/index.html",
         "site/404.html",
         "site/bell-heist/index.html",
+        "site/heist-details/index.html",
         "site/how-it-works/index.html",
         "site/how-it-works/athletics/index.html",
         "site/how-it-works/alumni/index.html",
@@ -637,7 +638,7 @@ def test_readme_documents_render_and_html_validation_before_data_commit():
     assert (
         workflow_section.index("render site")
         < workflow_section.index("set up node")
-        < workflow_section.index("validate all seven")
+        < workflow_section.index("validate all eight")
         < workflow_section.index("data/ changed?")
         < workflow_section.index("commits data")
     )

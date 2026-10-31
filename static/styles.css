@@ -307,3 +307,33 @@ main { padding-block: 1.5rem 2.5rem; display: grid; gap: 1.5rem; }
 .prose p, .prose li { line-height: 1.6; }
 .prose li { margin-block: 0.5rem; }
 .back { margin: 1rem 0 0; }
+
+/* Monon Bell heist history (/heist-details/): a card per story, edged in the color of the school that did it */
+.heist-page { max-width: 46rem; display: block; }   /* block flow: the shared main grid would add a 1.5rem gap between every element */
+.heist-page h2 { margin: 1.25rem 0 0.5rem; }
+.heist-page .heist-title { margin: 0.75rem 0 0.5rem; font-size: 1.75rem; }
+.heist-intro { margin: 0 0 0.75rem; }
+.heist-tally { margin: 0 0 0.25rem; font-size: 1.125rem; }
+.heist-note { margin: 0 0 0.75rem; color: var(--color-text-muted); font-size: 0.9375rem; }
+.heist-method { color: var(--color-text-muted); font-size: 0.9375rem; }
+.heist-method p { margin: 0 0 0.5rem; }
+.heist-era { font-size: 1.25rem; }
+.heist { margin: 1rem 0; border: 1px solid var(--color-border); border-left: 6px solid var(--color-tie-accent); border-radius: var(--radius); padding: 0.75rem var(--gutter); background: var(--color-surface); scroll-margin-top: 1rem; }
+.heist:target { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.heist-school-depauw { border-left-color: var(--color-depauw-accent); }
+.heist-school-wabash { border-left-color: var(--color-wabash-accent); }
+.heist h3 { margin: 0.25rem 0 0.5rem; font-size: 1.1875rem; }
+.heist p { margin: 0 0 0.5rem; }
+.heist-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; color: var(--color-text-muted); font-size: 0.9375rem; margin: 0; }
+.heist-tag { border: 2px solid var(--color-tie-accent); border-radius: 999px; padding: 0 0.6rem; font-weight: 650; font-size: 0.8125rem; color: var(--color-text); }
+.heist-school-depauw .heist-tag { border-color: var(--color-depauw-accent); }
+.heist-school-wabash .heist-tag { border-color: var(--color-wabash-accent); }
+.heist-school-depauw .heist-who { color: var(--color-depauw-text); }
+.heist-school-wabash .heist-who { color: var(--color-wabash-text); }
+.heist-game { font-size: 0.9375rem; }
+.heist-details { margin: 0.5rem 0; }
+.heist-details summary { cursor: pointer; font-weight: 600; min-height: 44px; padding: 0.4rem 0; }
+.heist-consequences, .heist-sources, .heist-row-sources { color: var(--color-text-muted); font-size: 0.9375rem; }
+.heist-years { margin: 0 0 0.5rem; padding-left: 1.25rem; }
+.heist-years li { margin-block: 0.4rem; }
+.heist-guarding { margin-top: 2rem; }

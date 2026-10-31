@@ -22,7 +22,7 @@ SCRIPT_PAGES = {"index.html": "easter-eggs.js", "alumni/index.html": "../easter-
 PAGES = (
     "index.html", "alumni/index.html", "how-it-works/index.html",
     "how-it-works/athletics/index.html", "how-it-works/alumni/index.html",
-    "404.html", "bell-heist/index.html",
+    "404.html", "bell-heist/index.html", "heist-details/index.html",
 )
 
 
@@ -41,7 +41,7 @@ def csp(source):
     return html.unescape(re.search(r'http-equiv="Content-Security-Policy" content="([^"]+)"', source).group(1))
 
 
-def test_seven_page_inventory_and_script_csp_are_exact(site):
+def test_eight_page_inventory_and_script_csp_are_exact(site):
     assert {p.relative_to(site).as_posix() for p in site.rglob("*.html")} == set(PAGES)
     for name in PAGES:
         source = page(site, name)
@@ -202,7 +202,7 @@ def test_title_button_focus_outline_contrasts_with_header_in_light_and_dark_mode
         assert (max(outline, background) + 0.05) / (min(outline, background) + 0.05) >= 3
 
 
-def test_shared_footer_comment_and_disclosure_are_exactly_once_on_all_seven_pages(site):
+def test_shared_footer_comment_and_disclosure_are_exactly_once_on_all_eight_pages(site):
     for name in PAGES:
         source = page(site, name)
         assert source.count("<!-- Both schools supplied the records. Only one supplied the developers. -->") == 1
@@ -308,11 +308,11 @@ def test_published_inputs_are_unchanged_and_two_fixed_time_builds_match(tmp_path
         out = tmp_path / name
         render.build(ROOT / "data" / "series.json", out, now=NOW, upcoming_path=out / "missing.json")
         outputs.append({path.relative_to(out).as_posix(): path.read_bytes() for path in out.rglob("*") if path.is_file()})
-        for filename in ("series.json", "alumni.json", "endowment.json"):
+        for filename in ("series.json", "alumni.json", "endowment.json", "bell-heists.json"):
             assert (out / "data" / filename).read_bytes() == source_files[ROOT / "data" / filename]
         assert (out / "games.csv").read_bytes() == render.render_csv(data).encode()
     assert outputs[0] == outputs[1]
-    # The site publishes three JSON downloads, not a fourth; preserve the current export set.
+    # The site publishes four JSON downloads, not a fifth; preserve the current export set.
     assert {name for name in outputs[0] if name.startswith("data/") and name.endswith(".json")} == {
-        "data/series.json", "data/alumni.json", "data/endowment.json"}
+        "data/series.json", "data/alumni.json", "data/endowment.json", "data/bell-heists.json"}
     assert all(path.read_bytes() == content for path, content in source_files.items())

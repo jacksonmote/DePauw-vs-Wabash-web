@@ -30,7 +30,7 @@ def meta(page, key):
 
 def test_every_description_is_155_characters_or_fewer_and_matches_its_share_tags(site):
     pages = sorted(site.rglob("*.html"))
-    assert len(pages) == 7
+    assert len(pages) == 8
     for p in pages:
         page = p.read_text(encoding="utf-8")
         d = meta(page, "description")

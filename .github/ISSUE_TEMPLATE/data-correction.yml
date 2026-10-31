@@ -11,7 +11,7 @@ body:
     id: sport
     attributes:
       label: Sport
-      description: For example Football, Men’s Basketball or Men’s Swimming and Diving.
+      description: For example Football, Men’s Basketball or Men’s Swimming and Diving. For the Monon Bell heist stories, use “Monon Bell heist history”.
       placeholder: Football
     validations:
       required: true

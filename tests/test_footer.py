@@ -44,6 +44,7 @@ PAGES = {
     "how-it-works/index.html": ("../", None, "neutral"),          # the landing page does not link to itself
     "404.html": ("/", "how-it-works/", "neutral"),
     "bell-heist/index.html": ("../", "how-it-works/", "neutral"),
+    "heist-details/index.html": ("../", "how-it-works/athletics/", "heists"),
 }
 
 
@@ -73,7 +74,7 @@ def test_every_page_has_the_shared_lines_in_order_and_links_to_its_own_how_page(
 @pytest.mark.parametrize("name", PAGES)
 def test_the_mens_note_shows_on_the_athletics_pages_only(site, name):
     f = footer(site, name)
-    assert (MEN_ONLY in f) == (PAGES[name][2] == "athletics")
+    assert (MEN_ONLY in f) == (PAGES[name][2] in ("athletics", "heists"))
     assert "Only men’s sports are compared because" not in f
 
 
@@ -147,7 +148,7 @@ def test_the_shared_lines_are_the_same_on_every_page_apart_from_the_how_link_and
                     '</div>\n</footer>\n</body>\n</html>\n')
 
 
-AREAS = {"athletics": "Athletics", "alumni": "Alumni and endowment", "neutral": "Whole site"}
+AREAS = {"athletics": "Athletics", "heists": "Athletics", "alumni": "Alumni and endowment", "neutral": "Whole site"}
 
 
 @pytest.mark.parametrize("name", PAGES)
@@ -165,7 +166,7 @@ def test_the_enhancement_link_leaves_the_correction_links_as_they_were(site, nam
     f = footer(site, name)
     kind = PAGES[name][2]
     assert f.count("Report a data error</a>") == (1 if kind == "athletics" else 0)
-    assert f.count("Suggest a correction</a>") == (1 if kind == "alumni" else 0)
+    assert f.count("Suggest a correction</a>") == (1 if kind in ("alumni", "heists") else 0)
     if kind == "athletics":
         assert f'<a href="{render.report_url()}">Report a data error</a>' in f
     if kind == "alumni":
@@ -177,7 +178,8 @@ def test_the_feedback_links_sit_on_their_own_line_between_the_downloads_and_the_
     f = footer(site, name)
     para = re.search(r'<p class="feedback">(.*?)</p>', f).group(1)
     kind = PAGES[name][2]
-    first = {"athletics": "Report a data error. ", "alumni": "Suggest a correction. ", "neutral": ""}[kind]
+    first = {"athletics": "Report a data error. ", "alumni": "Suggest a correction. ", "heists": "Suggest a correction. ",
+             "neutral": ""}[kind]
     assert re.sub(r"<[^>]+>", "", para) == f"{first}Suggest an enhancement."
     if kind == "neutral":                                 # the neutral pages: before the shared links line
         assert f.index('<p class="feedback">') < f.index('<p class="footer-links">')
@@ -202,3 +204,14 @@ def test_the_totals_heading_is_renamed_and_keeps_its_anchor(site):
     assert '<h2 id="overall-h">All head-to-head sports</h2>' in html
     assert 'aria-labelledby="overall-h"' in html                  # the id old links and the section label rely on
     assert "All sports combined" not in html
+
+
+def test_the_heist_footer_has_its_own_data_block_before_the_shared_lines(site):
+    f = footer(site, "heist-details/index.html")
+    assert 'Stories last verified <time datetime="2026-10-30">Oct 30, 2026</time>.' in f
+    assert '<a href="../data/bell-heists.json">bell-heists.json</a>' in f
+    assert 'Suggest a correction</a>' in f and "Suggest an enhancement" in f
+    assert "template=data-correction.yml" in f and "Monon%20Bell%20heist%20history" in f
+    assert "Data from: the sources listed with each story." in f
+    assert f.index("Stories last verified") < f.index("How the numbers work") < f.index(MEN_ONLY)
+    assert "series.json" not in f and "alumni.json" not in f and 'class="sources"' not in f
