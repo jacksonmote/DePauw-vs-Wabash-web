@@ -48,7 +48,7 @@ jobs:
     # other trigger (the two daily schedules, a push to main, a manual run) always runs. Reads only the
     # data files (fetched from the data branch) with the runner's own Python: no dependencies, no scrape, no
     # commit, no deploy. A fetch that fails fails the job; it never reads a missing schedule as "no games".
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 3
     permissions:
       contents: read
@@ -76,7 +76,7 @@ jobs:
     # (.checked-at) that only exists on this runner. A GITHUB_TOKEN push does not start another run.
     needs: gate
     if: ${{ needs.gate.outputs.run == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     concurrency:
       group: update-and-deploy
@@ -229,7 +229,7 @@ jobs:
   deploy:
     needs: build
     if: ${{ !cancelled() && needs.build.result == 'success' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
       group: pages
@@ -252,7 +252,7 @@ jobs:
     # can never open two issues at once.
     needs: build
     if: ${{ !cancelled() && needs.build.result == 'success' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     concurrency:
       group: review-issue
@@ -287,7 +287,7 @@ jobs:
     # or a data commit that was rejected.
     needs: [build, deploy]
     if: ${{ !cancelled() && needs.build.outputs.problems == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
       - env:
