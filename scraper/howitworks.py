@@ -3,7 +3,9 @@ The "How the numbers work" pages, written for fans. Three pages share render.py'
   /how-it-works/            landing_content():       one line and a link for each of the two pages below
   /how-it-works/athletics/  content():               the same facts as the README's merge section
   /how-it-works/alumni/     alumni_content():        who counts, sourcing, the endowment basis, enrollment,
-                                                     rounding, the "about even" rule, the size and history note
+                                                     rounding, the "about even" rule, the size and history note.
+                                                     "Who counts" repeats privacy.PUBLIC_INFO (the privacy page's
+                                                     definition of public information) and links to /privacy/
 Every number comes from the data (alumni.json and endowment.json through the alumni.py functions, series.json,
 overrides.json, or the constants in merge.py and gameday.py that the code actually uses), never from this file,
 so a page cannot go out of date when the data changes.

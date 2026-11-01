@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping keep the alumni page right. **This issue will be public**, so please don’t include personal details (no phone numbers, email addresses or home addresses). A link to a reliable source is all that’s needed. Only named graduates with an earned degree count, and every entry needs a source.
+        Thanks for helping keep the alumni page right. **This issue will be public**, so please don’t include personal details (no phone numbers, email addresses or home addresses). A link to a reliable source is all that’s needed. Only named graduates with an earned degree count, and every entry needs a source. To ask privately about an entry instead, see the privacy page: https://depauwvswabash.com/privacy/
   - type: dropdown
     id: school
     attributes:
