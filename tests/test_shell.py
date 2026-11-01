@@ -20,6 +20,7 @@ PAGES = {   # page -> prefix from the page to the site root
     "index.html": "", "alumni/index.html": "../", "how-it-works/index.html": "../",
     "how-it-works/athletics/index.html": "../../", "how-it-works/alumni/index.html": "../../",
     "404.html": "/", "bell-heist/index.html": "../", "heist-details/index.html": "../",
+    "privacy/index.html": "../",
 }
 CSS = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
 

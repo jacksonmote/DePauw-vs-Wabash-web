@@ -22,7 +22,7 @@ SCRIPT_PAGES = {"index.html": "easter-eggs.js", "alumni/index.html": "../easter-
 PAGES = (
     "index.html", "alumni/index.html", "how-it-works/index.html",
     "how-it-works/athletics/index.html", "how-it-works/alumni/index.html",
-    "404.html", "bell-heist/index.html", "heist-details/index.html",
+    "404.html", "bell-heist/index.html", "heist-details/index.html", "privacy/index.html",
 )
 
 
@@ -41,7 +41,7 @@ def csp(source):
     return html.unescape(re.search(r'http-equiv="Content-Security-Policy" content="([^"]+)"', source).group(1))
 
 
-def test_eight_page_inventory_and_script_csp_are_exact(site):
+def test_nine_page_inventory_and_script_csp_are_exact(site):
     assert {p.relative_to(site).as_posix() for p in site.rglob("*.html")} == set(PAGES)
     for name in PAGES:
         source = page(site, name)
@@ -213,7 +213,7 @@ def test_title_button_focus_outline_contrasts_with_header_in_light_and_dark_mode
         assert (max(outline, background) + 0.05) / (min(outline, background) + 0.05) >= 3
 
 
-def test_shared_footer_comment_and_disclosure_are_exactly_once_on_all_eight_pages(site):
+def test_shared_footer_comment_and_disclosure_are_exactly_once_on_all_nine_pages(site):
     for name in PAGES:
         source = page(site, name)
         assert source.count("<!-- Both schools supplied the records. Only one supplied the developers. -->") == 1
