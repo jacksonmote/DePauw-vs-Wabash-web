@@ -234,6 +234,17 @@ def test_text_roles_meet_aa_and_fills_meet_3_to_1_in_both_modes(mode):
     assert _ratio(t["--color-board-depauw"], t["--color-board"]) >= 3
 
 
+def test_the_paw_prints_are_the_light_gold_token_and_clear_3_to_1_in_both_modes():
+    """easter-paw.svg loads as an <img>, so it can't read the tokens and shows one color in both modes: it hardcodes
+    the light --color-depauw-accent, which must stay a 3:1 fill on the light and the dark page."""
+    svg = (ROOT / "static" / "easter-paw.svg").read_text(encoding="utf-8")
+    fills = set(re.findall(r'fill="(#[0-9a-fA-F]{6})"', svg))
+    light, dark = _tokens()
+    assert fills == {light["--color-depauw-accent"]}
+    for t in (light, dark):
+        assert _ratio(light["--color-depauw-accent"], t["--color-page"]) >= 3
+
+
 def test_dark_mode_scarlet_text_is_red_not_pink():
     import colorsys
     t = _tokens()[1]
