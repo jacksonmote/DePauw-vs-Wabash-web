@@ -45,7 +45,15 @@ PAGES = {
     "404.html": ("/", "how-it-works/", "neutral"),
     "bell-heist/index.html": ("../", "how-it-works/", "neutral"),
     "heist-details/index.html": ("../", "how-it-works/athletics/", "heists"),
+    "privacy/index.html": ("../", "how-it-works/", "neutral"),
 }
+
+
+def privacy_link(name):
+    """The footer's Privacy item: a link everywhere except on the privacy page, which shows plain text."""
+    if name == "privacy/index.html":
+        return '<span aria-current="page">Privacy</span>'
+    return f'<a href="{PAGES[name][0]}privacy/">Privacy</a>'
 
 
 def shared_tail(f):
@@ -65,7 +73,9 @@ def test_every_page_has_the_shared_lines_in_order_and_links_to_its_own_how_page(
     assert f.count("A note on impartiality") == f.count("The data is independently sourced. The developers were educated correctly.") == 1
     assert f.count("<!-- Both schools supplied the records. Only one supplied the developers. -->") == 1
     if how:
-        assert f.index("<!-- Both schools supplied") < f.index("How the numbers work") < f.index("Built in the open")
+        assert f.index("<!-- Both schools supplied") < f.index("How the numbers work") < f.index("Privacy") < f.index("Built in the open")
+    assert privacy_link(name) + " · " + f'<a href="{render.REPO_URL}">Built in the open' in f
+    assert f.count(">Privacy<") == 1
     assert 'class="copyright"' in f[-200:]                       # the copyright is still the last line
     assert f.count(render.DISCLAIMER) == 1
     assert "Code and data on GitHub" not in f.replace("Built in the open: code and data on GitHub", "")
@@ -114,7 +124,7 @@ def test_the_alumni_footer_has_the_alumni_data_block_and_nothing_athletics_only(
 @pytest.mark.parametrize("name", [n for n, p in PAGES.items() if p[2] == "neutral"])
 def test_the_neutral_footer_is_only_the_shared_lines(site, name):
     f = footer(site, name)
-    how_link = "" if PAGES[name][1] is None else f'<a href="{PAGES[name][0]}how-it-works/">How the numbers work</a> · '
+    how_link = ("" if PAGES[name][1] is None else f'<a href="{PAGES[name][0]}how-it-works/">How the numbers work</a> · ') + privacy_link(name) + " · "
     assert f == ('<footer class="site-footer">\n<div class="wrap">\n' + SITE_FEEDBACK + '<!-- Both schools supplied the records. Only one supplied the developers. -->\n<p class="footer-links">' + how_link +
                  f'<a href="{render.REPO_URL}">Built in the open: code and data on GitHub</a></p>\n'
                  f'<p>{render.DISCLAIMER}</p>\n<details class="impartiality"><summary>A note on impartiality</summary><p>The data is independently sourced. The developers were educated correctly.</p></details>\n<p class="copyright">© 2026 Jackson Mote and Joe Haynes</p>\n'
@@ -140,8 +150,9 @@ def test_the_shared_lines_are_the_same_on_every_page_apart_from_the_how_link_and
     if how:
         tail = tail.replace(f'href="{prefix}{how}"', 'href="HOW"')
     tail = tail.replace(f"<p>{MEN_ONLY}</p>\n", "")
+    tail = tail.replace(privacy_link(name), "PRIVACY")
     tail = tail.replace('<details class="impartiality"><summary>A note on impartiality</summary><p>The data is independently sourced. The developers were educated correctly.</p></details>\n', "IMPARTIALITY\n")
-    link = '<a href="HOW">How the numbers work</a> · ' if how else ""
+    link = ('<a href="HOW">How the numbers work</a> · ' if how else "") + "PRIVACY · "
     assert tail == ('<p class="footer-links">' + link +
                     f'<a href="{render.REPO_URL}">Built in the open: code and data on GitHub</a></p>\n'
                     f'<p>{render.DISCLAIMER}</p>\nIMPARTIALITY\n<p class="copyright">© 2026 Jackson Mote and Joe Haynes</p>\n'

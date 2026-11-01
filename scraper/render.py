@@ -9,6 +9,7 @@ hand-curated data/alumni.json, data/endowment.json and data/bell-heists.json, an
   how-it-works/index.html         landing page; how-it-works/athletics/ and how-it-works/alumni/ (howitworks.py)
   bell-heist/index.html           public, unindexed fictional story
   heist-details/index.html        the sourced Monon Bell heist history (heists.py)
+  privacy/index.html              the privacy policy (privacy.py; no script, base CSP)
   404.html                       root-relative URLs, noindex
   styles.css, the icons, easter-eggs.js (home and alumni only), three original easter-egg SVGs,
   og-image.png and alumni-og-image.png (drawn by images.py), site.webmanifest,
@@ -50,6 +51,7 @@ import images
 import meetings
 import merge
 import places
+import privacy
 import review
 import alumni as alumni_page
 import funfacts
@@ -1187,14 +1189,16 @@ def heists_footer_block(prefix: str, heists_data: dict) -> list:
 
 def site_footer(now: dt.datetime, *, prefix: str = "", data: dict | None = None, checked: str | None = None,
                 upcoming: dict | None = None, alumni: tuple | None = None, link_how: bool = True,
-                heists: dict | None = None) -> list:
+                heists: dict | None = None, privacy_self: bool = False) -> list:
     """The footer of every page: one function with a page-specific data block and the same structure and
     lines after it. `prefix` reaches the site root from the page ("" on the home page, "../" one folder
     down, the root path on 404.html). With `data` the block is the athletics one, with `alumni` (the alumni
     and endowment data) the alumni one; with neither (404 and the how-it-works landing page) only the shared
     lines show. "How the numbers work" links to the matching page, and the men's head-to-head note shows
     only on the athletics pages (it is about athletics, so the alumni and the neutral pages leave it out). The
-    how-it-works landing page passes link_how=False: a link from that page to itself would go nowhere."""
+    how-it-works landing page passes link_how=False: a link from that page to itself would go nowhere. Every
+    footer links to the privacy page, except the privacy page itself (privacy_self=True), which shows the word as
+    plain text marked aria-current="page"."""
     block, how, men_note = [], HOW_PATH, False
     if heists:                                      # athletics-side, but its data block is the curated stories
         block, how, men_note = heists_footer_block(prefix, heists), HOW_ATHLETICS_PATH, True
@@ -1209,6 +1213,7 @@ def site_footer(now: dt.datetime, *, prefix: str = "", data: dict | None = None,
         *block,
         '<!-- Both schools supplied the records. Only one supplied the developers. -->',
         '<p class="footer-links">' + (f'<a href="{esc(prefix + how)}">How the numbers work</a> · ' if link_how else "") +
+        ('<span aria-current="page">Privacy</span>' if privacy_self else f'<a href="{esc(prefix + privacy.PATH)}">Privacy</a>') + ' · ' +
         f'<a href="{esc(REPO_URL)}">Built in the open: code and data on GitHub</a></p>',
         *([f'<p>{esc(MEN_ONLY)}</p>'] if men_note else []),
         f'<p>{esc(DISCLAIMER)}</p>',
@@ -1412,6 +1417,18 @@ def render_heist_details(data: dict, heists_data: dict, now: dt.datetime | None 
     ])
 
 
+def render_privacy(data: dict, now: dt.datetime | None = None, upcoming: dict | None = None) -> str:
+    """/privacy/: the privacy policy. One folder down, base CSP (no script), neutral header, no nav item current."""
+    now = now or dt.datetime.now(dt.timezone.utc)
+    return how_page(
+        privacy.TITLE, privacy.DESCRIPTION, prefix="../", path=privacy.PATH, current="",
+        preview=athletics_preview(data, now, upcoming or {}),
+        back=[("../", BACK_ATHLETICS), ("../alumni/", BACK_ALUMNI)],
+        body=privacy.content(repo_url=REPO_URL, report_url=report_url(), correction_url=alumni_page.correction_url(),
+                             enhancement_url=enhancement_url(AREA_SITE)),
+        footer=site_footer(now, prefix="../", privacy_self=True), subtitle=NEUTRAL_SUBTITLE)
+
+
 def render_bell_heist(now: dt.datetime | None = None) -> str:
     return "\n".join([
         head("Mission accomplished | DePauw vs. Wabash", "An entirely fictional Monon Bell mission.",
@@ -1445,6 +1462,7 @@ def render_sitemap(data: dict, checked: str | None = None, alumni_verified: str 
                if alumni_verified else '') +
             (f'  <url><loc>{esc(SITE_URL + HEIST_PATH)}</loc><lastmod>{esc(heists_verified)}</lastmod></url>\n'
              if heists_verified else '') +
+            f'  <url><loc>{esc(SITE_URL + privacy.PATH)}</loc><lastmod>{esc(privacy.UPDATED)}</lastmod></url>\n'
             '</urlset>\n')
 
 
@@ -1523,6 +1541,7 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
         "404.html": render_404(now),
         "bell-heist/index.html": render_bell_heist(now),
         HEIST_PATH + "index.html": render_heist_details(data, heists_data, now, upcoming),
+        privacy.PATH + "index.html": render_privacy(data, now, upcoming),
         "games.csv": render_csv(data),
         "site.webmanifest": render_manifest(),
         "sitemap.xml": render_sitemap(data, checked_at, alumni_verified_date(alumni_data, endowment_data),
