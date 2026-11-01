@@ -16,7 +16,7 @@ Cross country, track and field, and golf are left out because they are multi-tea
 
 **Live site: https://depauwvswabash.com/**
 
-The site has two halves, joined by a navigation bar at the top of every page (**Athletics** | **Alumni**). The bar marks the half you are in; the how-it-works landing page, Bell-heist page and 404 page serve both halves and mark neither.
+The site has two halves, joined by a navigation bar at the top of every page (**Athletics** | **Alumni**). The bar marks the half you are in; the how-it-works landing page, Bell-heist page, privacy page and 404 page serve both halves and mark neither.
 
 | Address | What it is |
 |---|---|
@@ -25,7 +25,9 @@ The site has two halves, joined by a navigation bar at the top of every page (**
 | `/how-it-works/` | A short landing page with a link to each of the two explanations below (the address was shared before there were two) |
 | `/how-it-works/athletics/` | "How the athletics numbers work": sources, what is counted, how the two schools' records are combined, disputes, rulings, update times |
 | `/how-it-works/alumni/` | "How the alumni numbers work": who counts, how names were sourced, the endowment basis, enrollment, rounding, the "about even" rule |
+| `/heist-details/` | "The Bell's heist history": the sourced timeline of attempts on the Monon Bell (athletics side; see "Monon Bell heist history") |
 | `/bell-heist/` | A public, unindexed fictional Bell mission page, linked from the Monon Bell block |
+| `/privacy/` | The privacy policy, linked from every footer (see "The privacy policy") |
 | any missing address | `404.html`: two back links to the halves, root-relative links (GitHub Pages serves it at any depth), not indexed |
 
 The site also publishes `data/series.json`, `data/alumni.json`, `data/endowment.json`, `data/bell-heists.json` and `games.csv` (the downloads linked in the footers), `sitemap.xml`, `robots.txt`, `site.webmanifest` and `/.well-known/security.txt`.
@@ -69,7 +71,7 @@ The endowment figures use the same audited fiscal date, June 30, 2025, but the a
 
 **How the page is laid out.** The scoreboard is a table with one linked row per category card; the larger count in a row is bold, in its school's color, underlined (the underline sits under the number itself, not the whole cell) and announced as "higher" to screen readers, and a tie is plain. Under each category's name a small record bar shows the two counts side by side (none for a category with no graduates). The endowment row has one too, except while the two per-student figures are "about even": then neither school is marked higher anywhere, and a bar would show a gap the page says is not one. There is deliberately no overall alumni total or "leads in N categories" line. A note directly under the scoreboard says that Wabash has always been a men's college, that DePauw has admitted women since 1867 and enrolls about twice as many students (worked out from the enrollment counts in `data/endowment.json`), and that counts of named graduates aren't adjusted for either difference; the same note is on `/how-it-works/alumni/`. Each category card repeats the counts as count tiles with a record bar under them (none for a category with no graduates), with the two name lists below (side by side from 600px, stacked on phones). Dates use the athletics style ("Jun 30, 2025"), a recorded degree reads "B.A., 1969" and a graduate with only a year reads "Class of 1885". An office still held at the time of the review is marked `"present": true` in `data/alumni.json` and reads "(2025–present)". Fortune 500 entries show the ranking year as "ranked #199 in the 1996 Fortune 500", not as a tenure. In a person's "Names and sources" list each URL appears once: when the school source and the qualification source are the same page, one link is shown.
 
-**Corrections and sharing.** Every card has a "Suggest a correction" link to the `alumni-correction.yml` issue form, with the category filled in (the issues are public, so the form asks for nothing personal). `images.py` also draws `alumni-og-image.png` at every build (1200x630, same fonts and colors as the home page card, endowment per student for each school, no overall score, no logos); its `?v=` changes only when a drawn figure does.
+**Corrections and sharing.** Every card has a "Suggest a correction" link to the `alumni-correction.yml` issue form, with the category filled in (the issues are public, so the form asks for nothing personal). Someone listed who wants an entry reviewed or removed can also use the privacy contact on `/privacy/` (see "The privacy policy"). `images.py` also draws `alumni-og-image.png` at every build (1200x630, same fonts and colors as the home page card, endowment per student for each school, no overall score, no logos); its `?v=` changes only when a drawn figure does.
 
 ## Monon Bell heist history
 

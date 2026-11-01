@@ -20,5 +20,6 @@ This is a volunteer project, so replies are best effort and there is no bounty. 
 
 - The two schools' own websites, or the accuracy of their records. A wrong score or a missing game is not a security problem: use the "Report a data error" issue form instead.
 - Reports that need physical access to someone's device, or that only describe missing HTTP headers on GitHub Pages (the host does not allow changing them).
+- Privacy questions, or a request about an alumni entry: the contact is on the privacy page (https://depauwvswabash.com/privacy/), not here.
 
 Only the latest version on `main` is supported.
