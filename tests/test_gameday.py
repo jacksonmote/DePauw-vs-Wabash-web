@@ -695,6 +695,7 @@ def test_production_html_validation_matches_pull_request_checks():
         "site/404.html",
         "site/bell-heist/index.html",
         "site/heist-details/index.html",
+        "site/privacy/index.html",
         "site/how-it-works/index.html",
         "site/how-it-works/athletics/index.html",
         "site/how-it-works/alumni/index.html",
@@ -742,7 +743,7 @@ def test_readme_documents_render_and_html_validation_in_its_own_job():
         < workflow_section.index("upload site artifact")
         < workflow_section.index("validate job")
         < workflow_section.index("set up node")
-        < workflow_section.index("validate all eight")
+        < workflow_section.index("validate all nine")
     )
     assert "render fails" in workflow_section and "no commit, no deploy" in workflow_section
     assert "validation skipped" in workflow_section and "run turns red" in workflow_section
