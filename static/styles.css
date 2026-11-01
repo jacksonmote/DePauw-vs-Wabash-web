@@ -19,7 +19,8 @@
   --color-header: #f4f1e8;
   --color-header-text: #15140f;
   --color-header-muted: #4f4b40;
-  --color-depauw-accent: #a87c00;   /* old gold: fills, bars, stripes and edges, never text */
+  --color-depauw-accent: #a87c00;   /* old gold: fills, bars, stripes and edges, never text. easter-paw.svg
+                                       hardcodes this value (an <img> can't read tokens): change both together */
   --color-depauw-text: #6b4e00;     /* darkened gold: readable as text */
   --color-wabash-accent: #a6192e;   /* scarlet: fills */
   --color-wabash-text: #a6192e;
