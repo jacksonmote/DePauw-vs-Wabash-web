@@ -71,7 +71,7 @@ def test_the_privacy_page_renders_with_its_title_headings_and_a_fixed_date(site)
     assert s.find("link", rel="canonical")["href"] == "https://depauwvswabash.com/privacy/"
     assert s.find("meta", property="og:image")["content"].startswith("https://depauwvswabash.com/og-image.png")
     assert not s.find("meta", attrs={"name": "robots"})
-    assert "Last updated Oct 31, 2026" in s.find("p", class_="updated").get_text()
+    assert "Last updated Nov 1, 2026" in s.find("p", class_="updated").get_text()
     assert s.find("time")["datetime"] == privacy.UPDATED
     assert not any(a.has_attr("aria-current") for a in s.find("nav").find_all("a"))     # no nav item marked current
 
@@ -80,7 +80,7 @@ def test_the_last_updated_date_comes_from_the_constant_not_the_clock(tmp_path):
     for now in (dt.datetime(2026, 11, 1, tzinfo=dt.timezone.utc), dt.datetime(2027, 6, 1, tzinfo=dt.timezone.utc)):
         out = tmp_path / now.date().isoformat()
         render.build(ROOT / "data" / "series.json", out, now=now, upcoming_path=out / "none.json")
-        assert f'datetime="{privacy.UPDATED}">Oct 31, 2026</time>' in (out / "privacy" / "index.html").read_text(encoding="utf-8")
+        assert f'datetime="{privacy.UPDATED}">{privacy.updated_text()}</time>' in (out / "privacy" / "index.html").read_text(encoding="utf-8")
         entry = re.search(r"<loc>https://depauwvswabash.com/privacy/</loc><lastmod>([^<]+)</lastmod>",
                           (out / "sitemap.xml").read_text(encoding="utf-8"))
         assert entry.group(1) == privacy.UPDATED
@@ -106,7 +106,8 @@ def test_the_policy_makes_the_promises_the_other_tests_check(site):
     assert "It stores nothing and sends nothing anywhere." in text
     for law in ("GDPR", "CCPA", "COPPA", "HIPAA", "FERPA"):
         assert law not in text                     # no claim of compliance with any specific law
-    assert "isn’t legal advice" in text and "unofficial fan site, not affiliated" in text
+    assert "This page describes how the site works." in text and "legal advice" not in text
+    assert "unofficial fan site, not affiliated with DePauw University or Wabash College." in text
 
 
 # ---- the footer link ------------------------------------------------------------------------------------
@@ -187,11 +188,13 @@ def test_no_page_loads_anything_from_another_origin(site):
     assert "http" not in manifest
 
 
-def test_no_form_field_email_or_phone_link_exists_on_any_page(site):
+def test_no_form_field_or_phone_link_exists_and_mailto_only_on_the_privacy_page(site):
     for page in pages(site):
         s = soup(page)
         assert not s.find_all(["form", "input", "textarea", "select"]), page
-        assert not [a for a in s.find_all("a", href=True) if a["href"].lower().startswith(("mailto:", "tel:"))], page
+        assert not [a for a in s.find_all("a", href=True) if a["href"].lower().startswith("tel:")], page
+        assert [a["href"] for a in s.find_all("a", href=True) if a["href"].lower().startswith("mailto:")] == (
+            [] if page.name != "index.html" or page.parent.name != "privacy" else ["mailto:" + privacy.PRIVACY_EMAIL] * 2), page
 
 
 # ---- issue links ----------------------------------------------------------------------------------------
@@ -225,10 +228,72 @@ def test_every_github_issue_link_carries_only_the_template_and_the_page_category
     assert seen > 20
 
 
+def test_the_hosting_section_names_no_network_and_links_githubs_own_statements(site):
+    s = soup(site / "privacy" / "index.html")
+    text = s.get_text(" ", strip=True)
+    for word in ("Fastly", "content-delivery", "CDN", "Cloudflare"):
+        assert word not in text
+    hrefs = {a["href"] for a in s.find_all("a", href=True)}
+    assert {privacy.GITHUB_PAGES_DATA, privacy.GITHUB_PRIVACY, privacy.GITHUB_SUBPROCESSORS} <= hrefs
+    assert privacy.GITHUB_PAGES_DATA.startswith("https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages")
+    assert "its address points directly at GitHub." in text
+    assert "don’t see or receive those logs" in text
+
+
+def test_the_privacy_email_is_on_the_privacy_page_only_as_one_mailto_link_and_nowhere_else_on_the_site(site):
+    email = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
+    target = site / "privacy" / "index.html"
+    s = soup(target)
+    mailto = [a for a in s.find_all("a", href=True) if a["href"].lower().startswith("mailto:")]
+    assert mailto and {a["href"] for a in mailto} == {"mailto:" + privacy.PRIVACY_EMAIL}
+    assert all(a.get_text() == privacy.PRIVACY_EMAIL for a in mailto)
+    assert set(email.findall(target.read_text(encoding="utf-8"))) == {privacy.PRIVACY_EMAIL}
+    for path in site.rglob("*"):
+        if path.is_file() and path != target and path.suffix in {".html", ".txt", ".json", ".csv", ".xml", ".webmanifest", ".css", ".js", ".svg"}:
+            assert not email.search(path.read_text(encoding="utf-8")), path
+            assert "mailto:" not in path.read_text(encoding="utf-8"), path
+    security = (site / ".well-known" / "security.txt").read_text(encoding="utf-8")
+    assert "@" not in security and "mailto" not in security.lower()
+
+
+def test_the_alumni_definition_of_public_information_is_the_same_on_both_pages(site):
+    for name in ("privacy/index.html", "how-it-works/alumni/index.html"):
+        text = soup(site / name).get_text(" ", strip=True)
+        assert privacy.PUBLIC_INFO in text, name
+    how = soup(site / "how-it-works" / "alumni" / "index.html")
+    link = [a for a in how.find_all("a") if a.get_text() == "privacy page"]
+    assert len(link) == 1 and resolve(site, site / "how-it-works" / "alumni" / "index.html", link[0]["href"]) == site / "privacy" / "index.html"
+    text = soup(site / "privacy" / "index.html").get_text(" ", strip=True)
+    assert "Alumni entries are limited to public roles and public sources" in text
+    assert "A short, general request is enough, with no personal details needed, and we’ll consider it." in text
+
+
+def test_the_policy_text_file_exists_and_both_changes_links_point_at_it(site):
+    assert (ROOT / privacy.SOURCE_PATH).is_file()
+    assert Path(privacy.__file__).resolve() == (ROOT / privacy.SOURCE_PATH).resolve()
+    assert f'UPDATED = "{privacy.UPDATED}"' in (ROOT / privacy.SOURCE_PATH).read_text(encoding="utf-8")
+    history, source = privacy.source_urls(render.REPO_URL)
+    assert history == f"{render.REPO_URL}/commits/main/{privacy.SOURCE_PATH}"
+    assert source == f"{render.REPO_URL}/blob/main/{privacy.SOURCE_PATH}"
+    hrefs = {a.get_text(): a["href"] for a in soup(site / "privacy" / "index.html").find_all("a", href=True)}
+    assert hrefs["changes to this page"] == history and hrefs["the page’s source"] == source
+
+
+def test_the_contact_section_is_only_the_privacy_contact(site):
+    s = soup(site / "privacy" / "index.html")
+    contact = s.find("h3", string="Contact")
+    paragraphs = []
+    for sibling in contact.find_next_siblings():
+        paragraphs.append(sibling)
+    text = " ".join(p.get_text() for p in paragraphs)
+    assert text.startswith(f"Questions about this policy or a privacy request (including about an alumni entry): {privacy.PRIVACY_EMAIL}.")
+    contact_links = [a["href"] for p in paragraphs for a in p.find_all("a", href=True)]
+    assert contact_links == [f"mailto:{privacy.PRIVACY_EMAIL}"]
+
+
 def test_the_policys_own_links_are_https_and_point_where_it_says():
-    body = "\n".join(privacy.content(repo_url=render.REPO_URL, report_url=render.report_url(),
-                                      correction_url="https://github.com/x/y/issues/new?template=alumni-correction.yml",
-                                      enhancement_url=render.enhancement_url(render.AREA_SITE)))
-    hrefs = re.findall(r'href="([^"]+)"', body)
+    body = "\n".join(privacy.content(repo_url=render.REPO_URL,
+                                      correction_url="https://github.com/x/y/issues/new?template=alumni-correction.yml"))
+    hrefs = [h for h in re.findall(r'href="([^"]+)"', body) if not h.startswith("mailto:")]
     assert hrefs and all(h.startswith("https://") for h in hrefs)
     assert privacy.GITHUB_PRIVACY in hrefs and render.REPO_URL + "/security/advisories/new" in hrefs

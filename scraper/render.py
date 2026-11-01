@@ -1424,8 +1424,7 @@ def render_privacy(data: dict, now: dt.datetime | None = None, upcoming: dict | 
         privacy.TITLE, privacy.DESCRIPTION, prefix="../", path=privacy.PATH, current="",
         preview=athletics_preview(data, now, upcoming or {}),
         back=[("../", BACK_ATHLETICS), ("../alumni/", BACK_ALUMNI)],
-        body=privacy.content(repo_url=REPO_URL, report_url=report_url(), correction_url=alumni_page.correction_url(),
-                             enhancement_url=enhancement_url(AREA_SITE)),
+        body=privacy.content(repo_url=REPO_URL, correction_url=alumni_page.correction_url()),
         footer=site_footer(now, prefix="../", privacy_self=True), subtitle=NEUTRAL_SUBTITLE)
 
 
