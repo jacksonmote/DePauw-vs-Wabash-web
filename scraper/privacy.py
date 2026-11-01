@@ -114,14 +114,11 @@ def content(*, repo_url: str, correction_url: str) -> list:
         '<p>Pages here link to other sites, including the schools’ athletics and college sites, Wikipedia, news '
         'outlets, government sites and College Navigator. Those sites have their own privacy policies, and '
         'this one doesn’t cover them.</p>',
-        '<h3>Children</h3>',
-        '<p>The site collects no information from anyone, so there is nothing specific to children.</p>',
         '<h3>Changes</h3>',
         '<p>If this policy changes, the “Last updated” date at the top changes with it. The full history is in '
         f'the public repository: {_a(history, "changes to this page")} and {_a(source, "the page’s source")}.</p>',
         '<h3>Contact</h3>',
         f'<p>Questions about this policy or a privacy request (including about an alumni entry): {mail}.</p>',
-        '<p>This is an unofficial fan site, not affiliated with DePauw University or Wabash College. This page '
-        'describes how the site works.</p>',
+        '<p>This is an unofficial fan site, not affiliated with DePauw University or Wabash College.</p>',
         '</section>',
     ]

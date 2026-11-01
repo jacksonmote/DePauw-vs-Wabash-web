@@ -106,7 +106,7 @@ def test_the_policy_makes_the_promises_the_other_tests_check(site):
     assert "It stores nothing and sends nothing anywhere." in text
     for law in ("GDPR", "CCPA", "COPPA", "HIPAA", "FERPA"):
         assert law not in text                     # no claim of compliance with any specific law
-    assert "This page describes how the site works." in text and "legal advice" not in text
+    assert "describes how the site works" not in text and "legal advice" not in text and "Children" not in text
     assert "unofficial fan site, not affiliated with DePauw University or Wabash College." in text
 
 
