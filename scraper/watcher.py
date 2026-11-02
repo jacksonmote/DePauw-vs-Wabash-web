@@ -25,8 +25,9 @@ once; the newer one always yields, so two gates starting together cannot both st
 The loop, one pass every CADENCE (sooner when the window opens): fetch the data branch again, then
   window not open yet    wait until it opens
   window open            start an update (at most one every CADENCE)
-  window closed, result  start one last update, then stop
-  window closed, 3 AM    stop (the result never arrived; the daily runs pick it up)
+  window closed, result  start one last update, then stop (with several games that day: only once every
+                         game watched has its result; between games it waits for the next window)
+  window closed, 3 AM    stop (a result never arrived; the daily runs pick it up)
   no game left           stop
 and after RELAY_AFTER in the job, while a window is open or still to open, start a fresh watcher run marked
 as a relay, then stop: jobs on GitHub's runners may last 6 hours at most.
@@ -120,10 +121,10 @@ def decide(now: dt.datetime, started: dt.datetime, last_dispatch: dt.datetime | 
         return Decision("wait", last_dispatch + CADENCE, why, state)
     if state == BEFORE:
         return Decision("wait", min(start, now + CADENCE), why, state)
-    if watched and any(result_in(k, d, upcoming, sports) for k, d in watched):
+    if watched and all(result_in(k, d, upcoming, sports) for k, d in watched):
         return Decision("final", None, "the result is in on a history page, so the window closed", state)
     if watched:
-        return Decision("stop", None, "the window closed at 3 AM Eastern without the result", state)
+        return Decision("stop", None, "the window closed at 3 AM Eastern without every result", state)
     return Decision("stop", None, why, state)
 
 

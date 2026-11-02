@@ -4,7 +4,7 @@ run-name: ${{ inputs.dry_run && 'Game-day watcher (dry run)' || (inputs.relay &&
 # Keeps the site updating every 15 minutes during a DePauw vs. Wabash game, without depending on GitHub starting
 # more scheduled runs (it drops most of them when busy). Once one run of this workflow starts on a game day, it
 # starts "Update data and deploy site" on main itself (workflow_dispatch with gameday: true, so that run reads only
-# the sport being played) every 15 minutes until the game-day window closes, then once more if the result came in,
+# the sports being played) every 15 minutes until the game-day window closes, then once more if every result came in,
 # and stops. scraper/watcher.py has the rules; the window rules are gameday.py's.
 #
 # It never fetches the schools' sites, never commits and never deploys: it reads the data branch and starts the

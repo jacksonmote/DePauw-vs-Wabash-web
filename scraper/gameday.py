@@ -6,8 +6,8 @@ Three things use this, and all need only the stored data (data/upcoming.json and
   * the gate (`python scraper/gameday.py gate`), the first and fastest job of the workflow. It decides whether
     the run does anything and which sports it reads (`plan`):
       daily schedule, hand-started manual run      every sport
-      game-day run (the 30-minute schedule inside  only the sports with a game today (or yesterday, until the
-        a window, or a run the watcher started)    window closes at 3 AM): `gameday_sports`
+      game-day run (the 30-minute schedule inside  only the sports whose window is open (when none is, the
+        a window, or a run the watcher started)    sports whose game today has started or finished): `gameday_sports`
       push to main                                 nothing (stored data, re-merged), unless the push changed the
                                                    scraper or sources.json (SCRAPE_ON_PUSH): then every sport
     The 30-minute schedule does nothing outside a window, and inside one it also stands aside while the
@@ -120,18 +120,26 @@ def open_windows(now: dt.datetime, upcoming: dict, sports: dict) -> list:
 
 
 def gameday_sports(now: dt.datetime, upcoming: dict, sports: dict) -> list:
-    """The sports a game-day run reads: those with a game (not postponed) on the schedule or in the history
-    dated today (Eastern), or yesterday while that window can still be open (until 3 AM). By date rather than
-    by open window, so the watcher's last update after the result is in still reads the sport that just played."""
+    """The sports a game-day run reads. While any window is open: only the sports whose window is open (a game
+    later today is not read before it starts, and one already finished is not read again). When none is open:
+    the sports whose game today (or yesterday, until 3 AM) has started or finished, so the watcher's last update
+    after the final result still reads what was played. A game with no start time counts from noon, like its
+    window. Games not yet started are never read."""
     today = to_eastern(now)[0].date()
-    keys = []
+    open_keys, begun = set(), set()
     for date in (today - dt.timedelta(days=1), today):
         if date != today and now >= window_end(date):
             continue
         for key, s in sports.items():
             sched, hist = games_on(date.isoformat(), upcoming.get(key, {}).get("games", []), s["games"])
-            if (sched or hist) and key not in keys:
-                keys.append(key)
+            if not (sched or hist):
+                continue
+            if sched and now < start_of(sched, date):
+                continue                      # not started yet: nothing new on its pages
+            begun.add(key)
+            if sched and len(hist) < len(sched):
+                open_keys.add(key)
+    keys = open_keys or begun
     return [k for k in sports if k in keys]
 
 

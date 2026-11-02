@@ -420,12 +420,60 @@ def test_a_push_reads_nothing_unless_it_changed_the_scraper_or_the_sources():
     assert plan("push", changed=None)[:2] == (True, "all")                  # could not tell: read everything
 
 
-def test_game_day_scope_covers_yesterdays_game_until_3_am_and_lists_two_sports_in_order():
+def test_game_day_scope_reads_only_open_windows_and_never_a_game_that_has_not_started():
     up = {"football": {"games": [sched(date="2026-11-14", time="7:00 PM")]},
           "baseball": {"games": [sched(date="2026-11-15", time="1:00 PM")]}}
     sports = {"football": {"name": "Football", "games": []}, "baseball": {"name": "Baseball", "games": []}}
-    assert gameday.gameday_sports(et("2026-11-15 01:00"), up, sports) == ["football", "baseball"]
-    assert gameday.gameday_sports(et("2026-11-15 03:00"), up, sports) == ["baseball"]
+    assert gameday.gameday_sports(et("2026-11-15 01:00"), up, sports) == ["football"]   # baseball not started
+    assert gameday.gameday_sports(et("2026-11-15 03:00"), up, sports) == []             # nothing begun today
+    assert gameday.gameday_sports(et("2026-11-15 13:30"), up, sports) == ["baseball"]
+
+
+def two_sport_day(start, football_posted, basketball_posted):
+    """Football at 1:07 PM and basketball at 7:00 PM on Nov 14, watched from `start` (Eastern), following each
+    relay into a fresh run a minute later. A result reaches the data branch UPDATE_MINUTES after the first update
+    that started once it was posted. Returns (outcome of the last run, [(HH:MM, scope) for every dispatch])."""
+    clock = {"now": et(start)}
+    dispatched = []
+    games = {"football": ("1:07 PM", football_posted), "mens-basketball": ("7:00 PM", basketball_posted)}
+
+    def data():
+        up = {k: {"games": [sched(time=t)]} for k, (t, _) in games.items()}
+        sports = {}
+        for k, (_, posted) in games.items():
+            known = posted and any(d >= et(posted) and clock["now"] >= d + dt.timedelta(minutes=UPDATE_MINUTES)
+                                   for d, _ in dispatched)
+            sports[k] = {"name": k, "games": [result()] if known else []}
+        return up, sports
+
+    def dispatch():
+        dispatched.append((clock["now"], gameday.gameday_sports(clock["now"], *data())))
+
+    def sleep(sec):
+        clock["now"] += dt.timedelta(seconds=sec)
+    while True:
+        out = watcher.run(lambda: clock["now"], sleep, data, dispatch, lambda: None, log=lambda line: None)
+        if not out.relayed:
+            return out, [(fmt_t(t), scope) for t, scope in dispatched]
+        sleep(60)
+
+
+def test_a_day_with_two_sports_reads_each_only_in_its_window_and_ends_with_one_final_update():
+    out, runs = two_sport_day("2026-11-14 12:00", "2026-11-14 16:30", "2026-11-14 21:00")
+    football = [t for t, scope in runs if scope == ["football"]]
+    basketball = [t for t, scope in runs if scope == ["mens-basketball"]]
+    assert football[0] == "13:07" and basketball[0] == "19:00"
+    assert not [t for t, _ in runs if football[-1] < t < "19:00"]      # waits between the games, reads nothing
+    assert runs[-1][1] == ["football", "mens-basketball"]               # the final update reads what was played
+    assert len(runs) == len(football) + len(basketball) + 1
+    assert out.stopped.startswith("the result is in")
+
+
+def test_one_result_in_and_the_other_never_stops_at_3_am_without_a_final_update():
+    out, runs = two_sport_day("2026-11-14 12:00", "2026-11-14 16:30", None)
+    assert "3 AM" in out.stopped and "every result" in out.stopped
+    assert [scope for _, scope in runs if scope != ["football"]] == [["mens-basketball"]] * (len(runs) - len(
+        [1 for _, scope in runs if scope == ["football"]]))
 
 
 def test_the_gate_cli_writes_the_scope_and_reads_the_changed_files(tmp_path, monkeypatch, capsys):
