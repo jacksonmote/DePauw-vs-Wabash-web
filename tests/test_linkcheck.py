@@ -1,7 +1,8 @@
 """The monthly link check (scraper/linkcheck.py, .github/workflows/link-check.yml).
 
 No network and no outside programs: links come from the small fixture site in tests/fixtures/linkcheck, every
-request goes to a fake transport, time is a fake clock, and the issue sync gets a fake gh runner."""
+request goes to a fake transport, time is a fake clock, and the issue sync gets a fake gh runner. The links within
+the site are checked on two full builds from the frozen fixture, with a fixed clock."""
 
 import ast
 import datetime as dt

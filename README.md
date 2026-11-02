@@ -416,15 +416,36 @@ The logic is in `scraper/snapshot.py` and the tests in `tests/test_snapshot.py`.
 `.github/workflows/link-check.yml` checks the site's outbound links once a month (the 2nd, 19:41 UTC) and keeps one GitHub issue, labeled `broken-links`, listing anything that needs a look. It never changes the site or the data: it renders the site in its own runner, reads it, and reports. Fixing a link is a normal pull request to the page or data file that uses it.
 
 - **What is checked.** Every `<a href>` to an `http` or `https` address on every rendered page, plus every `http(s)` address in the hand-curated data files (`alumni.json`, `endowment.json`, `bell-heists.json`, `fun-facts.json`, `overrides.json`). Each address is fetched once, without its `#fragment` (the dozens of links into one Congressional directory PDF are one request), and the report lists every page and data entry that uses it (`data/alumni.json: albert-porter: qualifications.governors.source`).
-- **What is not checked, and why.** Email addresses (`mailto:`), links to this site, and this repository's own links (issue forms, security advisories, source files) are ours. Every box score on depauwtigers.com and sports.wabash.edu is skipped: there are hundreds, they come from the schools' own pages, and checking them would send far more traffic to the schools' sites than the scraper's normal page fetches. The opponent-history and schedule pages in `scraper/sources.json` are skipped too, because the scraper already fetches them twice a day and a failure there already turns a run red. Other pages on the schools' sites (a news story cited by a ruling, for example) are checked. The report says how many distinct addresses each group skipped.
+- **What is not checked, and why.** Email addresses (`mailto:`), links to this site, and this repository's own links (issue forms, security advisories, source files) are ours. Every box score on depauwtigers.com and sports.wabash.edu is skipped: there are hundreds, they come from the schools' own pages, and checking them would send far more traffic to the schools' sites than the scraper's normal page fetches. The opponent-history and schedule pages in `scraper/sources.json` are skipped too, because the scraper already fetches them twice a day: a history page that fails turns that run red, and a schedule page that fails logs a warning in the run. Other pages on the schools' sites (a news story cited by a ruling, for example) are checked. The report says how many distinct addresses each group skipped.
 - **Links within the site are a test, not part of the monthly run.** They can break only when our own code or data changes, and checking them needs no network, so `tests/test_linkcheck.py` builds the whole site (from the frozen fixture, on an ordinary day and on a Bell game day, so the game-day banner's links count too) and requires every link between pages, every download link and every `#fragment` to reach a built page or file and an existing `id` (`linkcheck.internal_problems`). A broken one fails the pull request, and, like every test, stops a deploy.
 - **How politely.** One request at a time, at least 2 seconds between requests to the same host, a 20-second timeout and a User-Agent naming the site and this repository. HEAD first; a GET only when HEAD does not answer 2xx (405 or 501, an error status, or no answer: many servers mishandle HEAD); one retry of that GET after 10 seconds for a timeout, a connection error or a 5xx. Redirects are followed by hand, at most 5. A GET never reads the page body, so a link never costs more than one page. The limits are named constants in `scraper/linkcheck.py`.
 - **The statuses.** *Broken*: 404, 410, a DNS failure, or still failing after the retry. *Moved permanently*: a 301 or 308 on the way to a working page at a different address; the report gives the new address, so the link can be updated. *Couldn't check*: 401, 403, 429 or another bot-protection answer; many sites block automated checks, so these are listed in the run summary but never counted as broken and never open the issue. *Other*: anything unexpected, with its status (too many redirects, for example). *OK*.
-- **The issue.** When anything is broken, moved or other, the `issues` job creates the one open `broken-links` issue (and the label, if missing) or replaces its text with the new report, and adds a short comment with the date and the totals. When nothing is, it comments and closes the open issue. It never opens a second one. Couldn't-check links alone do nothing to the issue. The issue job runs only on `main`, so a manual run on a branch exercises the check without touching the issue.
-- **Every run's output.** The run summary has the totals, the skipped counts and every link that is not OK; the `link-report` artifact (kept 90 days) has the full report as Markdown and JSON, OK links included. The check exits 0 whether or not links are broken; a red run means the checker itself failed.
+- **The issue.** When anything is broken, moved or other, the `issues` job creates the one open `broken-links` issue (and the label, if missing) or replaces its text with the new report, and adds a short comment with the date and the totals. When nothing is, it comments and closes the open issue. It never opens a second one. Couldn't-check links never open the issue or keep it open. The issue job runs only on `main`, so a manual run on a branch exercises the check without touching the issue.
+- **Every run's output.** The run summary has the totals, the skipped counts and every link that is not OK; the `link-report` artifact (kept 90 days) has the full report as Markdown and JSON, OK links included. The check exits 0 whether or not links are broken, so a red run means a step itself failed (the data fetch, the install, the render, the checker or the issue update), never that a link is broken.
 - **By hand.** Actions, "Link check", Run workflow. Locally, after a render: `python scraper/linkcheck.py check` (writes `link-check/link-report.md`, `link-report.json` and `summary.md`; the folder is git-ignored). This makes live requests, with the same limits.
 
-The logic is in `scraper/linkcheck.py` and the tests in `tests/test_linkcheck.py` (a fixture site, a fake transport, a fake clock and a fake `gh`; no network).
+What each monthly run does:
+
+```mermaid
+flowchart TD
+  T1["The 2nd of every month<br/>(19:41 UTC)"] --> C
+  T2["Manual run"] --> C
+  C["check job (contents: read):<br/>fetch the data branch files,<br/>install the locked packages, render site/"] --> L["linkcheck.py: collect the outbound links<br/>from the pages and the curated data files"]
+  L -- "skipped and counted" --> SK["box scores, scraped history and<br/>schedule pages, this repository,<br/>this site, email addresses"]
+  L --> H["check each address once:<br/>HEAD, a GET if needed, one retry,<br/>2 seconds between requests to a host"]
+  H --> R["run summary and the link-report<br/>artifact (kept 90 days)"]
+  R --> M{"run on main?"}
+  M -- "no" --> X["stop: the issue is not touched"]
+  M -- "yes" --> Q{"issues job (issues: write):<br/>anything broken, moved or other?"}
+  Q -- "yes" --> O{"a broken-links<br/>issue open?"}
+  O -- "no" --> NEW["create it (and the label),<br/>comment the date and totals"]
+  O -- "yes" --> UPD["replace its text with the report,<br/>comment the date and totals"]
+  Q -- "no (couldn't check alone is no)" --> CL{"a broken-links<br/>issue open?"}
+  CL -- "yes" --> CLOSE["comment and close it"]
+  CL -- "no" --> NOP["nothing to do"]
+```
+
+The logic is in `scraper/linkcheck.py` and the tests in `tests/test_linkcheck.py` (a fixture site, a fake transport, a fake clock and a fake `gh` for the monthly check, and two full builds for the links within the site; no network).
 
 ## Shared pieces of every page
 
@@ -451,7 +472,7 @@ The bot-managed data files live on the `data` branch, so on a fresh clone run `p
 
 Tests never read the real clock, the network or the bot-updated files in `data/` for an exact count. They use
 fixtures (`tests/fixtures/`, including a frozen copy of `series.json`), a fixed `now` passed to the code, and
-`tests/conftest.py`, which fails any test that opens a connection or runs `gh`, `npm`, `node` or `curl`. The
+`tests/conftest.py`, which fails any test that opens a connection or runs `gh`, `npm`, `npx`, `node`, `curl` or `wget`. The
 checks on the live `data/series.json` are rules that always hold (totals add up, results match scores, the Bell
 era starts in 1932), in `tests/test_real_data_invariants.py`.
 
@@ -533,8 +554,9 @@ scraper/
 static/              styles.css, favicon.svg, easter-eggs.js, three original easter-egg SVGs, fonts/ (Barlow Condensed TTFs for the
                      share images, the Latin woff2 subset the pages load, OFL.txt; SIL Open Font License)
 tests/               one test file per area (scraper, merge, overrides, review, snapshot, game day, render,
-                     footer, how-it-works pages, alumni, swimming ...); fixtures/ holds page markup captured
-                     from both schools' sites and the expected parse of each
+                     footer, how-it-works pages, alumni, swimming, link check ...); fixtures/ holds page markup
+                     captured from both schools' sites and the expected parse of each, the frozen copy of
+                     series.json, and the small site and data files the link-check tests read (linkcheck/)
 .github/workflows/   update-and-deploy.yml, checks.yml, snapshot.yml, link-check.yml
 .github/ISSUE_TEMPLATE/  data-correction.yml, alumni-correction.yml, enhancement.yml, config.yml (blank issues off)
 .github/dependabot.yml   weekly updates of the pinned GitHub Actions, the locked Python packages (pip) and the locked HTML validator (npm)

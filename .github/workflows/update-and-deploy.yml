@@ -37,7 +37,7 @@ permissions:
 # Nothing is ever cancelled once it is running.
 #
 # Where the data lives: main holds the code and the hand-curated data files (overrides, alumni, endowment,
-# heists); the files only this workflow writes (series, depauw, wabash, upcoming, pending-changes) live on the
+# heists, fun facts); the files only this workflow writes (series, depauw, wabash, upcoming, pending-changes) live on the
 # unprotected `data` branch, because the "Protect main" ruleset rejects the Actions bot. Every job that needs
 # them runs `scraper/databranch.py fetch` first; only the build job pushes to that branch, and the build
 # job's concurrency group keeps two runs from pushing at once (scraper/databranch.py explains the rest).
