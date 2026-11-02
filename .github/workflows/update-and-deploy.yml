@@ -140,7 +140,7 @@ jobs:
     # writes it and saves it to the Actions cache, and every run first restores the newest saved one, so a deploy
     # that read nothing still shows the time of the last real scrape (never its own time). A cache miss leaves
     # "Last checked" off the page. A GITHUB_TOKEN push does not start another run.
-    # A full scrape waits 30 seconds between requests to each school's site (robots.txt), about 7 minutes.
+    # A full scrape waits 30 seconds between requests to each school's site (robots.txt), about 8 minutes.
     needs: gate
     if: ${{ needs.gate.outputs.run == 'true' }}
     runs-on: ubuntu-24.04

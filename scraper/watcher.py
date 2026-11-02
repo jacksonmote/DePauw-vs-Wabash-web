@@ -61,7 +61,8 @@ CADENCE = dt.timedelta(minutes=15)                    # at most one update this 
 RELAY_AFTER = dt.timedelta(hours=4, minutes=45)       # the next pass after this hands over (jobs stop at 6 hours)
 ACTIVE = ("in_progress", "queued", "waiting", "pending", "requested")
 DRY_TITLE = "(dry run)"                               # in a dry run's run name, so the checks below ignore it
-MAX_DISPATCH_FAILURES = 3                             # in a row, then the watcher gives up and the run turns red
+MAX_FAILURES = 3                                      # in a row (dispatches, or fetches of the data branch), then it gives up, red
+RETRY = dt.timedelta(minutes=1)                       # after a failed dispatch or fetch
 
 BEFORE, OPEN, NONE = "before", "open", "none"
 
@@ -144,35 +145,55 @@ class Outcome:
     watched: set = field(default_factory=set)
     stopped: str = ""
     relayed: bool = False
+    failed: bool = False                                # gave up after repeated failures (the run turns red)
     log: list = field(default_factory=list)
 
 
 def run(clock, sleep, refresh, dispatch_update, dispatch_relay, log=print) -> Outcome:
     """The watch loop. clock() -> aware UTC now; sleep(seconds); refresh() -> (upcoming, sports) from the data
-    branch; dispatch_update() and dispatch_relay() start the runs (no-ops that log in a dry run)."""
+    branch; dispatch_update() and dispatch_relay() start the runs (no-ops that log in a dry run).
+
+    A failed fetch of the data branch is tried again after RETRY (the last data read is never used to start an
+    update); a failed dispatch or relay is retried after RETRY, without moving the 15-minute clock. MAX_FAILURES
+    in a row of either stop the watcher and mark the outcome failed."""
     out = Outcome()
     started = clock()
     last = None
-    failures = 0
+    data = None
+    fetch_failures = failures = 0
     while True:
-        upcoming, sports = refresh()
+        try:
+            data = refresh()
+            fetch_failures = 0
+        except Exception as exc:  # noqa: BLE001 - a passing network problem must not end the watch
+            fetch_failures += 1
+            log(f"{fmt(clock())}  could not read the data branch ({fetch_failures} in a row): {exc}")
+            if fetch_failures >= MAX_FAILURES:
+                out.stopped, out.failed = f"the data branch could not be read ({fetch_failures} in a row)", True
+                return out
+            sleep(RETRY.total_seconds())
+            continue
+        upcoming, sports = data
         now = clock()
         d = decide(now, started, last, out.watched, upcoming, sports)
         out.watched |= open_keys(now, upcoming, sports)
         line = f"{fmt(now)}  {d.state or '-':<6}  {d.action:<8}  {d.why}"
         out.log.append(line)
         log(line)
-        if d.action in ("dispatch", "final"):
+        if d.action in ("dispatch", "final", "relay"):
             try:
-                dispatch_update()
-                out.dispatches.append(now)
+                (dispatch_relay if d.action == "relay" else dispatch_update)()
                 failures = 0
             except Exception as exc:  # noqa: BLE001 - one failed dispatch must not end the watch
                 failures += 1
-                log(f"  dispatch FAILED ({failures} in a row): {exc}")
-                if failures >= MAX_DISPATCH_FAILURES:
-                    out.stopped = f"{failures} dispatches failed in a row"
+                log(f"  {d.action} FAILED ({failures} in a row), trying again in a minute: {exc}")
+                if failures >= MAX_FAILURES:
+                    out.stopped, out.failed = f"{failures} dispatches failed in a row", True
                     return out
+                sleep(RETRY.total_seconds())
+                continue
+            if d.action != "relay":
+                out.dispatches.append(now)
         if d.action == "final":
             out.stopped = d.why + "; started one last update"
             return out
@@ -180,7 +201,6 @@ def run(clock, sleep, refresh, dispatch_update, dispatch_relay, log=print) -> Ou
             out.stopped = d.why
             return out
         if d.action == "relay":
-            dispatch_relay()
             out.relayed = True
             out.stopped = d.why
             return out
@@ -369,7 +389,7 @@ def main(argv=None) -> int:
     text = describe(out, args.dry_run)
     print(text)
     summary(text)
-    return 1 if out.stopped.endswith("failed in a row") else 0
+    return 1 if out.failed else 0
 
 
 if __name__ == "__main__":

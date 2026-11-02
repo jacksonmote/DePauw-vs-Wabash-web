@@ -198,7 +198,53 @@ def test_three_failed_dispatches_in_a_row_stop_the_watcher():
         raise OSError("GitHub said no")
     out = watcher.run(lambda: clock["now"], lambda s: clock.__setitem__("now", clock["now"] + dt.timedelta(seconds=s)),
                       lambda: world(), boom, lambda: None, log=lambda line: None)
-    assert out.stopped == "3 dispatches failed in a row" and out.dispatches == []
+    assert out.stopped == "3 dispatches failed in a row" and out.dispatches == [] and out.failed
+
+
+def _ticking(start):
+    clock = {"now": et(start)}
+    return clock, (lambda: clock["now"]), (lambda s: clock.__setitem__("now", clock["now"] + dt.timedelta(seconds=s)))
+
+
+def test_a_failed_dispatch_is_tried_again_a_minute_later_and_the_cadence_counts_from_the_one_that_worked():
+    clock, now, sleep = _ticking("2026-11-14 13:07")
+    tries = []
+
+    def flaky():
+        tries.append(clock["now"])
+        if len(tries) == 1:
+            raise OSError("502 from GitHub")
+    out = watcher.run(now, sleep, lambda: world(history=[result()] if clock["now"] >= et("2026-11-14 13:20") else []),
+                      flaky, lambda: None, log=lambda line: None)
+    assert [fmt_t(t) for t in tries] == ["13:07", "13:08", "13:23"] and not out.failed
+    assert out.stopped.startswith("the result is in")
+
+
+def test_a_failed_read_of_the_data_branch_is_tried_again_and_never_ends_the_watch_by_itself():
+    clock, now, sleep = _ticking("2026-11-14 13:07")
+    reads = []
+
+    def refresh():
+        reads.append(clock["now"])
+        if len(reads) == 2:
+            raise OSError("timed out")
+        return world(history=[result()] if clock["now"] >= et("2026-11-14 13:30") else [])
+    out = watcher.run(now, sleep, refresh, lambda: None, lambda: None, log=lambda line: None)
+    assert fmt_t(reads[2]) == "13:23" and not out.failed and out.stopped.startswith("the result is in")
+
+
+def test_three_failed_reads_in_a_row_stop_the_watcher_and_turn_its_run_red():
+    clock, now, sleep = _ticking("2026-11-14 13:07")
+
+    def refresh():
+        raise OSError("timed out")
+    dispatched = []
+    out = watcher.run(now, sleep, refresh, lambda: dispatched.append(1), lambda: None, log=lambda line: None)
+    assert out.failed and "could not be read (3 in a row)" in out.stopped and dispatched == []
+
+
+def fmt_t(t):
+    return watcher.to_eastern(t)[0].strftime("%H:%M")
 
 
 def test_each_pass_logs_the_eastern_time_the_state_and_the_action():

@@ -745,7 +745,7 @@ def test_readme_documents_render_and_html_validation_in_its_own_job():
     assert "html validation never stops the build" in operator_text
     assert "if node cannot be set up the validation is skipped" in operator_text
     assert "a warning annotation and a run-summary note" in operator_text
-    assert "turns the run red for a scraper failure, a failed validation or a skipped validation" in operator_text
+    assert "turns the run red for a scraper failure, a page robots.txt disallowed, a failed validation or a skipped validation" in operator_text
     assert "separate `validate` job" in operator_text and "package-lock.json" in operator_text
     workflow_section = readme.split("what each run of `update-and-deploy.yml` does:", 1)[1].split("### why the merge works", 1)[0]
     assert "render" in workflow_section and "validate" in workflow_section and "commit" in workflow_section
