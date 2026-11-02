@@ -15,11 +15,11 @@ that uses it. Left out on purpose, and counted in the report (distinct URLs per 
     advisories, source files);
   * every box score on the schools' athletics sites: there are hundreds, they come from the schools' own pages,
     and checking them would send far more traffic to those sites than the scraper's normal page fetches;
-  * the opponent-history and schedule pages the scraper already fetches twice a day (from sources.json).
+  * the opponent-history and schedule pages the scraper already fetches (from sources.json).
 
 How a link is checked, politely: one request at a time, at least HOST_GAP seconds between requests to the same
-host (counted from the end of the last one), a TIMEOUT-second timeout, a User-Agent naming the site and the
-repository. HEAD first; a GET only if HEAD did not answer 2xx (405/501, an error status or no answer: many servers
+host (counted from the end of the last one), a TIMEOUT-second timeout, the scraper's own User-Agent (naming the
+site, the repository and the privacy contact; politeness.USER_AGENT). HEAD first; a GET only if HEAD did not answer 2xx (405/501, an error status or no answer: many servers
 mishandle HEAD); one retry of that GET after RETRY_WAIT seconds for a timeout, a connection error or a 5xx.
 Redirects are followed by hand, at most MAX_REDIRECTS, each hop paced like any request. A GET never reads the
 body, so no link costs more than one page.
@@ -50,6 +50,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urldefrag, urljoin, urlparse
 
+from politeness import USER_AGENT  # the one user agent the project sends anywhere; standard library only
 from timeutil import to_eastern   # standard library only, like this module
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -66,8 +67,6 @@ SOURCE_HOSTS = ("depauwtigers.com", "www.depauwtigers.com", "sports.wabash.edu")
 # The hand-curated files on main. The bot-managed files hold only the schools' own pages and box scores.
 DATA_FILES = ("alumni.json", "endowment.json", "bell-heists.json", "fun-facts.json", "overrides.json")
 
-USER_AGENT = ("DePauw-vs-Wabash-link-check/1.0 (monthly check of the links on https://depauwvswabash.com/; "
-              "https://github.com/jacksonmote/DePauw-vs-Wabash-web)")
 HOST_GAP = 2.0          # seconds between requests to the same host, at least
 TIMEOUT = 20            # seconds, per request
 MAX_REDIRECTS = 5
