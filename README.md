@@ -203,7 +203,7 @@ Five GitHub Actions workflows live in `.github/workflows/`:
 | Workflow | Runs when | Jobs and permissions |
 |---|---|---|
 | `update-and-deploy.yml` ("Update data and deploy site") | Twice a day, every 30 minutes (ended at once by the gate unless a game is being played and no watcher is running), on every push to `main`, by hand, and every 15 minutes during a game when the game-day watcher starts it | `gate` (`contents: read`, `actions: read`; fetches the data from the `data` branch, decides whether a 30-minute run does anything, and decides what the run reads from the schools: every sport, today's sport or nothing), `watcher-handoff` (daily runs only; `actions: write`, the only job here that holds it; starts the game-day watcher on a game day), `build` (`contents: write`; fetches the `data` branch files, re-merges `series.json` offline, runs required tests, restores the last check time from the Actions cache, scrapes what the gate said and saves the new check time, renders the candidate site, which must succeed, then commits changed `data/` files to the `data` branch as the Actions bot, which is tolerated if that push is rejected, and uploads the site), `validate` (`contents: read`, no write token and no saved credentials; unpacks the uploaded site, installs the HTML validator from `package-lock.json` with install scripts off, and checks all nine generated pages with `html-validate`, which only warns), `deploy` (`pages: write`, `id-token: write`; publishes to GitHub Pages), `issues` (`issues: write`; fetches the data, then keeps the `data-review` issue in step), `report` (turns the run red after the deploy if a sport failed to scrape, robots.txt disallowed a page, the HTML validation failed or was skipped, or the data commit was rejected, and says which; test and render failures stop the build instead) |
-| `gameday-watcher.yml` ("Game-day watcher") | Every 10 minutes (ended within seconds by its gate unless a game is played today), from the two daily runs on a game day, by hand (dry runs and test dispatches too), and by itself as a relay | `gate` (`contents: read`, `actions: read`; reads the `data` branch and stands aside for an older watcher run), `watch` (`contents: read`, `actions: write`; one at a time; starts `update-and-deploy.yml` every 15 minutes during the game, never fetches the schools' sites, commits or deploys). See "The game-day watcher" |
+| `gameday-watcher.yml` ("Game-day watcher") | Every 10 minutes (ended within seconds by its gate unless a game is played today), from the two daily runs on a game day, by hand (dry runs and test dispatches too), and by itself as a relay | `gate` (`contents: read`, `actions: read`; reads the `data` branch and stands aside for an older watcher run), `watch` (`contents: read`, `actions: write`; one at a time; starts `update-and-deploy.yml` every 15 minutes during the game and one final update per game, never fetches the schools' sites, commits or deploys). See "The game-day watcher" |
 | `checks.yml` ("Checks") | On every pull request to `main` | Two read-only jobs, each of which first fetches the bot-managed files from the `data` branch (a read-only fetch, no token) and re-merges `series.json` offline. `checks`: the tests, the render, script syntax, `html-validate` (the locked copy) on all nine pages and every Mermaid diagram in this README. `fake-clock` (three runs): the whole test suite again with the clock frozen at Nov 14, 2026 1:30 PM ET, Jan 1, 2027 and Oct 30, 2027, so a test that secretly depends on today’s date fails in the pull request. Only `checks` is the required status check |
 | `link-check.yml` ("Link check") | The 2nd of every month at 19:41 UTC, and by hand | `check` (`contents: read`; fetches the data from the `data` branch, installs the locked packages, renders the site, checks every outbound link with `scraper/linkcheck.py`, uploads the `link-report` artifact and writes the run summary; never changes the site or the data, and broken links never fail it), `issues` (`contents: read` for the checkout and `issues: write`, on `main` only; opens, updates or closes the one `broken-links` issue). One concurrency group, so two runs never overlap. See "The link check" |
 | `snapshot.yml` ("Data snapshot") | July 1 and January 2, and by hand | `prepare` (read-only; fetches the data from the `data` branch, then the change check and the release files), `release` (`contents: write`; the GitHub Release), `archive` (`contents: write`; asks the Wayback Machine to save the source pages, last, and can never fail the run) |
@@ -251,14 +251,14 @@ flowchart TD
   T2["Every 30 minutes"] --> G
   T3["Push to main"] --> G
   T4["Manual run (options: allow shrink,<br/>apply reviewed changes,<br/>test data commit, game-day update)"] --> G
-  T5["Game-day watcher<br/>(every 15 minutes during a game)"] --> G
+  T5["Game-day watcher<br/>(every 15 minutes during a game,<br/>one final update per game)"] --> G
   G{"gate job (reads the data branch)<br/>30-minute run with no window open,<br/>or with the watcher running?"}
   G -- "yes" --> X["Stop here:<br/>no scrape, no commit, no deploy"]
   G -- "no" --> F["build: fetch the data branch files,<br/>re-merge series.json<br/>(failure tolerated)"]
   F --> B["run required tests"]
   B -- "tests fail" --> TF["build stops:<br/>no scrape or publication"]
   B -- "tests pass" --> LC2["restore the last check time<br/>(Actions cache)"]
-  LC2 --> S["Scrape what the gate said (failure tolerated):<br/>daily and manual: every sport;<br/>game day: today's sport;<br/>push: nothing, unless it changed the scraper"]
+  LC2 --> S["Scrape what the gate said (failure tolerated):<br/>daily and manual: every sport;<br/>game day: only the sports being played;<br/>push: nothing, unless it changed the scraper"]
   S --> R["render site/"]
   R -- "render fails" --> RF["build stops:<br/>no commit, no deploy"]
   R -- "render succeeds" --> C{"data/ changed?"}
@@ -389,7 +389,32 @@ The build and deploy jobs each have their own concurrency group (`cancel-in-prog
 
 ### The game-day watcher
 
-`.github/workflows/gameday-watcher.yml` with `scraper/watcher.py`. GitHub drops most scheduled runs when it is busy, so a game cannot wait for the 30-minute schedule. Once any one watcher run starts on a game day, it starts "Update data and deploy site" on `main` itself (workflow_dispatch with `gameday: true`, which `GITHUB_TOKEN` may do: GitHub's "Triggering a workflow from a workflow" says `workflow_dispatch` events always create runs) every 15 minutes until the window closes, so no further scheduled run has to fire.
+`.github/workflows/gameday-watcher.yml` with `scraper/watcher.py`. GitHub drops most scheduled runs when it is busy, so a game cannot wait for the 30-minute schedule. Once any one watcher run starts on a game day, it starts "Update data and deploy site" on `main` itself (workflow_dispatch with `gameday: true`, which `GITHUB_TOKEN` may do: GitHub's "Triggering a workflow from a workflow" says `workflow_dispatch` events always create runs; a test dispatch on `main` proved it on Nov 2, 2026) every 15 minutes until the window closes, so no further scheduled run has to fire.
+
+How one watcher run decides, pass by pass (a dry run follows the same path on a simulated clock and starts nothing):
+
+```mermaid
+flowchart TD
+  ST["Watcher run starts: every 10 minutes, from a daily run<br/>on a game day, by hand, or as a relay<br/>(handed the games still owed a final update)"] --> TD{"Test dispatch?"}
+  TD -- "yes" --> ONE["start one game-day update<br/>on main, then stop"]
+  TD -- "no" --> GA{"gate: a game today, not postponed,<br/>with its window open or still to open,<br/>or a handed-over game owed a final?"}
+  GA -- "no" --> QUIT["stop within seconds"]
+  GA -- "yes, but an older watcher<br/>is already running" --> QUIT
+  GA -- "yes" --> L["watch: fetch the data branch,<br/>recheck every window"]
+  L --> OW{"a game's result is in,<br/>its final not yet started,<br/>and no window open?"}
+  OW -- "yes" --> FI["start that game's final update<br/>(at least 15 minutes after the last update)"]
+  FI --> MORE{"another game still to come today?"}
+  MORE -- "yes" --> WAIT["wait 15 minutes"]
+  MORE -- "no" --> DONE["stop: every game watched<br/>has had its final update"]
+  OW -- "no" --> RL{"4 hours 45 minutes<br/>in this job?"}
+  RL -- "yes" --> RE["start a relay, handing over the games<br/>still owed a final update, then stop"]
+  RL -- "no" --> OP{"a window open?"}
+  OP -- "yes" --> UP["start an update that reads only<br/>the sports whose window is open"]
+  UP --> WAIT
+  OP -- "no, a game still to start" --> WAIT
+  OP -- "no, 3 AM Eastern passed<br/>without a result" --> LATE["stop without that final<br/>(the daily runs pick the result up)"]
+  WAIT --> L
+```
 
 - **How it starts.** Any one of: its own schedule every 10 minutes (on a day without a game its gate ends the run within seconds), the two daily runs of the update workflow on a game day (`watcher-handoff`), a hand start (Actions, "Game-day watcher", Run workflow: the backstop on game morning), or a relay from an earlier watcher.
 - **When it watches.** When today (Eastern) has a game that is not postponed and its window is open or still to open. Before the window it waits, checking every 15 minutes; inside the window it starts an update every 15 minutes (never more often), each reading only that sport; before each one it fetches the `data` branch again and rechecks the window with `gameday.py`'s rules. When the result is on either school's history page the window closes: it starts that game's final update and stops (or, with another game still to come that day, keeps waiting for it; see below). At 3 AM Eastern without the result it stops (the daily runs pick the result up).
