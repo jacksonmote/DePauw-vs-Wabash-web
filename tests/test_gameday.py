@@ -130,14 +130,14 @@ def test_the_cli_reads_the_committed_files_and_writes_only_the_output_file(tmp_p
 
     code = gameday.main(["gate", "--schedule", FREQ, "--now", "2026-11-12T12:00:00-05:00",
                          "--upcoming", str(up), "--series", str(series)])
-    assert code == 0 and out.read_text() == "run=false\n"
-    assert "run=false: no game-day window is open" in capsys.readouterr().out
+    assert code == 0 and out.read_text() == "run=false\nscope=\n"
+    assert "run=false scope=(nothing): no game-day window is open" in capsys.readouterr().out
     assert {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in tmp_path.iterdir()} == before   # no commits to make
 
     out.unlink()
     gameday.main(["gate", "--schedule", FREQ, "--now", "2026-11-14T14:00:00-05:00",
                   "--upcoming", str(up), "--series", str(series)])
-    assert out.read_text() == "run=true\n"
+    assert out.read_text() == "run=true\nscope=football\n"
 
 
 def test_the_gate_stops_and_says_so_when_it_cannot_read_the_data(tmp_path, monkeypatch, capsys):
@@ -146,7 +146,7 @@ def test_the_gate_stops_and_says_so_when_it_cannot_read_the_data(tmp_path, monke
     code = gameday.main(["gate", "--schedule", FREQ, "--now", "2026-11-14T14:00:00-05:00",
                          "--series", str(tmp_path / "missing.json"),
                          "--upcoming", str(tmp_path / "missing2.json")])
-    assert code == 1 and out.read_text() == "run=false\n" and "could not read" in capsys.readouterr().err
+    assert code == 1 and out.read_text() == "run=false\nscope=\n" and "could not read" in capsys.readouterr().err
 
 
 def test_the_gate_imports_nothing_outside_the_standard_library():
@@ -440,15 +440,16 @@ def test_a_test_failure_blocks_later_build_steps_and_downstream_writes():
     assert "github.ref == 'refs/heads/main'" in job("issues")
 
 
-def test_scraper_failure_remains_tolerated_and_the_summary_takes_only_the_two_step_outcomes():
+def test_scraper_failure_remains_tolerated_and_the_summary_takes_only_the_step_outcomes():
     assert named_step("Scrape")["continue-on-error"] is True
     summary = named_step("Summarize")
     assert summary["env"] == {
         "SCRAPE": "${{ steps.scrape.outcome }}",
+        "REMERGE": "${{ steps.remerge.outcome }}",
         "COMMIT": "${{ steps.commit.outcome }}",
     }
     outputs = workflow_jobs()["build"]["outputs"]
-    assert set(outputs) == {"problems", "scrape", "commit"}                       # validation has its own job now
+    assert set(outputs) == {"problems", "scrape", "commit", "blocked"}            # validation has its own job now
 
 
 def test_a_rejected_data_commit_does_not_stop_the_deploy_and_goes_to_the_data_branch_only():
@@ -467,26 +468,42 @@ def test_a_rejected_data_commit_does_not_stop_the_deploy_and_goes_to_the_data_br
 needs_bash = pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash on PATH (the workflow's shell steps run under bash)")
 
 
-@needs_bash
-@pytest.mark.parametrize(
-    ("scrape_result", "expected"),
-    [
-        ("success", ["problems=false", "scrape=ok", "commit=ok"]),
-        ("failure", ["problems=true", "scrape=failed", "commit=ok"]),
-    ],
-)
-def test_summary_shell_reports_the_scrape_outcome(tmp_path, scrape_result, expected):
-    output = tmp_path / "github-output"
+def run_summary(tmp_path, scrape="success", commit="success", remerge="success", blocked=None):
+    output, summary = tmp_path / "github-output", tmp_path / "step-summary"
+    if blocked is not None:
+        (tmp_path / "robots-blocked.txt").write_bytes(blocked.encode("utf-8"))   # LF, as on the runner
     result = subprocess.run(
         ["bash", "-e", "-c", named_step("Summarize")["run"]],
-        env={"PATH": os.environ["PATH"], "SCRAPE": scrape_result, "COMMIT": "success", "GITHUB_OUTPUT": str(output)},
-        stdin=subprocess.DEVNULL,
-        capture_output=True,
-        text=True,
-        check=False,
+        env={"PATH": os.environ["PATH"], "SCRAPE": scrape, "COMMIT": commit, "REMERGE": remerge,
+             "RUNNER_TEMP": str(tmp_path), "GITHUB_OUTPUT": str(output), "GITHUB_STEP_SUMMARY": str(summary)},
+        stdin=subprocess.DEVNULL, capture_output=True, text=True, check=False,
     )
     assert result.returncode == 0, result.stderr
-    assert output.read_text(encoding="utf-8").splitlines() == expected
+    return output.read_text(encoding="utf-8").splitlines(), result, summary
+
+
+@needs_bash
+@pytest.mark.parametrize(
+    ("scrape_result", "remerge", "expected"),
+    [
+        ("success", "success", ["problems=false", "scrape=ok", "commit=ok", "blocked="]),
+        ("failure", "success", ["problems=true", "scrape=failed", "commit=ok", "blocked="]),
+        # an ordinary push reads nothing: the skipped Scrape step is not a failure ...
+        ("skipped", "success", ["problems=false", "scrape=skipped", "commit=ok", "blocked="]),
+        # ... but then the re-merge made the data, so its failure is the scraper's
+        ("skipped", "failure", ["problems=true", "scrape=failed", "commit=ok", "blocked="]),
+    ],
+)
+def test_summary_shell_reports_the_scrape_outcome(tmp_path, scrape_result, remerge, expected):
+    lines, _, _ = run_summary(tmp_path, scrape=scrape_result, remerge=remerge)
+    assert lines == expected
+
+
+@needs_bash
+def test_summary_shell_turns_a_page_robots_txt_disallows_into_a_problem(tmp_path):
+    lines, _, _ = run_summary(tmp_path, scrape="failure", blocked="https://depauwtigers.com/a\nhttps://sports.wabash.edu/b\n")
+    assert lines == ["problems=true", "scrape=failed", "commit=ok",
+                     "blocked=https://depauwtigers.com/a https://sports.wabash.edu/b "]
 
 
 @needs_bash
@@ -499,15 +516,8 @@ def test_summary_shell_reports_the_scrape_outcome(tmp_path, scrape_result, expec
     ],
 )
 def test_summary_shell_reports_the_data_commit_outcome(tmp_path, commit_result, expected_tail, warns):
-    output, summary = tmp_path / "github-output", tmp_path / "step-summary"
-    result = subprocess.run(
-        ["bash", "-e", "-c", named_step("Summarize")["run"]],
-        env={"PATH": os.environ["PATH"], "SCRAPE": "success", "COMMIT": commit_result,
-             "GITHUB_OUTPUT": str(output), "GITHUB_STEP_SUMMARY": str(summary)},
-        stdin=subprocess.DEVNULL, capture_output=True, text=True, check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    assert output.read_text(encoding="utf-8").splitlines() == expected_tail
+    lines, result, summary = run_summary(tmp_path, commit=commit_result)
+    assert lines == expected_tail + ["blocked="]
     assert result.stdout.startswith("::warning title=Data commit::") == warns
     assert summary.exists() == warns
 
@@ -572,7 +582,9 @@ def test_report_names_the_problem_and_still_fails_the_run_after_the_deploy():
         "VALIDATION": "${{ needs.validate.outputs.validation }}",
         "VALIDATE_JOB": "${{ needs.validate.result }}",
         "COMMIT": "${{ needs.build.outputs.commit }}",
+        "BLOCKED": "${{ needs.build.outputs.blocked }}",
     }
+    assert "robots.txt now disallows pages the scraper needs" in report_text
     assert "The data commit to the data branch failed" in report_text
     assert "exit 1" in report_text
     assert "The scraper reported a failure" in report_text
@@ -597,7 +609,8 @@ def test_report_shell_says_which_problem_it_was_and_always_fails(scrape, validat
     report = workflow_jobs()["report"]["steps"][0]
     result = subprocess.run(
         ["bash", "-e", "-c", report["run"]],
-        env={"PATH": os.environ["PATH"], "SCRAPE": scrape, "VALIDATION": validation, "VALIDATE_JOB": job_result, "COMMIT": commit},
+        env={"PATH": os.environ["PATH"], "SCRAPE": scrape, "VALIDATION": validation, "VALIDATE_JOB": job_result,
+             "COMMIT": commit, "BLOCKED": ""},
         stdin=subprocess.DEVNULL, capture_output=True, text=True, check=False,
     )
     assert result.returncode == 1

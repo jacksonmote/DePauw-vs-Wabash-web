@@ -1,0 +1,107 @@
+name: Game-day watcher
+run-name: ${{ inputs.dry_run && 'Game-day watcher (dry run)' || (inputs.relay && 'Game-day watcher (relay)' || 'Game-day watcher') }}
+
+# Keeps the site updating every 15 minutes during a DePauw vs. Wabash game, without depending on GitHub starting
+# more scheduled runs (it drops most of them when busy). Once one run of this workflow starts on a game day, it
+# starts "Update data and deploy site" on main itself (workflow_dispatch with gameday: true, so that run reads only
+# the sport being played) every 15 minutes until the game-day window closes, then once more if the result came in,
+# and stops. scraper/watcher.py has the rules; the window rules are gameday.py's.
+#
+# It never fetches the schools' sites, never commits and never deploys: it reads the data branch and starts the
+# existing workflow. Only the watch job holds actions: write, to start those runs.
+#
+# Ways it starts (any one is enough): this schedule (every 10 minutes; on a day without a game the gate ends the run
+# within seconds), the two daily runs of update-and-deploy.yml on a game day, a hand start (Actions, "Game-day
+# watcher", Run workflow; the backstop on game morning), and a relay: after about 5 hours in its job (GitHub stops a
+# job at 6) a watcher starts a fresh run of itself, marked as a relay, and stops.
+#
+# One watcher at a time: the gate of a run that is not a relay or a dry run stands aside when an older watcher run
+# is in progress (the newer always yields), and the watch job's concurrency group queues anything that slips past.
+# Dry runs dispatch nothing, simulate the clock instead of sleeping, and take a pretend start time.
+
+on:
+  schedule:
+    - cron: "3,13,23,33,43,53 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: do everything except start any run, and log what it would start"
+        type: boolean
+        default: false
+      pretend_now:
+        description: "Dry runs only: a pretend start time, Eastern unless it has an offset (for example 2026-11-14T12:30)"
+        type: string
+        default: ""
+      relay:
+        description: "Set by the watcher itself when it hands over to a fresh run; leave it unticked"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    # Watch or not? Reads only the data branch with the runner's own Python (nothing installed). Watches when today
+    # (Eastern) has a game that is not postponed whose window is open or still to open.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      actions: read # to see whether another watcher run is in progress
+    outputs:
+      watch: ${{ steps.gate.outputs.watch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          sparse-checkout: |
+            scraper
+
+      - name: Get the data files from the data branch
+        run: python3 scraper/databranch.py fetch --remote origin
+
+      - name: Is there a game to watch today?
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          RELAY: ${{ inputs.relay }}
+          PRETEND_NOW: ${{ inputs.pretend_now }}
+        run: |
+          args="--no-fetch"
+          if [ "$DRY_RUN" = "true" ]; then args="$args --dry-run"; fi
+          if [ "$RELAY" = "true" ]; then args="$args --relay"; fi
+          python3 scraper/watcher.py gate $args --now "$PRETEND_NOW"
+
+  watch:
+    needs: gate
+    if: ${{ needs.gate.outputs.watch == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330 # the watcher hands over to a fresh run after about 5 hours; GitHub's limit is 6
+    concurrency:
+      group: ${{ inputs.dry_run && format('gameday-watcher-dry-{0}', github.run_id) || 'gameday-watcher' }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: write # to start update-and-deploy.yml (and a relay of this workflow) with workflow_dispatch
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          sparse-checkout: |
+            scraper
+
+      - name: Get the data files from the data branch
+        run: python3 scraper/databranch.py fetch --remote origin
+
+      # Fetches the data branch again before every pass, so it stops as soon as a result or 3 AM closes the window.
+      - name: Watch the game and start an update every 15 minutes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          PRETEND_NOW: ${{ inputs.pretend_now }}
+        run: |
+          args=""
+          if [ "$DRY_RUN" = "true" ]; then args="--dry-run"; fi
+          python3 scraper/watcher.py watch $args --now "$PRETEND_NOW"
