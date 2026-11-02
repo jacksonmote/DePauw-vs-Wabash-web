@@ -490,3 +490,19 @@ def test_the_report_names_pages_robots_txt_disallows():
                             stdin=subprocess.DEVNULL, capture_output=True, text=True, check=False)
     assert result.returncode == 1
     assert "robots.txt now disallows pages the scraper needs" in result.stdout and "https://depauwtigers.com/x" in result.stdout
+
+
+def test_the_readme_and_agents_describe_the_watcher_the_politeness_rules_and_the_run_scopes():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+    watcher_section = readme.split("### The game-day watcher", 1)[1].split("\n## ", 1)[0]
+    for phrase in ("every 15 minutes", "Relay.", "dry_run", "pretend_now", "hand start", "One at a time.",
+                   "never does", "workflow_dispatch"):
+        assert phrase in watcher_section, phrase
+    for phrase in ("**Politeness**", "robots.txt", "Crawl-delay", "gameday.SCRAPE_ON_PUSH", "`gameday-watcher.yml`",
+                   "What each run reads", "Actions cache", "change all sixteen `runs-on:` lines"):
+        assert phrase in readme, phrase
+    assert "twice a day: a history page" not in readme and "spaced a few seconds apart" not in readme
+    for phrase in ("scraper/politeness.py", "Crawl-delay", "Never increase request volume", "gameday-watcher.yml",
+                   "never fetches the schools' sites, commits or deploys", "actions: write"):
+        assert phrase in agents, phrase
