@@ -16,3 +16,6 @@ data/.commit-test
 # build output, never committed
 site/
 .checked-at
+
+# the link check's local report (python scraper/linkcheck.py check), never committed
+link-check/

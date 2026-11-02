@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "people": [
+    {"id": "person-one", "name": "Person One",
+     "school_source": {"label": "School page", "url": "https://www.example.edu/people/one"},
+     "qualifications": {"senators": {"achievement": "U.S. senator",
+                                     "source": {"label": "Directory", "url": "https://directory.example.gov/one.pdf#page=12"}}}}
+  ]
+}
