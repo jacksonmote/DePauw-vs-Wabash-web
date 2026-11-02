@@ -10,12 +10,14 @@ import re
 from pathlib import Path
 
 import pytest
+import yaml
 
 import linkcheck
 import render
 
 ROOT = Path(__file__).resolve().parent.parent
 FIX = Path(__file__).resolve().parent / "fixtures" / "linkcheck"
+WORKFLOW = ROOT / ".github" / "workflows" / "link-check.yml"
 WHEN = dt.datetime(2026, 11, 2, 19, 41, tzinfo=dt.timezone.utc)
 
 
@@ -333,3 +335,53 @@ def test_the_check_command_writes_the_report_and_exits_zero_even_with_broken_lin
     assert report["totals"]["broken"] == 1 and report["links"][0]["url"] == "https://en.wikipedia.org/wiki/Monon_Bell"
     assert (out / "link-report.md").is_file() and (out / "summary.md").is_file()
 
+# ---- the workflow ------------------------------------------------------------------------------ #
+
+def workflow():
+    return yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+
+
+def test_the_workflow_runs_monthly_and_by_hand_only():
+    wf = workflow()
+    triggers = wf[True]                                                                   # YAML reads `on` as True
+    assert set(triggers) == {"schedule", "workflow_dispatch"}
+    assert "pull_request" not in WORKFLOW.read_text(encoding="utf-8")
+    [entry] = triggers["schedule"]
+    minute, hour, day, month, weekday = entry["cron"].split()
+    assert minute.isdigit() and minute != "0"                                             # not on the hour
+    assert 1 <= int(day) <= 28 and month == "*" and weekday == "*"                        # once a month; never both day fields
+    # Outside 6 to 9 AM Pacific in both PST (14:00-17:00 UTC) and PDT (13:00-16:00 UTC).
+    assert not 13 <= int(hour) <= 17
+
+
+def test_the_workflow_permissions_are_minimal_and_never_overlap():
+    wf = workflow()
+    assert wf["permissions"] == {"contents": "read"}
+    assert wf["concurrency"] == {"group": "link-check", "cancel-in-progress": False}
+    assert set(wf["jobs"]) == {"check", "issues"}
+    assert wf["jobs"]["check"]["permissions"] == {"contents": "read"}
+    assert wf["jobs"]["issues"]["permissions"] == {"contents": "read", "issues": "write"}
+    assert "secrets." not in WORKFLOW.read_text(encoding="utf-8")
+    assert "refs/heads/main" in wf["jobs"]["issues"]["if"]                                 # a branch run opens no issue
+    for job in wf["jobs"].values():
+        assert job["runs-on"] == "ubuntu-24.04"
+        assert job["steps"][0]["with"]["persist-credentials"] is False
+
+
+def test_the_check_job_fetches_installs_renders_checks_and_uploads_in_that_order():
+    steps = workflow()["jobs"]["check"]["steps"]
+    runs = [s.get("run", "") + s.get("uses", "") for s in steps]
+
+    def at(text):
+        return next(i for i, r in enumerate(runs) if text in r)
+    assert (at("databranch.py fetch --remote origin") < at("pip install --require-hashes -r requirements.txt")
+            < at("scraper/render.py") < at("scraper/linkcheck.py check") < at("actions/upload-artifact")
+            < at("GITHUB_STEP_SUMMARY"))
+    assert "linkcheck.py issue" in "".join(s.get("run", "") for s in workflow()["jobs"]["issues"]["steps"])
+
+
+def test_every_action_in_the_workflow_is_pinned_to_a_full_sha():
+    uses = re.findall(r"uses: (\S+)(.*)", WORKFLOW.read_text(encoding="utf-8"))
+    assert uses
+    for action, comment in uses:
+        assert re.fullmatch(r"[\w./-]+@[0-9a-f]{40}", action) and re.search(r"# v\d", comment), action
