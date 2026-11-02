@@ -398,3 +398,48 @@ def test_every_action_in_the_workflow_is_pinned_to_a_full_sha():
     assert uses
     for action, comment in uses:
         assert re.fullmatch(r"[\w./-]+@[0-9a-f]{40}", action) and re.search(r"# v\d", comment), action
+
+
+# ---- links within the site --------------------------------------------------------------------- #
+
+def test_internal_links_that_lead_nowhere_are_found(tmp_path):
+    (tmp_path / "alumni").mkdir()
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "series.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "alumni" / "index.html").write_text('<h2 id="nobel">Nobel</h2><a href="../#top">Home</a>',
+                                                     encoding="utf-8")
+    (tmp_path / "index.html").write_text(
+        '<main id="top"><a href="#top">ok</a><a href="alumni/">ok</a><a href="alumni/#nobel">ok</a>'
+        '<a href="/alumni">ok, no slash</a><a href="data/series.json">ok</a>'
+        '<a href="https://depauwvswabash.com/alumni/#nobel">ok, absolute</a>'
+        '<a href="https://example.org/missing/">outbound, not ours</a><a href="mailto:x@example.org">mail</a>'
+        '<a href="#gone">bad fragment</a><a href="alumni/#gone">bad fragment elsewhere</a>'
+        '<a href="games.csv">missing file</a><a href="/how-it-works/">missing page</a></main>', encoding="utf-8")
+    assert linkcheck.internal_problems(tmp_path) == [
+        ("/", "#gone", 'no id="gone" on /'),
+        ("/", "alumni/#gone", 'no id="gone" on /alumni/'),
+        ("/", "games.csv", "no built file for /games.csv"),
+        ("/", "/how-it-works/", "no built file for /how-it-works/"),
+    ]
+
+
+FROZEN = Path(__file__).resolve().parent / "fixtures" / "series-frozen-2026-10-30.json"
+
+
+@pytest.mark.parametrize("now, upcoming", [
+    (dt.datetime(2026, 10, 30, 16, 0, tzinfo=dt.timezone.utc), {}),                       # an ordinary day
+    (dt.datetime(2026, 11, 14, 18, 30, tzinfo=dt.timezone.utc),                            # the Bell game, underway
+     {"football": {"schedule_url": "https://depauwtigers.com/sports/football/schedule",
+                   "games": [{"date": "2026-11-14", "time": "1:07 PM", "time_note": None, "location": "away",
+                              "site": "Hollett Little Giant Stadium, Crawfordsville, Ind.", "status": "scheduled",
+                              "doubleheader": False}]}}),
+], ids=["ordinary-day", "game-day"])
+def test_every_link_within_the_built_site_leads_somewhere(tmp_path, now, upcoming):
+    """Every page, every link between pages, every #fragment and every download link, on the whole built site."""
+    up = tmp_path / "upcoming.json"
+    up.write_text(json.dumps({"schema_version": 1, "sports": upcoming}), encoding="utf-8")
+    out = tmp_path / "site"
+    render.build(FROZEN, out, now=now, upcoming_path=up)
+    if upcoming:
+        assert 'id="game-day"' in (out / "index.html").read_text(encoding="utf-8")         # the banner is there
+    assert linkcheck.internal_problems(out) == []

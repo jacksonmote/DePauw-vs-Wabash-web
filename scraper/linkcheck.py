@@ -29,6 +29,10 @@ working page at a different URL; the report gives the new one), couldn't check (
 bot-protection answer: many sites block automated checks, so these are reported but never counted as broken),
 other (anything unexpected, with the status), OK.
 
+Links within the site are checked separately, from the built files alone (internal_problems): every link between
+pages must reach a page or file that was built, and every #fragment an id on its target page. That needs no
+network, so the tests run it on a full build on every pull request and before every deploy, rather than monthly.
+
 Standard library only at import time (requests is imported only by the live check), so the issue job can run
 this with the runner's own python3.
 """
@@ -102,20 +106,25 @@ MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", 
 class _Anchors(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
-        self.hrefs = []
+        self.hrefs, self.ids = [], set()
 
     def handle_starttag(self, tag, attrs):
-        if tag == "a":
-            href = dict(attrs).get("href")
-            if href:
-                self.hrefs.append(href.strip())
+        attrs = dict(attrs)
+        if attrs.get("id"):
+            self.ids.add(attrs["id"])
+        if tag == "a" and attrs.get("href"):
+            self.hrefs.append(attrs["href"].strip())
 
 
-def page_hrefs(html: str) -> list:
+def _parse(html: str) -> _Anchors:
     parser = _Anchors()
     parser.feed(html)
     parser.close()
-    return parser.hrefs
+    return parser
+
+
+def page_hrefs(html: str) -> list:
+    return _parse(html).hrefs
 
 
 def page_path(site_dir: Path, file: Path) -> str:
@@ -204,6 +213,39 @@ def collect(site_dir: Path = SITE, data_dir: Path = DATA, sources_path: Path = S
             for url, entry in data_urls(json.loads(file.read_text(encoding="utf-8"))):
                 add(url, f"data/{name}: {entry}")
     return links, skipped
+
+
+# ---- links within the site (files only, no network) -------------------------------------------- #
+
+def _target_file(site_dir: Path, path: str) -> Path | None:
+    """The built file a site path is served from (/alumni/ -> alumni/index.html), or None if there is none.
+    GitHub Pages also serves /alumni (no slash) from alumni/index.html."""
+    rel = path.lstrip("/")
+    candidates = [site_dir / rel / "index.html"] if rel.endswith("/") or not rel else         [site_dir / rel, site_dir / rel / "index.html"]
+    return next((c for c in candidates if c.is_file()), None)
+
+
+def internal_problems(site_dir: Path = SITE) -> list:
+    """[(page, href, problem)] for every link within the site that leads nowhere: a page or file that was not
+    built, or a #fragment with no matching id on its target page. Relative and root-relative links and absolute
+    links to this site all count. Reads the built files only; the monthly check never needs this, the tests do."""
+    site_dir = Path(site_dir)
+    pages = sorted(site_dir.rglob("*.html"), key=lambda f: page_path(site_dir, f))
+    parsed = {f.resolve(): _parse(f.read_text(encoding="utf-8")) for f in pages}
+    own = {urlparse(SITE_URL).hostname, "www." + urlparse(SITE_URL).hostname}
+    problems = []
+    for file in pages:
+        here = page_path(site_dir, file)
+        for href in parsed[file.resolve()].hrefs:
+            target = urlparse(urljoin(SITE_URL.rstrip("/") + here, href))
+            if target.scheme not in ("http", "https") or (target.hostname or "").lower() not in own:
+                continue                                         # outbound or mailto: the monthly check's job
+            found = _target_file(site_dir, target.path)
+            if found is None:
+                problems.append((here, href, f"no built file for {target.path}"))
+            elif target.fragment and found.suffix == ".html" and target.fragment not in parsed[found.resolve()].ids:
+                problems.append((here, href, f"no id=\"{target.fragment}\" on {page_path(site_dir, found)}"))
+    return problems
 
 
 # ---- checking one link ------------------------------------------------------------------------- #
