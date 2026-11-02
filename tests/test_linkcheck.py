@@ -165,11 +165,51 @@ def test_classification(script, status, detail, methods):
 
 
 def test_a_permanent_redirect_is_moved_and_gives_the_new_address():
-    new = "https://b.example/new"
+    new = "https://b.example/archive/x"                                                  # an equally specific page
     result, web = check({("HEAD", U): [(301, new)], ("HEAD", new): [200]})
     assert result["status"] == "moved" and result["final_url"] == new and result["detail"] == "301 to a new address"
     result, _ = check({("HEAD", U): [(308, "/moved")], ("HEAD", "https://a.example/moved"): [200]})
     assert result["status"] == "moved" and result["final_url"] == "https://a.example/moved"   # relative Location
+
+
+@pytest.mark.parametrize("old, new, status", [
+    # The Cummins pattern: a subdomain's page now lands on the main site's /company (behind a language prefix).
+    ("https://www.social.cummins.com/timeline", "https://www.cummins.com/en-na/company", "broken"),
+    # The Wabash news pattern: the same story under a new address scheme.
+    ("https://www.wabash.edu/news/displaystory.cfm?news_ID=2768", "https://www.wabash.edu/news/story/2768", "moved"),
+    ("https://a.example/people/one", "https://a.example/", "broken"),                     # to the homepage
+    ("https://a.example/news/2017/story", "https://a.example/news", "broken"),             # to a section page
+    ("https://a.example/page?id=7", "https://a.example/about", "broken"),                 # the identifying query gone
+    ("https://a.example/a/story", "https://a.example/a/story/", "moved"),                  # only a trailing slash
+    ("https://a.example/about", "https://www.a.example/about/", "moved"),                 # same page, www and slash
+    ("https://a.example/en/", "https://a.example/en-us/", "moved"),                       # a homepage stays a homepage
+    ("https://sports.wabash.edu/mononbell", "https://sports.wabash.edu/sports/2011/7/25/FB_0725114739.aspx", "moved"),
+    ("https://a.example/x/y/z", "https://a.example/2017-annual-report", "moved"),          # one segment, but specific
+    ("https://old.example/about", "https://new.example/about", "moved"),                  # same page, new domain
+    ("https://a.example/about?ref=x", "https://a.example/about", "moved"),                # a tracking query dropped
+])
+def test_a_permanent_redirect_to_a_general_page_is_probably_broken(old, new, status):
+    result, _ = check({("HEAD", old): [(301, new)], ("HEAD", new): [200]}, old)
+    assert result["status"] == status and result["final_url"] == new
+    if status == "broken":
+        assert result["detail"] == "probably broken (redirects to a general page)"
+    else:
+        assert result["detail"] == "301 to a new address"
+
+
+def test_a_probably_broken_link_counts_as_broken_and_opens_the_issue():
+    result, _ = check({("HEAD", U): [(308, "https://a.example/")], ("HEAD", "https://a.example/"): [200]})
+    result["used_on"] = ["/alumni/"]
+    report = linkcheck.build_report([result], {g: set() for g in linkcheck.SKIP_GROUPS}, WHEN)
+    assert report["totals"]["broken"] == 1 and report["totals"]["moved"] == 0
+    assert linkcheck.needs_issue(report)
+    body = linkcheck.render_issue_body(report)
+    assert "## Broken (1)" in body and "probably broken (redirects to a general page); ended at <https://a.example/>" in body
+
+
+def test_a_temporary_redirect_to_a_general_page_is_still_ok():
+    result, _ = check({("HEAD", U): [(302, "https://a.example/")], ("HEAD", "https://a.example/"): [200]})
+    assert result["status"] == "ok"
 
 
 def test_a_temporary_redirect_is_ok_and_a_redirect_to_a_dead_page_is_broken():

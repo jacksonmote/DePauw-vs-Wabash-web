@@ -106,7 +106,7 @@ def test_the_alumni_footer_has_the_alumni_data_block_and_nothing_athletics_only(
     prefix = PAGES[name][0]
     f = footer(site, name)
     endowment = alumni.load_json(ROOT / "data" / "endowment.json", "endowment")
-    assert "Records last verified <time datetime=\"2026-10-29\">Oct 29, 2026</time>." in f
+    assert "Records last verified <time datetime=\"2026-11-02\">Nov 2, 2026</time>." in f
     assert f'<a href="{prefix}data/alumni.json">alumni.json</a>' in f
     assert f'<a href="{prefix}data/endowment.json">endowment.json</a>' in f
     assert f'<a href="{alumni.correction_url()}">Suggest a correction</a>' in f
@@ -219,7 +219,7 @@ def test_the_totals_heading_is_renamed_and_keeps_its_anchor(site):
 
 def test_the_heist_footer_has_its_own_data_block_before_the_shared_lines(site):
     f = footer(site, "heist-details/index.html")
-    assert 'Stories last verified <time datetime="2026-10-30">Oct 30, 2026</time>.' in f
+    assert 'Stories last verified <time datetime="2026-11-02">Nov 2, 2026</time>.' in f
     assert '<a href="../data/bell-heists.json">bell-heists.json</a>' in f
     assert 'Suggest a correction</a>' in f and "Suggest an enhancement" in f
     assert "template=data-correction.yml" in f and "Monon%20Bell%20heist%20history" in f

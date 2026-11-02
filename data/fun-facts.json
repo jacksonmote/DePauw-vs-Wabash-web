@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "verified_at": "2026-10-31",
+  "verified_at": "2026-11-02",
   "facts": [
     {
       "id": "depauw-founding",
@@ -339,7 +339,7 @@
         },
         {
           "label": "Wabash: MXIBS celebrates 40 years",
-          "url": "https://www.wabash.edu/news/displaystory.cfm?news_ID=9160"
+          "url": "https://www.wabash.edu/news/story/9160"
         }
       ]
     },
@@ -361,7 +361,7 @@
       "sources": [
         {
           "label": "Wabash: Chapel Sing tradition",
-          "url": "https://www.wabash.edu/news/displaystory.cfm?news_ID=2768"
+          "url": "https://www.wabash.edu/news/story/2768"
         }
       ]
     },
@@ -409,7 +409,7 @@
         },
         {
           "label": "Wabash Athletics: Monon Bell",
-          "url": "https://sports.wabash.edu/mononbell"
+          "url": "https://sports.wabash.edu/sports/2011/7/25/FB_0725114739.aspx"
         }
       ]
     },
@@ -431,7 +431,7 @@
       "sources": [
         {
           "label": "Wabash Athletics: Monon Bell",
-          "url": "https://sports.wabash.edu/mononbell"
+          "url": "https://sports.wabash.edu/sports/2011/7/25/FB_0725114739.aspx"
         }
       ]
     },

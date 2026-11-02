@@ -24,8 +24,10 @@ mishandle HEAD); one retry of that GET after RETRY_WAIT seconds for a timeout, a
 Redirects are followed by hand, at most MAX_REDIRECTS, each hop paced like any request. A GET never reads the
 body, so no link costs more than one page.
 
-Statuses: broken (404, 410, DNS failure, or still failing after the retry), moved (a 301 or 308 on the way to a
-working page at a different URL; the report gives the new one), couldn't check (401, 403, 429 or another
+Statuses: broken (404, 410, DNS failure, or still failing after the retry; also "probably broken": a 301 or 308
+on the way to a working homepage or top-level section page from a more specific address, see general_redirect),
+moved (a 301 or 308 on the way to any other working page at a different URL; the report gives the new one, so the
+link can be updated once the new page is checked to say the same thing), couldn't check (401, 403, 429 or another
 bot-protection answer: many sites block automated checks, so these are reported but never counted as broken),
 other (anything unexpected, with the status), OK.
 
@@ -42,6 +44,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import re
 import socket
 import subprocess
 import sys
@@ -76,6 +79,8 @@ PERMANENT = {301, 308}
 BROKEN_CODES = {404, 410}
 BLOCKED_CODES = {401, 403, 429, 999}   # 999: what some sites send automated clients
 TRANSIENT_ERRORS = {"timeout", "connection", "dns", "tls"}
+GENERAL_SEGMENT_MAX = 20   # characters: a lone path segment this short (/company, /about, /news) is a section page
+GENERAL_DETAIL = "probably broken (redirects to a general page)"
 
 # Skip groups, in report order, with how each is described.
 SKIP_GROUPS = {
@@ -316,6 +321,53 @@ def _bot_wall(result: dict) -> bool:
     return result["status"] in BLOCKED_CODES or "cf-mitigated" in headers
 
 
+_LOCALE = re.compile(r"[a-z]{2}(?:[-_][a-z]{2})?", re.I)       # /en/, /en-na/, /en_US/
+_INDEX = re.compile(r"(?:index|default|home)\.[a-z]+", re.I)      # /index.html, /default.aspx
+_SECTION = re.compile(r"[a-z][a-z_-]*", re.I)                     # letters, hyphens, underscores: no ids or dates
+
+
+def _segments(path: str) -> list:
+    """The path's segments, without a leading language prefix and a final index page (they name no content)."""
+    segs = [s for s in path.split("/") if s]
+    while segs and _LOCALE.fullmatch(segs[0]):
+        segs.pop(0)
+    if segs and _INDEX.fullmatch(segs[-1]):
+        segs.pop()
+    return segs
+
+
+def _site(host: str | None) -> str:
+    host = (host or "").lower()
+    return host[4:] if host.startswith("www.") else host
+
+
+def is_general_page(url: str) -> bool:
+    """A site's homepage or a top-level section page: no query, and no path or a single segment of at most
+    GENERAL_SEGMENT_MAX letters, hyphens and underscores (/company), not counting a leading language prefix
+    (/en-na/) or a final index page (/index.html)."""
+    parts = urlparse(url)
+    segs = _segments(parts.path)
+    return not parts.query and (not segs or (len(segs) == 1 and len(segs[0]) <= GENERAL_SEGMENT_MAX
+                                             and bool(_SECTION.fullmatch(segs[0]))))
+
+
+def general_redirect(url: str, final: str) -> bool:
+    """True when a link that moved now lands on a general page (is_general_page) and the old address was more
+    specific: it had more path segments, or a different path that either had a query or was on another site
+    (www. ignored; a subdomain's page landing on the main site's /company). A redirect like that usually means the
+    cited page was removed, so the link is reported as probably broken, not moved. Anything else stays moved: a
+    story's new address pattern, an added trailing slash, the same path on another domain, a query dropped from
+    the same path."""
+    if not is_general_page(final):
+        return False
+    old, new = urlparse(url), urlparse(final)
+    old_segs, new_segs = _segments(old.path), _segments(new.path)
+    if len(old_segs) > len(new_segs):
+        return True
+    path_changed = [s.lower() for s in old_segs] != [s.lower() for s in new_segs]
+    return path_changed and (bool(old.query) or _site(old.hostname) != _site(new.hostname))
+
+
 ERROR_WORDS = {"timeout": "timed out", "connection": "could not connect", "dns": "DNS lookup failed",
                "tls": "TLS (certificate) error"}
 
@@ -331,6 +383,8 @@ def classify(url: str, result: dict, retried: bool) -> dict:
         return {**out, "status": "other", "detail": result["detail"]}
     if 200 <= code < 300:
         permanent = [hop for hop, _ in result["hops"] if hop in PERMANENT]
+        if final != url and permanent and general_redirect(url, final):
+            return {**out, "status": "broken", "detail": GENERAL_DETAIL}
         if final != url and permanent:
             return {**out, "status": "moved", "detail": f"{permanent[0]} to a new address"}
         return {**out, "status": "ok", "detail": f"{code}" + (" after a temporary redirect" if final != url else "")}

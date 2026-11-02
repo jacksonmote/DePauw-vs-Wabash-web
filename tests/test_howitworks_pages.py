@@ -136,7 +136,7 @@ def test_the_alumni_how_page_takes_every_number_from_the_data_files(site):
     assert f"DePauw ${per['depauw']:,} and Wabash ${per['wabash']:,}" in page
     assert f"within {alumni.EVEN_PERCENT}% of the lower one" in page and "about 1.0% apart" in page
     assert "rounded to the nearest $1,000" in page and "no overall alumni score" in page.lower()
-    assert "Oct 29, 2026" in page and "Jun 30, 2025" in page and "fall 2024" in page
+    assert "Nov 2, 2026" in page and "Jun 30, 2025" in page and "fall 2024" in page
     for item in e["schools"].values():
         assert f'href="{item["enrollment"]["source_url"]}"' in read(site, ALUMNI)
 
