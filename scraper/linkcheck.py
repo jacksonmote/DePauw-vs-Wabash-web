@@ -29,7 +29,10 @@ on the way to a working homepage or top-level section page from a more specific 
 moved (a 301 or 308 on the way to any other working page at a different URL; the report gives the new one, so the
 link can be updated once the new page is checked to say the same thing), couldn't check (401, 403, 429 or another
 bot-protection answer: many sites block automated checks, so these are reported but never counted as broken),
-other (anything unexpected, with the status), OK.
+other (anything unexpected, with the status), OK. Two more cases count as couldn't check, because the checker
+cannot see the page behind them: a redirect to a page whose query sends the visitor back to the address asked for
+(?next=, ?return_to= and the like: a bot check or sign-in page, see bot_check_redirect), and a timeout or failed
+connection on a host in BOT_CHECK_HOSTS.
 
 Links within the site are checked separately, from the built files alone (internal_problems): every link between
 pages must reach a page or file that was built, and every #fragment an id on its target page. That needs no
@@ -51,7 +54,7 @@ import sys
 import time
 from html.parser import HTMLParser
 from pathlib import Path
-from urllib.parse import urldefrag, urljoin, urlparse
+from urllib.parse import parse_qsl, urldefrag, urljoin, urlparse
 
 from politeness import USER_AGENT  # the one user agent the project sends anywhere; standard library only
 from timeutil import to_eastern   # standard library only, like this module
@@ -81,6 +84,17 @@ BLOCKED_CODES = {401, 403, 429, 999}   # 999: what some sites send automated cli
 TRANSIENT_ERRORS = {"timeout", "connection", "dns", "tls"}
 GENERAL_SEGMENT_MAX = 20   # characters: a lone path segment this short (/company, /about, /news) is a section page
 GENERAL_DETAIL = "probably broken (redirects to a general page)"
+BOT_CHECK_DETAIL = "redirects to a bot check or sign-in page (the site blocks automated checks)"
+# Query keys a bot check or sign-in page uses to send the visitor on to the page they asked for (lowercase).
+RETURN_KEYS = {"next", "return", "return_to", "returnto", "returnurl", "return_url", "redirect", "redirect_to",
+               "redirect_uri", "continue", "destination"}
+# Hosts that put the cited pages behind a bot check an automated client cannot pass, each checked by hand. There a
+# timeout or a failed connection means "couldn't check", not broken (a DNS or TLS failure is still broken). Add or
+# remove a host only through a pull request, with what was seen and when.
+BOT_CHECK_HOSTS = {
+    "digital.library.unt.edu": "2026-11-02: every page redirects to /dam/?next=<the page>, a bot check; the "
+                               "monthly run on GitHub Actions timed out twice, a browser passes",
+}
 
 # Skip groups, in report order, with how each is described.
 SKIP_GROUPS = {
@@ -368,6 +382,21 @@ def general_redirect(url: str, final: str) -> bool:
     return path_changed and (bool(old.query) or _site(old.hostname) != _site(new.hostname))
 
 
+def bot_check_redirect(url: str, final: str) -> bool:
+    """True when a redirect ended on a page whose query sends the visitor back to `url` (?next=/the/page): a bot
+    check or a sign-in page, which answers 200 without being the cited page."""
+    if final == url:
+        return False
+    for key, value in parse_qsl(urlparse(final).query, keep_blank_values=True):
+        if key.lower() in RETURN_KEYS and value and urldefrag(urljoin(url, value))[0] == url:
+            return True
+    return False
+
+
+def _bot_check_host(*urls: str) -> bool:
+    return any((urlparse(u).hostname or "").lower() in BOT_CHECK_HOSTS for u in urls if u)
+
+
 ERROR_WORDS = {"timeout": "timed out", "connection": "could not connect", "dns": "DNS lookup failed",
                "tls": "TLS (certificate) error"}
 
@@ -377,11 +406,16 @@ def classify(url: str, result: dict, retried: bool) -> dict:
     code, final = result["status"], result["final_url"]
     again = " (also on the retry)" if retried else ""
     out = {"code": code, "final_url": final if final != url else None}
+    if result["error"] in ("timeout", "connection") and _bot_check_host(url, final):
+        return {**out, "status": "blocked",
+                "detail": ERROR_WORDS[result["error"]] + again + "; the site puts its pages behind a bot check"}
     if result["error"] in TRANSIENT_ERRORS:
         return {**out, "status": "broken", "detail": ERROR_WORDS[result["error"]] + again}
     if result["error"]:
         return {**out, "status": "other", "detail": result["detail"]}
     if 200 <= code < 300:
+        if bot_check_redirect(url, final):
+            return {**out, "status": "blocked", "detail": BOT_CHECK_DETAIL}
         permanent = [hop for hop, _ in result["hops"] if hop in PERMANENT]
         if final != url and permanent and general_redirect(url, final):
             return {**out, "status": "broken", "detail": GENERAL_DETAIL}

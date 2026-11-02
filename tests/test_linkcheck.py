@@ -9,6 +9,7 @@ import datetime as dt
 import json
 import re
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 import yaml
@@ -210,6 +211,65 @@ def test_a_probably_broken_link_counts_as_broken_and_opens_the_issue():
 def test_a_temporary_redirect_to_a_general_page_is_still_ok():
     result, _ = check({("HEAD", U): [(302, "https://a.example/")], ("HEAD", "https://a.example/"): [200]})
     assert result["status"] == "ok"
+
+
+UNT = "https://digital.library.unt.edu/ark:/67531/metadc980580/m1/24/"
+UNT_WALL = "https://digital.library.unt.edu/dam/?next=%2Fark%3A%2F67531%2Fmetadc980580%2Fm1%2F24%2F"
+
+
+def test_a_redirect_to_a_bot_check_is_couldnt_check_not_ok():
+    """The UNT Digital Library pattern (seen 2026-11-02): a 302 to /dam/?next=<the page>, which answers 200."""
+    result, _ = check({("HEAD", UNT): [(302, "/dam/?next=%2Fark%3A%2F67531%2Fmetadc980580%2Fm1%2F24%2F")],
+                       ("HEAD", UNT_WALL): [200]}, UNT)
+    assert result["status"] == "blocked" and result["final_url"] == UNT_WALL
+    assert result["detail"] == "redirects to a bot check or sign-in page (the site blocks automated checks)"
+
+
+@pytest.mark.parametrize("location, status", [
+    ("https://a.example/login?return_to=https%3A%2F%2Fa.example%2Fx", "blocked"),        # a full URL back
+    ("https://a.example/check?Next=/x", "blocked"),                                       # keys in any case
+    ("https://a.example/login?next=/elsewhere", "ok"),                                    # not back to the page
+    ("https://a.example/search?q=/x", "ok"),                                              # not a return key
+    ("https://a.example/login?next=", "ok"),                                              # empty
+])
+def test_only_a_query_that_returns_to_the_cited_page_is_a_bot_check(location, status):
+    result, _ = check({("HEAD", U): [(302, location)], ("HEAD", location): [200]})
+    assert result["status"] == status
+
+
+def test_a_permanent_redirect_to_a_bot_check_is_couldnt_check_not_moved_or_broken():
+    wall = "https://a.example/?redirect=%2Fx"
+    result, _ = check({("HEAD", U): [(301, wall)], ("HEAD", wall): [200]})
+    assert result["status"] == "blocked"
+
+
+def test_a_timeout_on_a_bot_check_host_is_couldnt_check():
+    """GitHub Actions, 2026-11-02: the UNT page timed out on the HEAD and both GETs."""
+    script = {("HEAD", UNT): ["timeout"], ("GET", UNT): ["timeout", "timeout"]}
+    result, web = check(script, UNT)
+    assert (result["status"], result["detail"]) == (
+        "blocked", "timed out (also on the retry); the site puts its pages behind a bot check")
+    assert [m for m, _, _ in web.calls] == ["HEAD", "GET", "GET"]                         # same politeness
+    result, _ = check({("HEAD", UNT): ["connection"], ("GET", UNT): ["connection"]}, UNT)
+    assert result["status"] == "blocked"
+    result, _ = check({("HEAD", UNT): ["dns"], ("GET", UNT): ["dns"]}, UNT)
+    assert result["status"] == "broken"                                                   # a DNS failure is real
+    result, _ = check({("HEAD", UNT): [404], ("GET", UNT): [404]}, UNT)
+    assert result["status"] == "broken"                                                   # so is a 404
+    result, _ = check({("HEAD", U): ["timeout"], ("GET", U): ["timeout"]})
+    assert result["status"] == "broken"                                                   # any other host
+
+
+def test_every_bot_check_host_is_still_used_by_a_curated_link():
+    """The list is only for hosts the site links to; a host with no links left should be taken off."""
+    hosts = set()
+    for name in linkcheck.DATA_FILES:
+        file = linkcheck.DATA / name
+        if file.is_file():
+            hosts |= {urlparse(url).hostname for url, _ in linkcheck.data_urls(json.loads(file.read_text(encoding="utf-8")))}
+    assert set(linkcheck.BOT_CHECK_HOSTS) <= hosts
+    for host, note in linkcheck.BOT_CHECK_HOSTS.items():
+        assert host == host.lower() and re.match(r"\d{4}-\d{2}-\d{2}: ", note), host       # says what was seen, when
 
 
 def test_a_temporary_redirect_is_ok_and_a_redirect_to_a_dead_page_is_broken():
