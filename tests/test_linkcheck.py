@@ -279,7 +279,25 @@ def test_a_long_use_list_and_a_huge_body_are_capped():
     report["links"][0]["used_on"] = [f"/p{i}/" for i in range(25)]
     body = linkcheck.render_issue_body(report)
     assert len(body) <= linkcheck.ISSUE_LIMIT and "more link" in body
+    lines = body.splitlines()
+    for i, line in enumerate(lines):                                    # every link keeps its "Used on" line
+        if line.startswith("- <"):
+            assert lines[i + 1].startswith("  - Used on: "), line
+    shown = sum(line.startswith("- <") for line in lines)
+    assert f"… and {3002 - shown} more links" in body                    # 3,000 broken + 1 moved + 1 other
     assert ", and 15 more" in linkcheck.render_markdown(report)
+
+
+def test_truncation_never_leaves_a_heading_without_links():
+    report = sample_report(broken=1200, moved=300, other=0)
+    body = linkcheck.render_issue_body(report)
+    lines = body.splitlines()
+    assert len(body) <= linkcheck.ISSUE_LIMIT and "## Moved" not in body           # the last section dropped whole
+    for i, line in enumerate(lines):
+        if line.startswith("## "):
+            assert lines[i + 2].startswith("- <"), line
+        if line.startswith("- <"):
+            assert lines[i + 1].startswith("  - Used on: "), line
 
 
 class FakeGh:

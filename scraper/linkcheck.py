@@ -467,14 +467,19 @@ def link_lines(link: dict) -> list:
     return [head, f"  - Used on: {shown}"]
 
 
-def sections(report: dict, statuses) -> list:
-    lines = []
+def sections(report: dict, statuses, keep: int | None = None) -> list:
+    """A heading per status (with its full count) and its links, in order; only the first `keep` links overall
+    when `keep` is given (whole links only: a link is never split from its "Used on" line)."""
+    lines, left = [], keep
     for status in statuses:
         group = [link for link in report["links"] if link["status"] == status]
-        if group:
+        shown = group if left is None else group[:max(left, 0)]
+        if shown:
             lines += ["", f"## {STATUSES[status]} ({len(group)})", ""]
-            for link in group:
+            for link in shown:
                 lines += link_lines(link)
+        if left is not None:
+            left -= len(shown)
     return lines
 
 
@@ -504,14 +509,15 @@ def render_issue_body(report: dict, run_url: str = "") -> str:
         intro += ["", f"{plural(report['totals']['blocked'], 'link')} couldn’t be checked (the site blocks automated "
                       "checks); they are listed in the run summary, not here."]
     tail = ["", skipped_line(report)] + (["", f"Latest run: {run_url}"] if run_url else [])
-    body = sections(report, ISSUE_STATUSES)
-    text = "\n".join(intro + body + tail) + "\n"
-    while len(text) > ISSUE_LIMIT and body:
-        body = body[:-2]   # drop the last link (two lines) until it fits
-        dropped = sum(report["totals"][s] for s in ISSUE_STATUSES) - sum(1 for l in body if l.startswith("- "))
-        text = "\n".join(intro + body + ["", f"… and {plural(dropped, 'more link')}, see the run’s link-report "
-                                             "artifact."] + tail) + "\n"
-    return text
+    total = sum(report["totals"][s] for s in ISSUE_STATUSES)
+    keep = total
+    while True:   # drop whole links from the end until the body fits
+        more = [] if keep == total else ["", f"… and {plural(total - keep, 'more link')}, see the run’s "
+                                             "link-report artifact."]
+        text = "\n".join(intro + sections(report, ISSUE_STATUSES, keep) + more + tail) + "\n"
+        if len(text) <= ISSUE_LIMIT or keep == 0:
+            return text
+        keep = max(0, keep - max(1, (len(text) - ISSUE_LIMIT) // 200))   # a link is a few hundred characters
 
 
 # ---- the issue --------------------------------------------------------------------------------- #
