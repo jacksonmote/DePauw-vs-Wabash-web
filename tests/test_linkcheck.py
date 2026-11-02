@@ -218,7 +218,9 @@ def test_the_module_needs_no_package_to_import():
     top = [n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom))]
     names = {a.name.split(".")[0] for n in top if isinstance(n, ast.Import) for a in n.names}
     names |= {n.module.split(".")[0] for n in top if isinstance(n, ast.ImportFrom)}
-    assert "requests" not in names and names <= set(__import__("sys").stdlib_module_names) | {"__future__"}
+    assert "requests" not in names and names <= set(__import__("sys").stdlib_module_names) | {"__future__", "timeutil"}
+    timeutil = ast.parse((Path(linkcheck.__file__).parent / "timeutil.py").read_text(encoding="utf-8"))
+    assert {a.name for n in timeutil.body if isinstance(n, ast.Import) for a in n.names} <= {"datetime"}
 
 
 def test_the_user_agent_names_the_site_and_the_repository():
@@ -250,11 +252,18 @@ def test_the_report_groups_broken_first_and_counts_everything():
     assert md.startswith("# Link check, Nov 2, 2026\n")
     assert "Checked 6 links: 1 broken, 1 moved, 1 other, 1 couldn’t check, 2 OK." in md
     assert "2 box scores on the schools’ athletics sites" in md and "Skipped on purpose (5 distinct URLs)" in md
+    assert "; 1 email address (mailto:)." in md and "0 links to this repository" in md
+
     heads = re.findall(r"^## (.+)$", md, re.M)
     assert heads == ["Broken (1)", "Moved permanently (1)", "Other (1)", "Couldn’t check (1)", "OK (2)"]
     assert "now at <https://new.example/>" in md and "  - Used on: /, data/alumni.json: x: source" in md
     summary = linkcheck.render_markdown(report, include_ok=False)
     assert "## OK" not in summary and "## Couldn’t check (1)" in summary
+
+
+def test_dates_are_eastern_like_the_rest_of_the_site():
+    assert linkcheck.fmt_date("2026-11-02T03:30:00+00:00") == "Nov 1, 2026"                # 10:30 PM EST on Nov 1
+    assert linkcheck.fmt_date("2026-11-02T19:41:00+00:00") == "Nov 2, 2026"
 
 
 def test_the_issue_body_lists_only_broken_moved_and_other():

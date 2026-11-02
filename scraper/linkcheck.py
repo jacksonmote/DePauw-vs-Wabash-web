@@ -46,6 +46,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urldefrag, urljoin, urlparse
 
+from timeutil import to_eastern   # standard library only, like this module
+
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "site"
 DATA = ROOT / "data"
@@ -74,11 +76,13 @@ TRANSIENT_ERRORS = {"timeout", "connection", "dns", "tls"}
 
 # Skip groups, in report order, with how each is described.
 SKIP_GROUPS = {
-    "box-scores": "box scores on the schools’ athletics sites",
-    "scraped-pages": "opponent-history and schedule pages the scraper already fetches",
-    "repository": "links to this repository (issue forms, security advisories, source files)",
-    "own-site": "links to this site",
-    "mailto": "email addresses (mailto:)",
+    "box-scores": ("box score on the schools’ athletics sites", "box scores on the schools’ athletics sites"),
+    "scraped-pages": ("opponent-history or schedule page the scraper already fetches",
+                      "opponent-history and schedule pages the scraper already fetches"),
+    "repository": ("link to this repository (issue forms, security advisories, source files)",
+                   "links to this repository (issue forms, security advisories, source files)"),
+    "own-site": ("link to this site", "links to this site"),
+    "mailto": ("email address (mailto:)", "email addresses (mailto:)"),
 }
 # Status keys, in report order, with their headings.
 STATUSES = {"broken": "Broken", "moved": "Moved permanently", "other": "Other",
@@ -388,7 +392,8 @@ def build_report(results: list, skipped: dict, checked_at: dt.datetime) -> dict:
 
 
 def fmt_date(iso: str) -> str:
-    d = dt.datetime.fromisoformat(iso).date()
+    """The Eastern calendar date of a UTC time, like the site's dates: "Nov 2, 2026"."""
+    d = to_eastern(dt.datetime.fromisoformat(iso))[0].date()
     return f"{MONTHS[d.month - 1]} {d.day}, {d.year}"
 
 
@@ -403,7 +408,7 @@ def totals_line(report: dict) -> str:
 
 
 def skipped_line(report: dict) -> str:
-    parts = [f"{n} {SKIP_GROUPS[g]}" for g, n in report["skipped"].items()]
+    parts = [f"{n} {SKIP_GROUPS[g][0 if n == 1 else 1]}" for g, n in report["skipped"].items()]
     return f"Skipped on purpose ({sum(report['skipped'].values())} distinct URLs): " + "; ".join(parts) + "."
 
 
@@ -523,6 +528,8 @@ def main(argv=None) -> int:
     i.add_argument("--report", type=Path, required=True)
     i.add_argument("--run-url", default="")
     args = ap.parse_args(argv)
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")   # the curly apostrophe on a Windows console
     if args.command == "check":
         links, skipped = collect(args.site, args.data)
         results = run_checks(links, requests_transport())
