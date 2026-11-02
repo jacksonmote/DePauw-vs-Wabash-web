@@ -2,11 +2,14 @@ name: Update data and deploy site
 
 on:
   schedule:
-    # Twice a day (UTC): about 6:19 AM and 11:47 PM Eastern, so late games land the same night.
+    # Twice a day (UTC): 5:19 AM and 10:47 PM Eastern in standard time (6:19 AM and 11:47 PM in daylight time).
+    # GitHub often starts scheduled runs hours late (5 to 7 hours in late October 2026) or not at all, which is
+    # why game days rely on the game-day watcher (gameday-watcher.yml) rather than on this schedule.
     - cron: "19 10 * * *"
     - cron: "47 3 * * *"
     # Game-day mode: every 30 minutes, at jittered minutes. The "gate" job below ends these runs at once
-    # unless a DePauw vs. Wabash game is being played (see scraper/gameday.py). The string must match
+    # unless a DePauw vs. Wabash game is being played (see scraper/gameday.py), and also while the game-day
+    # watcher is running (it already starts an update every 15 minutes). The string must match
     # FREQUENT_CRON in scraper/gameday.py; a test checks that.
     - cron: "7,37 * * * *"
   push:
@@ -23,6 +26,10 @@ on:
         default: false
       test_data_commit:
         description: "Prove the push to the data branch works: commit only a marker file there (no real data)"
+        type: boolean
+        default: false
+      gameday:
+        description: "Game-day update: read only the sports playing today (the game-day watcher sets this; leave it unticked for a full update)"
         type: boolean
         default: false
 
@@ -44,16 +51,21 @@ permissions:
 
 jobs:
   gate:
-    # Decides whether this run does the real work. Only the frequent game-day schedule can say no; every
-    # other trigger (the two daily schedules, a push to main, a manual run) always runs. Reads only the
-    # data files (fetched from the data branch) with the runner's own Python: no dependencies, no scrape, no
-    # commit, no deploy. A fetch that fails fails the job; it never reads a missing schedule as "no games".
+    # Decides whether this run does the real work and which sports it reads from the schools (scope). Only the
+    # frequent game-day schedule can say no (outside a game-day window, or while the game-day watcher runs).
+    # Scope: every sport for the two daily schedules and a hand-started manual run; only the sports playing today
+    # for a game-day run (the frequent schedule inside a window, or a run the watcher started with gameday);
+    # nothing for a push to main, unless the push changed the scraper or sources.json (gameday.SCRAPE_ON_PUSH).
+    # Reads only the data files (fetched from the data branch) with the runner's own Python: no dependencies, no
+    # scrape, no commit, no deploy. A fetch that fails fails the job; it never reads a missing schedule as "no games".
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     permissions:
       contents: read
+      actions: read # to see whether a game-day watcher run is in progress
     outputs:
       run: ${{ steps.gate.outputs.run }}
+      scope: ${{ steps.gate.outputs.scope }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -64,20 +76,75 @@ jobs:
       - name: Get the data files from the data branch
         run: python3 scraper/databranch.py fetch --remote origin
 
-      - name: Is a game being played?
+      - name: Is the game-day watcher running?
+        id: watcher
+        if: ${{ github.event.schedule == '7,37 * * * *' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scraper/watcher.py running
+
+      # A failed fetch (a first push, a rewritten history) leaves no list, and the gate then reads every sport.
+      - name: Which files did this push change?
+        if: ${{ github.event_name == 'push' }}
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          if git fetch --quiet --no-tags --depth=1 origin "$BEFORE" "$AFTER"; then
+            git diff --name-only "$BEFORE" "$AFTER" > "$RUNNER_TEMP/changed.txt"
+            cat "$RUNNER_TEMP/changed.txt"
+          else
+            echo "Could not fetch the commits before and after the push; every sport will be read."
+          fi
+
+      - name: Is a game being played, and what does this run read?
         id: gate
         env:
           SCHEDULE: ${{ github.event.schedule }}
-        run: python3 scraper/gameday.py gate --schedule "$SCHEDULE"
+          EVENT: ${{ github.event_name }}
+          GAMEDAY: ${{ inputs.gameday }}
+          WATCHER_RUNNING: ${{ steps.watcher.outputs.running }}
+        run: >-
+          python3 scraper/gameday.py gate --schedule "$SCHEDULE" --event "$EVENT" --gameday "$GAMEDAY"
+          --watcher-running "$WATCHER_RUNNING" --changed "$RUNNER_TEMP/changed.txt"
+
+  watcher-handoff:
+    # On a game day the two daily runs also start the game-day watcher (gameday-watcher.yml): one more chance for
+    # it to start when GitHub drops its own scheduled runs. Its own job, so that only it holds actions: write, and
+    # independent of the build, so a build that is queued or replaced never loses the hand-off. Reads only the
+    # data branch; starts nothing when there is no game today or a watcher is already running.
+    if: ${{ github.ref == 'refs/heads/main' && (github.event.schedule == '19 10 * * *' || github.event.schedule == '47 3 * * *') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      actions: write # to start the game-day watcher (workflow_dispatch)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          sparse-checkout: |
+            scraper
+
+      - name: Get the data files from the data branch
+        run: python3 scraper/databranch.py fetch --remote origin
+
+      - name: Start the game-day watcher if a game is played today
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scraper/watcher.py handoff --no-fetch
 
   build:
-    # Every run that gets past the gate scrapes, so every deploy carries a fresh "Last checked".
-    # The scrape and the render share one job because the check time is an uncommitted file
-    # (.checked-at) that only exists on this runner. A GITHUB_TOKEN push does not start another run.
+    # Every run that gets past the gate scrapes what its scope says (every sport, today's sport, or nothing for an
+    # ordinary push), then renders. The check time is an uncommitted file (.checked-at): a run that reads pages
+    # writes it and saves it to the Actions cache, and every run first restores the newest saved one, so a deploy
+    # that read nothing still shows the time of the last real scrape (never its own time). A cache miss leaves
+    # "Last checked" off the page. A GITHUB_TOKEN push does not start another run.
+    # A full scrape waits 30 seconds between requests to each school's site (robots.txt), about 8 minutes.
     needs: gate
     if: ${{ needs.gate.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     concurrency:
       group: update-and-deploy
       cancel-in-progress: false
@@ -87,6 +154,7 @@ jobs:
       problems: ${{ steps.summary.outputs.problems }}
       scrape: ${{ steps.summary.outputs.scrape }}
       commit: ${{ steps.summary.outputs.commit }}
+      blocked: ${{ steps.summary.outputs.blocked }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -118,17 +186,37 @@ jobs:
         id: tests
         run: python -m pytest -q tests
 
+      # The newest check time saved by an earlier run on main (a run that reads pages replaces it below).
+      - name: Restore the last check time
+        continue-on-error: true
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .checked-at
+          key: checked-at-${{ github.run_id }}
+          restore-keys: checked-at-
+
       - name: Scrape
         id: scrape
+        if: ${{ needs.gate.outputs.scope != '' }}
         continue-on-error: true
         env:
           ALLOW_SHRINK: ${{ inputs.allow_shrink }}
           APPLY_REVIEWED: ${{ inputs.apply_reviewed_changes }}
+          SCOPE: ${{ needs.gate.outputs.scope }}
         run: |
-          args=""
-          if [ "$ALLOW_SHRINK" = "true" ]; then args="--allow-shrink"; fi
+          args="--blocked-file $RUNNER_TEMP/robots-blocked.txt"
+          if [ "$SCOPE" != "all" ]; then args="$args --only $SCOPE"; fi
+          if [ "$ALLOW_SHRINK" = "true" ]; then args="$args --allow-shrink"; fi
           if [ "$APPLY_REVIEWED" = "true" ]; then args="$args --apply-reviewed"; fi
           python scraper/scrape.py $args
+
+      - name: Save the check time
+        if: ${{ steps.scrape.outcome == 'success' || steps.scrape.outcome == 'failure' }}
+        continue-on-error: true
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .checked-at
+          key: checked-at-${{ github.run_id }}-${{ github.run_attempt }}
 
       # Render is a hard gate: if it fails the build stops here, before the data commit and the upload.
       - name: Render site
@@ -155,15 +243,23 @@ jobs:
           path: site
           include-hidden-files: true
 
+      # A run that read nothing (an ordinary push) skips the Scrape step: that is not a failure, but its re-merge
+      # is then the only thing that made the data, so a failed re-merge counts as the scraper failing.
       - name: Summarize
         id: summary
         env:
           SCRAPE: ${{ steps.scrape.outcome }}
+          REMERGE: ${{ steps.remerge.outcome }}
           COMMIT: ${{ steps.commit.outcome }}
         run: |
-          if [ "$SCRAPE" = "success" ]; then scrape=ok; else scrape=failed; fi
+          if [ "$SCRAPE" = "success" ]; then scrape=ok
+          elif [ "$SCRAPE" = "skipped" ] && [ "$REMERGE" != "failure" ]; then scrape=skipped
+          else scrape=failed
+          fi
+          blocked=""
+          if [ -s "$RUNNER_TEMP/robots-blocked.txt" ]; then blocked=$(tr '\n' ' ' < "$RUNNER_TEMP/robots-blocked.txt"); fi
           if [ "$COMMIT" = "failure" ]; then commit=failed; else commit=ok; fi
-          if [ "$scrape" = "ok" ] && [ "$commit" = "ok" ]; then problems=false; else problems=true; fi
+          if [ "$scrape" != "failed" ] && [ "$commit" = "ok" ] && [ -z "$blocked" ]; then problems=false; else problems=true; fi
           if [ "$commit" = "failed" ]; then
             message="The data commit to the data branch failed, so the stored data was not updated. Publishing continues with the data this run scraped; review the Commit if data changed step logs and the Protect data ruleset."
             {
@@ -177,6 +273,7 @@ jobs:
             echo "problems=$problems"
             echo "scrape=$scrape"
             echo "commit=$commit"
+            echo "blocked=$blocked"
           } >> "$GITHUB_OUTPUT"
 
   validate:
@@ -334,8 +431,9 @@ jobs:
 
   report:
     # A failed test or render stops the build directly. This turns the run red after the deployment attempt for
-    # the problems that do not stop publishing: a scraper failure, HTML validation that failed or was skipped
-    # (or whose job did not finish), or a data commit that was rejected.
+    # the problems that do not stop publishing: a scraper failure, a page robots.txt now disallows (not requested,
+    # last good data kept), HTML validation that failed or was skipped (or whose job did not finish), or a data
+    # commit that was rejected.
     needs: [build, deploy, validate]
     if: ${{ !cancelled() && needs.build.result == 'success' && (needs.build.outputs.problems == 'true' || needs.validate.result != 'success' || needs.validate.outputs.validation != 'ok') }}
     runs-on: ubuntu-24.04
@@ -346,9 +444,13 @@ jobs:
           VALIDATION: ${{ needs.validate.outputs.validation }}
           VALIDATE_JOB: ${{ needs.validate.result }}
           COMMIT: ${{ needs.build.outputs.commit }}
+          BLOCKED: ${{ needs.build.outputs.blocked }}
         run: |
-          if [ "$SCRAPE" != "ok" ]; then
-            echo "The scraper reported a failure. Check the Scrape step logs and the deployment result."
+          if [ "$SCRAPE" = "failed" ]; then
+            echo "The scraper reported a failure. Check the Scrape step logs (on a run that read no pages, the Re-merge step) and the deployment result."
+          fi
+          if [ -n "$BLOCKED" ]; then
+            echo "robots.txt now disallows pages the scraper needs, so they were not requested and their last good data is kept: $BLOCKED"
           fi
           if [ "$COMMIT" = "failed" ]; then
             echo "The data commit to the data branch failed, so the stored data is stale. It does not block publishing. Check the Commit if data changed step logs, the Protect data ruleset and the deployment result."

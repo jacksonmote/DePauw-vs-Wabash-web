@@ -15,6 +15,7 @@ import yaml
 
 import linkcheck
 import render
+import scrape
 
 ROOT = Path(__file__).resolve().parent.parent
 FIX = Path(__file__).resolve().parent / "fixtures" / "linkcheck"
@@ -219,14 +220,21 @@ def test_the_module_needs_no_package_to_import():
     top = [n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom))]
     names = {a.name.split(".")[0] for n in top if isinstance(n, ast.Import) for a in n.names}
     names |= {n.module.split(".")[0] for n in top if isinstance(n, ast.ImportFrom)}
-    assert "requests" not in names and names <= set(__import__("sys").stdlib_module_names) | {"__future__", "timeutil"}
+    assert "requests" not in names and names <= set(__import__("sys").stdlib_module_names) | {
+        "__future__", "timeutil", "politeness"}
+    for local in ("politeness", "privacy"):     # the user agent's module and the one it reads the contact from
+        tree = ast.parse((Path(linkcheck.__file__).parent / f"{local}.py").read_text(encoding="utf-8"))
+        imported = {a.name.split(".")[0] for n in tree.body if isinstance(n, ast.Import) for a in n.names} | {
+            n.module.split(".")[0] for n in tree.body if isinstance(n, ast.ImportFrom) and n.module}
+        assert imported <= set(__import__("sys").stdlib_module_names) | {"__future__", "privacy"}, local
     timeutil = ast.parse((Path(linkcheck.__file__).parent / "timeutil.py").read_text(encoding="utf-8"))
     assert {a.name for n in timeutil.body if isinstance(n, ast.Import) for a in n.names} <= {"datetime"}
 
 
-def test_the_user_agent_names_the_site_and_the_repository():
-    assert "https://depauwvswabash.com/" in linkcheck.USER_AGENT and render.REPO_URL in linkcheck.USER_AGENT
-    assert "@" not in linkcheck.USER_AGENT
+def test_the_user_agent_is_the_scrapers_and_names_the_site_the_repository_and_the_contact():
+    """One user agent for everything the project fetches (tests/test_politeness.py pins its text)."""
+    assert "https://depauwvswabash.com" in linkcheck.USER_AGENT and render.REPO_URL in linkcheck.USER_AGENT
+    assert linkcheck.USER_AGENT == scrape.USER_AGENT
 
 
 # ---- the report and the issue ------------------------------------------------------------------ #
