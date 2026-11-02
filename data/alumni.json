@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "verified_at": "2026-10-29",
+  "verified_at": "2026-11-02",
   "methodology": "Named earned-degree holders found by reviewing each school's notable-alumni material and the relevant official award or office records. Count a person once per school and category. Include all genders and historical school names; exclude honorary-only degrees, attendance without an earned degree, nominees, finalists, team members without an individual award, and executives without the qualifying title and year overlap. These are verified named graduates in the reviewed sources, not a claim of complete all-time coverage.",
   "categories": [
     {
@@ -1458,8 +1458,8 @@
             2000
           ],
           "source": {
-            "label": "Cummins company history: Solso named CEO in 2000; successor named in 2012",
-            "url": "https://www.social.cummins.com/timeline"
+            "label": "Cummins press release, Jul 12, 2011: Solso, chairman and CEO since 2000, to retire",
+            "url": "https://investor.cummins.com/news/detail/228/tim-solso-to-retire-as-cummins-chairman-and-ceo"
           },
           "company": "Cummins",
           "rank_year": 2000,

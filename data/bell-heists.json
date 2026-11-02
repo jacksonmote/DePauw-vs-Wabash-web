@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "verified_at": "2026-10-30",
+  "verified_at": "2026-11-02",
   "intro": "The Monon Bell has been the target of pranks, plots and a few genuine thefts for decades. Here is what is on the record, oldest first.",
   "method": [
     "These stories come from news reports, school publications and Wikipedia’s account of the Bell, retold here in our own words with a link to every source. Rivalry stories grow in the telling, so anything the sources present as lore is marked as lore.",
@@ -14,7 +14,7 @@
     "sources": [
       {"label": "Wikipedia: Monon Bell", "url": "https://en.wikipedia.org/wiki/Monon_Bell"},
       {"label": "Wabash College News, Nov 8, 2006: Bell Week", "url": "https://www.wabash.edu/news/story/4064"},
-      {"label": "WRTV, Oct 25, 2017", "url": "https://www.wrtv.com/news/local-news/putnam-county/wabash-students-accused-of-trying-to-steal-the-monon-bell-from-depauw"}
+      {"label": "WRTV, Oct 25, 2017", "url": "https://www.wrtv.com/news/local-news/wabash-students-accused-of-trying-to-steal-the-monon-bell-from-depauw/"}
     ]
   },
   "incidents": [
@@ -143,7 +143,7 @@
       "consequences": "Misdemeanor trespassing charges that would stay off their records if they helped clean Blackstock Stadium after the November game, which many Wabash students and alumni joined in.",
       "counted_in_theft_total": false,
       "sources": [
-        {"label": "WRTV, Oct 25, 2017", "url": "https://www.wrtv.com/news/local-news/putnam-county/wabash-students-accused-of-trying-to-steal-the-monon-bell-from-depauw"},
+        {"label": "WRTV, Oct 25, 2017", "url": "https://www.wrtv.com/news/local-news/wabash-students-accused-of-trying-to-steal-the-monon-bell-from-depauw/"},
         {"label": "The DePauw, Oct 25, 2017", "url": "https://thedepauw.com/25371/news/little-giants-fail-lift-monon-bell/"},
         {"label": "Wikipedia: Monon Bell", "url": "https://en.wikipedia.org/wiki/Monon_Bell"}
       ]
