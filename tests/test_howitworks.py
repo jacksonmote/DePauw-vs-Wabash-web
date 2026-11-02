@@ -96,7 +96,8 @@ def test_the_merge_constants_are_read_from_merge_py(tmp_path, monkeypatch):
 def test_the_update_cadence_follows_the_game_day_schedule(site):
     t = text_of(how(site))
     assert "twice a day" in t and f"every {howitworks.frequent_minutes()} minutes" in t
-    assert howitworks.frequent_minutes() == 30
+    assert howitworks.frequent_minutes() == 15                              # the game-day watcher's cadence
+    assert "follows each school’s robots.txt" in t and "only that sport’s pages" in t
     workflow = (ROOT / ".github" / "workflows" / "update-and-deploy.yml").read_text(encoding="utf-8")
     crons = re.findall(r'- cron: "([^"]+)"', workflow)
     assert len(crons) == 3 and crons.count(gameday.FREQUENT_CRON) == 1      # two daily runs plus the frequent one

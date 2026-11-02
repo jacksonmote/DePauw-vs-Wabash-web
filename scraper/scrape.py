@@ -23,6 +23,12 @@ Safety rules, so a bad night never wipes good data:
   * The "last checked" time (.checked-at, uncommitted) is written only after a live run in which
     at least one page loaded and validated. A run where every page failed leaves it alone.
 
+Politeness (scraper/politeness.py): each host's robots.txt is read once per run before any page, a page it
+disallows is never requested (that school keeps its last good data, the run exits non-zero, and --blocked-file
+lists the URL so the workflow's report job can name it), and requests to one host are at least its Crawl-delay
+apart (30 seconds on both schools' sites). --only limits a run to some sports (a game-day run reads only the
+sport being played); every other sport keeps its saved data and schedule exactly as they were.
+
 Upcoming meetings (data/upcoming.json) come from each sport's schedule page at both schools and are
 separate from the records: a schedule that fails to load or parse only logs a warning, keeps that
 school's last good games, and never changes the exit code or the validation of the history.
@@ -33,6 +39,7 @@ Usage:
                                                 # DePauw, DIR/wabash-<sport-key>.html for Wabash
   python scraper/scrape.py --dry-run            # parse and report, don't write
   python scraper/scrape.py --remerge-only       # no fetching: rebuild series.json from the saved copies and rulings
+  python scraper/scrape.py --only football      # read only these sports' pages (comma-separated keys)
 """
 
 from __future__ import annotations
@@ -52,6 +59,7 @@ from typing import Optional
 from bs4 import BeautifulSoup
 
 import merge
+import politeness
 import review
 import upcoming
 from timeutil import to_eastern
@@ -64,11 +72,8 @@ UPCOMING = ROOT / "data" / "upcoming.json"
 # gitignored and lives outside data/), so series.json still changes only when games change.
 CHECKED_AT = ROOT / ".checked-at"
 
-USER_AGENT = (
-    "DePauw-Wabash-Series-Tracker/0.1 "
-    "(fan project; fetches twice a day; contact via GitHub repo)"
-)
-REQUEST_GAP_SECONDS = 3  # be polite between page requests
+USER_AGENT = politeness.USER_AGENT   # the same one the link check sends
+SLEEP = time.sleep                   # how the pacer waits (tests replace it so they never wait)
 
 NUMBER = r"\d+(?:\.\d+)?"          # swimming scores can end in .5
 SCORE_RE = re.compile(rf"^([WLT])\s+({NUMBER})\s*-\s*({NUMBER})$")
@@ -404,15 +409,41 @@ def fetch(url: str) -> str:
         resp.close()
 
 
-class Pacer:
-    """Waits REQUEST_GAP_SECONDS before every live request except the first of the run."""
-    def __init__(self):
-        self.first = True
+def Pacer() -> politeness.Pacer:
+    """The run's polite access to the schools' sites (robots.txt, per-host crawl delay), fetching with fetch()."""
+    return politeness.Pacer(fetch=lambda url: fetch(url), sleep=lambda seconds: SLEEP(seconds))
 
-    def wait(self) -> None:
-        if not self.first:
-            time.sleep(REQUEST_GAP_SECONDS)
-        self.first = False
+
+def page_urls(cfg: dict, only: Optional[set] = None) -> list:
+    """Every history and schedule page a live run of these sports reads."""
+    urls = []
+    for sport in cfg["sports"]:
+        if only is not None and sport["key"] not in only:
+            continue
+        for kind in ("path", "schedule"):
+            for school in ("depauw", "wabash"):
+                sc = school_cfg(cfg, school)
+                if sport.get(sc[kind]):
+                    urls.append(sc["base_url"].rstrip("/") + sport[sc[kind]])
+    return urls
+
+
+def report_blocked(blocked: list, path: Optional[Path]) -> None:
+    """Pages robots.txt disallowed this run: a clear warning, the run summary, and --blocked-file for the report job."""
+    if not blocked:
+        return
+    print(f"WARN robots.txt disallows {len(blocked)} page(s) the scraper needs; they were not requested and their "
+          f"last good data is kept:", file=sys.stderr)
+    for url in blocked:
+        print(f"WARN   {url}", file=sys.stderr)
+    target = os.environ.get("GITHUB_STEP_SUMMARY")
+    if target:
+        with open(target, "a", encoding="utf-8") as fh:
+            fh.write("### robots.txt disallows pages the scraper needs\n\n"
+                     + "".join(f"- {u}\n" for u in blocked)
+                     + "\nThey were not requested; the last good data is kept.\n\n")
+    if path:
+        path.write_text("".join(f"{u}\n" for u in blocked), encoding="utf-8")
 
 
 def school_cfg(cfg: dict, school: str) -> dict:
@@ -472,7 +503,7 @@ def legacy_depauw(previous_sports: dict) -> dict:
     return {k: {**s, "games": [dict(g) for g in s["games"]]} for k, s in previous_sports.items()}
 
 
-def scrape_one(sc: dict, sport: dict, school: str, fixtures: Optional[Path], pacer: Pacer,
+def scrape_one(sc: dict, sport: dict, school: str, fixtures: Optional[Path], pacer,
                previous: dict, allow_shrink: bool, total_warnings: Optional[list] = None):
     """One school's history page for one sport: fetched, parsed and checked against that page's own
     summary. Returns the raw payload, or None when a fixture run has no page for this school.
@@ -485,8 +516,7 @@ def scrape_one(sc: dict, sport: dict, school: str, fixtures: Optional[Path], pac
             return None
         html = page.read_text(encoding="utf-8")
     else:
-        pacer.wait()
-        html = fetch(url)
+        html = pacer.get(url)
     games, summary, skipped = parse_page(html, base_url=sc["base_url"], opponent_match=sc["opponent_match"])
     problems = validate(games, summary)
     if problems:
@@ -629,16 +659,20 @@ def _carry(entry: dict, old: dict, history_dates: Optional[list], today: Optiona
         print(f"INFO {name}: keeping {len(kept)} finished game(s) on the schedule until the history lists them")
 
 
-def scrape_schedules(cfg: dict, previous: dict, fixtures: Optional[Path], pacer: Pacer,
-                     history: Optional[dict] = None, today: Optional[dt.date] = None) -> dict:
+def scrape_schedules(cfg: dict, previous: dict, fixtures: Optional[Path], pacer,
+                     history: Optional[dict] = None, today: Optional[dt.date] = None,
+                     only: Optional[set] = None) -> dict:
     """Upcoming Wabash games per sport, from both schools' schedule pages. Never raises: a schedule
     problem is a warning, and a school whose page did not load keeps its games from the last run.
 
     `history` (sport key -> the merged game dates) and `today` (Eastern) switch on the carry-over of a game
-    that has just finished (see upcoming.carry_over): the game stays in the file until the history has it."""
+    that has just finished (see upcoming.carry_over): the game stays in the file until the history has it.
+    `only` limits the run to those sport keys; every other sport keeps its saved schedule untouched."""
     sports = dict(previous)
     for sport in cfg["sports"]:
         key = sport["key"]
+        if only is not None and key not in only:
+            continue
         old = previous.get(key, {})
         got: dict = {}
         canceled: list = []
@@ -655,8 +689,7 @@ def scrape_schedules(cfg: dict, previous: dict, fixtures: Optional[Path], pacer:
                         continue
                     html = page.read_text(encoding="utf-8")
                 else:
-                    pacer.wait()
-                    html = fetch(url)
+                    html = pacer.get(url)
                 games = upcoming.parse_schedule(html, opponent_id=sc["opponent_id"], canceled=canceled)
                 if school == "wabash":
                     games = [upcoming.flip_location(g) for g in games]
@@ -706,6 +739,9 @@ def main(argv=None) -> int:
                     help="fetch nothing: rebuild series.json from the saved depauw.json, wabash.json and the "
                          "rulings, the way a normal run merges (a merge that fails keeps that sport's last good "
                          "data and the run exits non-zero). Leaves upcoming.json and the check time alone.")
+    ap.add_argument("--only", help="comma-separated sport keys: read only these sports' pages and keep every other "
+                                   "sport's saved data (game-day runs)")
+    ap.add_argument("--blocked-file", type=Path, help="write the URLs robots.txt disallowed this run here, one per line")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--allow-shrink", action="store_true",
                     help="accept a sport whose game count went down")
@@ -714,6 +750,14 @@ def main(argv=None) -> int:
                  "wabash": args.wabash_output or args.output.parent / "wabash.json"}
 
     cfg = json.loads(SOURCES.read_text(encoding="utf-8"))
+    only = None
+    if args.only is not None:
+        only = {k.strip() for k in args.only.split(",") if k.strip()}
+        unknown = only - {s["key"] for s in cfg["sports"]}
+        if unknown:
+            print(f"FAIL --only names unknown sport(s): {', '.join(sorted(unknown))}", file=sys.stderr)
+            return 1
+        print(f"INFO this run reads only: {', '.join(sorted(only)) or 'nothing'}; every other sport keeps its saved data")
     pending_path = args.pending or args.output.parent / "pending-changes.json"
     try:
         overrides_path = args.overrides or args.output.parent / "overrides.json"
@@ -730,6 +774,8 @@ def main(argv=None) -> int:
         prev_raw["depauw"] = legacy_depauw(prev_sports)
 
     pacer = Pacer()
+    if not args.fixtures and not args.remerge_only:
+        pacer.prepare(page_urls(cfg, only))      # robots.txt for each host first, once
     new_raw: dict = {school: dict(prev_raw[school]) for school in raw_paths}   # last good copy until replaced
     failures = []
     total_warnings: list = []               # pages whose own total disagrees with their parsed games (warning only)
@@ -737,6 +783,8 @@ def main(argv=None) -> int:
     parsed: dict = {}                       # (school, sport key) -> a page that passed its own checks
     for sport in ([] if args.remerge_only else cfg["sports"]):
         key = sport["key"]
+        if only is not None and key not in only:
+            continue
         for school in ("depauw", "wabash"):
             sc = school_cfg(cfg, school)
             try:
@@ -799,9 +847,15 @@ def main(argv=None) -> int:
     old_upcoming = json.loads(args.upcoming_output.read_text(encoding="utf-8")) if args.upcoming_output.exists() else {}
     history = {k: [g["date"] for g in v["games"] if g.get("date_known", True)] for k, v in out["sports"].items()}
     new_upcoming = scrape_schedules(cfg, old_upcoming.get("sports", {}), args.fixtures, pacer,
-                                    history=history, today=to_eastern(now_utc())[0].date())
+                                    history=history, today=to_eastern(now_utc())[0].date(), only=only)
     if new_upcoming != old_upcoming.get("sports", {}) and not args.dry_run:
         write_if_changed(args.upcoming_output, {"schema_version": 1, "sports": new_upcoming})
+
+    report_blocked(pacer.blocked, args.blocked_file)
+    if pacer.blocked:
+        failures.append(("robots", "disallowed"))
+    if pacer.requests:
+        print(f"INFO requests this run: {pacer.report()}")
 
     # A fixture run or a dry run is not a check of the live site, and a run where every page failed
     # proves nothing about the data, so only a real run with at least one good page advances the time.

@@ -96,6 +96,15 @@ def scraper_clock_is_a_fixed_date(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def scraper_never_really_sleeps(monkeypatch):
+    """The scraper waits 30 seconds between requests to one host (robots.txt Crawl-delay). Tests never wait:
+    the waits are recorded in scrape.SLEPT instead, so a test can still check them."""
+    slept = []
+    monkeypatch.setattr(scrape, "SLEEP", slept.append)
+    monkeypatch.setattr(scrape, "SLEPT", slept, raising=False)
+
+
+@pytest.fixture(autouse=True)
 def clean_ci_environment(monkeypatch):
     for name in list(os.environ):
         if name.startswith(("GITHUB_", "GH_")) or name in {"CI", "RUNNER_TEMP"}:

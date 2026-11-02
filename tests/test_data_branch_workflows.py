@@ -93,7 +93,8 @@ def test_only_the_build_job_can_write_and_only_through_databranch_push():
                 assert "git push" not in step.get("run", ""), (name, job_name)
     wf = load("update-and-deploy.yml")
     assert wf["jobs"]["build"]["permissions"] == {"contents": "write"}
-    assert wf["jobs"]["gate"]["permissions"] == {"contents": "read"}
+    assert wf["jobs"]["gate"]["permissions"] == {"contents": "read", "actions": "read"}   # sees whether the watcher runs
+    assert wf["jobs"]["watcher-handoff"]["permissions"] == {"contents": "read", "actions": "write"}
     assert wf["jobs"]["issues"]["permissions"] == {"contents": "read", "issues": "write"}
     assert wf["jobs"]["build"]["concurrency"] == {"group": "update-and-deploy", "cancel-in-progress": False}
     assert wf["permissions"] == {"contents": "read"}

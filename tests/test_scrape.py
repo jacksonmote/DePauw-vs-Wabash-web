@@ -402,9 +402,13 @@ def test_reordering_sources_rewrites_the_file(fixture_dir, tmp_path, monkeypatch
 def live(both_dir, monkeypatch):
     """Make live fetches serve the fixture pages of both schools, with a switch to break individual
     sports (by sport key, at both schools)."""
-    state = {"broken": set()}
+    state = {"broken": set(), "robots": {}, "requested": []}
 
     def fake_fetch(url):
+        state["requested"].append(url)
+        if url.endswith("/robots.txt"):
+            return state["robots"].get("wabash" if "wabash.edu" in url else "depauw",
+                                       "User-agent: *\nAllow: /\nCrawl-delay: 30\n")
         wabash = "wabash.edu" in url
         slug = re.search(r"/sports/([^/]+)/", url).group(1)
         key = {"tennis": "mens-tennis", "swimming-and-diving": "mens-swimming-and-diving"}.get(slug, slug)             if wabash else slug                                          # Wabash's slugs for tennis and swimming
@@ -415,7 +419,6 @@ def live(both_dir, monkeypatch):
         return (both_dir / (f"wabash-{key}.html" if wabash else f"{key}.html")).read_text(encoding="utf-8")
 
     monkeypatch.setattr(scrape, "fetch", fake_fetch)
-    monkeypatch.setattr(scrape, "REQUEST_GAP_SECONDS", 0)
     return state
 
 
@@ -454,6 +457,99 @@ def test_fixture_and_dry_runs_are_not_checks(tmp_path, fixture_dir, live):
                         "--checked-file", str(tmp_path / "checked")]) == 0
     assert run_live(tmp_path, "--dry-run") == 0
     assert not (tmp_path / "checked").exists()
+
+
+# ---- run scopes: a game-day run reads only today's sport ------------------------------------------------ #
+
+def pages_read(live):
+    return [u for u in live["requested"] if not u.endswith("/robots.txt")]
+
+
+def test_a_full_run_reads_every_sport_at_both_schools_and_robots_txt_once_per_host(tmp_path, live):
+    assert run_live(tmp_path) == 0
+    history = [u for u in pages_read(live) if "/opponent-history/" in u]
+    assert len(history) == 2 * len(SPORT_KEYS)
+    assert sorted(u for u in live["requested"] if u.endswith("/robots.txt")) == [
+        "https://depauwtigers.com/robots.txt", "https://sports.wabash.edu/robots.txt"]
+
+
+def test_a_game_day_run_reads_only_that_sport_and_keeps_every_other_sport_as_it_was(tmp_path, live):
+    assert run_live(tmp_path) == 0
+    saved = {n: read(tmp_path, n) for n in ("depauw.json", "wabash.json", "series.json")}
+    (tmp_path / "checked").write_text("2026-01-01T00:00:00+00:00\n")
+    live["requested"].clear()
+    assert run_live(tmp_path, "--only", "football") == 0
+    assert pages_read(live) and all("/sports/football/" in u for u in pages_read(live))
+    assert len(pages_read(live)) == 4                                   # history and schedule, at both schools
+    for name, before in saved.items():
+        assert read(tmp_path, name)["sports"] == before["sports"]       # the same pages give the same data
+    assert (tmp_path / "checked").read_text() != "2026-01-01T00:00:00+00:00\n"   # a real check: the time moves
+
+
+def test_a_failed_page_in_a_game_day_run_keeps_its_last_good_data_and_exits_red(tmp_path, live):
+    assert run_live(tmp_path) == 0
+    before = read(tmp_path, "depauw.json")["sports"]
+    live["broken"] = {"football"}
+    assert run_live(tmp_path, "--only", "football") == 1
+    assert read(tmp_path, "depauw.json")["sports"] == before
+
+
+def test_a_game_day_run_keeps_the_review_entries_of_the_sports_it_did_not_read(tmp_path, live):
+    assert run_live(tmp_path) == 0
+    entry = {"id": "x1", "school": "depauw", "sport": "baseball", "kind": "changed", "season": "1990",
+             "old": {"date": "1990-04-01"}, "new": {"date": "1990-04-02"}, "found_at": "2026-10-30T12:00:00+00:00",
+             "source_url": "https://depauwtigers.com/sports/baseball/opponent-history/wabash/215"}
+    (tmp_path / "pending-changes.json").write_text(json.dumps({"schema_version": 1, "changes": [entry]}))
+    assert run_live(tmp_path, "--only", "football") == 0
+    assert read(tmp_path, "pending-changes.json")["changes"] == [entry]     # not read this run, so still waiting
+
+
+def test_the_shrink_check_still_applies_to_the_sport_a_game_day_run_reads(tmp_path, live):
+    assert run_live(tmp_path) == 0
+    depauw = read(tmp_path, "depauw.json")
+    depauw["sports"]["football"]["games_played"] += 5                   # the saved copy says it had more games
+    (tmp_path / "depauw.json").write_text(json.dumps(depauw, indent=2) + "\n", encoding="utf-8")
+    assert run_live(tmp_path, "--only", "football") == 1
+    assert read(tmp_path, "depauw.json")["sports"]["football"]["games_played"] == \
+        depauw["sports"]["football"]["games_played"]
+
+
+def test_an_empty_scope_reads_nothing_and_does_not_count_as_a_check(tmp_path, live):
+    assert run_live(tmp_path) == 0
+    (tmp_path / "checked").write_text("2026-01-01T00:00:00+00:00\n")
+    live["requested"].clear()
+    assert run_live(tmp_path, "--only", "") == 0
+    assert live["requested"] == []
+    assert (tmp_path / "checked").read_text() == "2026-01-01T00:00:00+00:00\n"
+
+
+def test_an_unknown_sport_in_the_scope_stops_the_run(tmp_path, live):
+    assert run_live(tmp_path, "--only", "curling") == 1
+    assert live["requested"] == []
+
+
+def test_a_page_robots_txt_disallows_is_not_requested_keeps_its_data_and_is_listed(tmp_path, live):
+    assert run_live(tmp_path) == 0
+    before = read(tmp_path, "depauw.json")["sports"]["football"]
+    live["robots"]["depauw"] = "User-agent: *\nDisallow: /sports/football/opponent-history/\nCrawl-delay: 30\n"
+    live["requested"].clear()
+    blocked = tmp_path / "blocked.txt"
+    assert run_live(tmp_path, "--only", "football", "--blocked-file", str(blocked)) == 1
+    url = "https://depauwtigers.com/sports/football/opponent-history/wabash/215"
+    assert url not in live["requested"]
+    assert blocked.read_text(encoding="utf-8") == url + "\n"
+    assert read(tmp_path, "depauw.json")["sports"]["football"] == before
+
+
+def test_a_run_with_nothing_blocked_writes_no_blocked_file(tmp_path, live):
+    assert run_live(tmp_path, "--only", "football", "--blocked-file", str(tmp_path / "blocked.txt")) == 0
+    assert not (tmp_path / "blocked.txt").exists()
+
+
+def test_fixture_runs_never_read_robots_txt_or_wait(tmp_path, fixture_dir, live):
+    assert scrape.main(["--fixtures", str(fixture_dir), "--output", str(tmp_path / "series.json"),
+                        "--upcoming-output", str(tmp_path / "upcoming.json")]) == 0
+    assert live["requested"] == [] and scrape.SLEPT == []
 
 
 # --------------------------------------------------------------------------- #

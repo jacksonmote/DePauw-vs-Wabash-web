@@ -112,8 +112,9 @@ def totals(sports: dict) -> dict:
 
 
 def frequent_minutes() -> int:
-    """Minutes between game-day runs, from the workflow's frequent schedule (e.g. '7,37 * * * *' is 30)."""
-    return 60 // len(gameday.FREQUENT_CRON.split()[0].split(","))
+    """Minutes between game-day updates: the game-day watcher's cadence (watcher.CADENCE, 15)."""
+    import watcher
+    return int(watcher.CADENCE.total_seconds() // 60)
 
 
 def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_included: str, repo_url: str) -> list:
@@ -191,8 +192,9 @@ def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_includ
 
         '<h3>How often it updates</h3>',
         f'<p>The site checks both schools’ pages twice a day, and every {frequent_minutes()} minutes while a '
-        'DePauw vs. Wabash game is being played. “Last checked” at the bottom of the home page is the last time '
-        'the site reached the schools’ pages. “Data last changed” is the last time a result actually changed, '
+        'DePauw vs. Wabash game is being played (only that sport’s pages). It follows each school’s robots.txt, '
+        'including the wait it asks for between requests. “Last checked” at the bottom of the home page is '
+        'the last time the site reached the schools’ pages. “Data last changed” is the last time a result actually changed, '
         'which can be much earlier, because nothing changes between games. Checks run on GitHub’s servers '
         'and GitHub can start a scheduled run late, so a new result may take a while to appear.</p>',
 
