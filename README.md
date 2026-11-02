@@ -91,7 +91,7 @@ The privacy page's "changes to this page" and "the page's source" links are buil
 
 ## How the data updates
 
-**How the data flows.** GitHub Actions fetches both schools' pages twice a day, and every 30 minutes while a game is being played (see "Game-day mode" below). The files the workflow writes are kept on the `data` branch, not on `main` (see "The `data` branch"). The dotted line is the twice-a-year snapshot.
+**How the data flows.** GitHub Actions fetches both schools' pages twice a day, and every 30 minutes while a game is being played (see "Game-day mode" below). The files the workflow writes are kept on the `data` branch, not on `main` (see "The `data` branch"). The dotted lines are the twice-a-year snapshot and the monthly link check, which only reads.
 
 ```mermaid
 flowchart LR
@@ -130,6 +130,7 @@ flowchart LR
   SITE --> GP["GitHub Pages<br/>depauwvswabash.com"]
   SJ -.-> SN["snapshot.yml (Jul 1, Jan 2)<br/>data files go to a<br/>GitHub Release first"]
   SN -.-> WB["then, best effort:<br/>source pages go to the<br/>Wayback Machine"]
+  SITE -.-> LC["link-check.yml (monthly)<br/>checks the outbound links,<br/>keeps a broken-links issue"]
   subgraph DB["data branch: only the Actions bot writes these;<br/>every job fetches them with databranch.py"]
     PC
     DJ
@@ -193,15 +194,16 @@ The same file also holds `keep_previous` rulings, which reject a school's edit t
 
 ### Workflows
 
-Three GitHub Actions workflows live in `.github/workflows/`:
+Four GitHub Actions workflows live in `.github/workflows/`:
 
 | Workflow | Runs when | Jobs and permissions |
 |---|---|---|
 | `update-and-deploy.yml` ("Update data and deploy site") | Twice a day, every 30 minutes (ended at once by the gate unless a game is being played), on every push to `main`, and by hand | `gate` (read-only; fetches the data from the `data` branch and decides whether a 30-minute run does anything), `build` (`contents: write`; fetches the `data` branch files, re-merges `series.json` offline, runs required tests, scrapes, renders the candidate site, which must succeed, then commits changed `data/` files to the `data` branch as the Actions bot, which is tolerated if that push is rejected, and uploads the site), `validate` (`contents: read`, no write token and no saved credentials; unpacks the uploaded site, installs the HTML validator from `package-lock.json` with install scripts off, and checks all nine generated pages with `html-validate`, which only warns), `deploy` (`pages: write`, `id-token: write`; publishes to GitHub Pages), `issues` (`issues: write`; fetches the data, then keeps the `data-review` issue in step), `report` (turns the run red after the deploy if a sport failed to scrape or the HTML validation failed or was skipped, or the data commit was rejected, and says which; test and render failures stop the build instead) |
 | `checks.yml` ("Checks") | On every pull request to `main` | Two read-only jobs, each of which first fetches the bot-managed files from the `data` branch (a read-only fetch, no token) and re-merges `series.json` offline. `checks`: the tests, the render, script syntax, `html-validate` (the locked copy) on all nine pages and every Mermaid diagram in this README. `fake-clock` (three runs): the whole test suite again with the clock frozen at Nov 14, 2026 1:30 PM ET, Jan 1, 2027 and Oct 30, 2027, so a test that secretly depends on today’s date fails in the pull request. Only `checks` is the required status check |
+| `link-check.yml` ("Link check") | The 2nd of every month at 19:41 UTC, and by hand | `check` (`contents: read`; fetches the data from the `data` branch, installs the locked packages, renders the site, checks every outbound link with `scraper/linkcheck.py`, uploads the `link-report` artifact and writes the run summary; never changes the site or the data, and broken links never fail it), `issues` (`contents: read` for the checkout and `issues: write`, on `main` only; opens, updates or closes the one `broken-links` issue). One concurrency group, so two runs never overlap. See "The link check" |
 | `snapshot.yml` ("Data snapshot") | July 1 and January 2, and by hand | `prepare` (read-only; fetches the data from the `data` branch, then the change check and the release files), `release` (`contents: write`; the GitHub Release), `archive` (`contents: write`; asks the Wayback Machine to save the source pages, last, and can never fail the run) |
 
-**Runner image.** Every job runs on `ubuntu-24.04`, not `ubuntu-latest`, on purpose. GitHub moves the `ubuntu-latest` label to a new Ubuntu release over several weeks (Ubuntu 26.04 from October 19 to November 19, 2026), and a run that lands on the new image mid-rollout could fail for a reason that has nothing to do with our change, on a game day or at a deploy. Moving to a newer image is a deliberate change: change all eleven `runs-on:` lines together (`tests/test_runner_image.py` fails if any workflow uses a different one, or `latest`), try it on a pull request first, and watch the first full run. The tests, the render and the Python packages do not depend on the OS: the lock is for Linux with Python 3.12, which `actions/setup-python` installs itself; only the gate and the data-branch steps use the image's own `python3` (standard library only).
+**Runner image.** Every job runs on `ubuntu-24.04`, not `ubuntu-latest`, on purpose. GitHub moves the `ubuntu-latest` label to a new Ubuntu release over several weeks (Ubuntu 26.04 from October 19 to November 19, 2026), and a run that lands on the new image mid-rollout could fail for a reason that has nothing to do with our change, on a game day or at a deploy. Moving to a newer image is a deliberate change: change all thirteen `runs-on:` lines together (`tests/test_runner_image.py` fails if any workflow uses a different one, or `latest`), try it on a pull request first, and watch the first full run. The tests, the render and the Python packages do not depend on the OS: the lock is for Linux with Python 3.12, which `actions/setup-python` installs itself; only the gate and the data-branch steps use the image's own `python3` (standard library only).
 
 To run the update by hand: Actions, "Update data and deploy site", Run workflow, on `main`. The three optional inputs are "Accept a sport whose game count went down" (`allow_shrink`), "Apply the changes to old games waiting for review" (`apply_reviewed_changes`, see "Review hold") and "Prove the push to the data branch works" (`test_data_commit`, see "The `data` branch"). Scraping and rendering share one `build` job because the "Last checked" time is an uncommitted file that exists only on that runner. A push made with the workflow's own token does not start another run, so scraping on every push to `main` cannot loop. Every run that gets past the gate scrapes first, so every deploy carries a fresh "Last checked". It then renders the candidate site before committing changed data; a render failure stops the build before the data commit, artifact upload, deploy, or issue sync. HTML validation problems are reported as warnings and do not stop publishing. With no data changes, the site is still rendered, checked, and uploaded. A scraper failure remains tolerated when its validated fallback data can render. "Data last changed" is different: it is when `series.json` last changed (`updated_at`), which can be weeks ago because nothing changes between games.
 
@@ -409,6 +411,42 @@ Tests are in `tests/test_review.py`; the logic is in `scraper/review.py` and `sc
 
 The logic is in `scraper/snapshot.py` and the tests in `tests/test_snapshot.py`.
 
+## The link check
+
+`.github/workflows/link-check.yml` checks the site's outbound links once a month (the 2nd, 19:41 UTC) and keeps one GitHub issue, labeled `broken-links`, listing anything that needs a look. It never changes the site or the data: it renders the site in its own runner, reads it, and reports. Fixing a link is a normal pull request to the page or data file that uses it.
+
+- **What is checked.** Every `<a href>` to an `http` or `https` address on every rendered page, plus every `http(s)` address in the hand-curated data files (`alumni.json`, `endowment.json`, `bell-heists.json`, `fun-facts.json`, `overrides.json`). Each address is fetched once, without its `#fragment` (the dozens of links into one Congressional directory PDF are one request), and the report lists every page and data entry that uses it (`data/alumni.json: albert-porter: qualifications.governors.source`).
+- **What is not checked, and why.** Email addresses (`mailto:`), links to this site, and this repository's own links (issue forms, security advisories, source files) are ours. Every box score on depauwtigers.com and sports.wabash.edu is skipped: there are hundreds, they come from the schools' own pages, and checking them would send far more traffic to the schools' sites than the scraper's normal page fetches. The opponent-history and schedule pages in `scraper/sources.json` are skipped too, because the scraper already fetches them twice a day: a history page that fails turns that run red, and a schedule page that fails logs a warning in the run. Other pages on the schools' sites (a news story cited by a ruling, for example) are checked. The report says how many distinct addresses each group skipped.
+- **Links within the site are a test, not part of the monthly run.** They can break only when our own code or data changes, and checking them needs no network, so `tests/test_linkcheck.py` builds the whole site (from the frozen fixture, on an ordinary day and on a Bell game day, so the game-day banner's links count too) and requires every link between pages, every download link and every `#fragment` to reach a built page or file and an existing `id` (`linkcheck.internal_problems`). A broken one fails the pull request, and, like every test, stops a deploy.
+- **How politely.** One request at a time, at least 2 seconds between requests to the same host, a 20-second timeout and a User-Agent naming the site and this repository. HEAD first; a GET only when HEAD does not answer 2xx (405 or 501, an error status, or no answer: many servers mishandle HEAD); one retry of that GET after 10 seconds for a timeout, a connection error or a 5xx. Redirects are followed by hand, at most 5. A GET never reads the page body, so a link never costs more than one page. The limits are named constants in `scraper/linkcheck.py`.
+- **The statuses.** *Broken*: 404, 410, a DNS failure, or still failing after the retry. *Moved permanently*: a 301 or 308 on the way to a working page at a different address; the report gives the new address, so the link can be updated. *Couldn't check*: 401, 403, 429 or another bot-protection answer; many sites block automated checks, so these are listed in the run summary but never counted as broken and never open the issue. *Other*: anything unexpected, with its status (too many redirects, for example). *OK*.
+- **The issue.** When anything is broken, moved or other, the `issues` job creates the one open `broken-links` issue (and the label, if missing) or replaces its text with the new report, and adds a short comment with the date and the totals. When nothing is, it comments and closes the open issue. It never opens a second one. Couldn't-check links never open the issue or keep it open. The issue job runs only on `main`, so a manual run on a branch exercises the check without touching the issue.
+- **Every run's output.** The run summary has the totals, the skipped counts and every link that is not OK; the `link-report` artifact (kept 90 days) has the full report as Markdown and JSON, OK links included. The check exits 0 whether or not links are broken, so a red run means a step itself failed (the data fetch, the install, the render, the checker or the issue update), never that a link is broken.
+- **By hand.** Actions, "Link check", Run workflow. Locally, after a render: `python scraper/linkcheck.py check` (writes `link-check/link-report.md`, `link-report.json` and `summary.md`; the folder is git-ignored). This makes live requests, with the same limits.
+
+What each monthly run does:
+
+```mermaid
+flowchart TD
+  T1["The 2nd of every month<br/>(19:41 UTC)"] --> C
+  T2["Manual run"] --> C
+  C["check job (contents: read):<br/>fetch the data branch files,<br/>install the locked packages, render site/"] --> L["linkcheck.py: collect the outbound links<br/>from the pages and the curated data files"]
+  L -- "skipped and counted" --> SK["box scores, scraped history and<br/>schedule pages, this repository,<br/>this site, email addresses"]
+  L --> H["check each address once:<br/>HEAD, a GET if needed, one retry,<br/>2 seconds between requests to a host"]
+  H --> R["run summary and the link-report<br/>artifact (kept 90 days)"]
+  R --> M{"run on main?"}
+  M -- "no" --> X["stop: the issue is not touched"]
+  M -- "yes" --> Q{"issues job (issues: write):<br/>anything broken, moved or other?"}
+  Q -- "yes" --> O{"a broken-links<br/>issue open?"}
+  O -- "no" --> NEW["create it (and the label),<br/>comment the date and totals"]
+  O -- "yes" --> UPD["replace its text with the report,<br/>comment the date and totals"]
+  Q -- "no (couldn't check alone is no)" --> CL{"a broken-links<br/>issue open?"}
+  CL -- "yes" --> CLOSE["comment and close it"]
+  CL -- "no" --> NOP["nothing to do"]
+```
+
+The logic is in `scraper/linkcheck.py` and the tests in `tests/test_linkcheck.py` (a fixture site, a fake transport, a fake clock and a fake `gh` for the monthly check, and two full builds for the links within the site; no network).
+
 ## Shared pieces of every page
 
 - **One header, one footer.** `render.py` builds every page's header (a "Skip to content" link, the title, the Athletics | Alumni bar, the subtitle) and footer from the same functions: `site_header` (with `site_nav`) and `site_footer`, whose page-specific data block comes first and whose shared lines come after (see "Footer" above). The alumni page uses the same helper, so the skip link and the nav can't drift. The skip link is the first thing in the tab order and is visible only when focused; it jumps to `<main id="main">`, which every page has once. The header is the compact ledger style: a gold-and-scarlet stripe, the title and the two nav links on one line (links at least 44 px tall), the subtitle under it. The subtitle is the athletics one on the athletics pages, the alumni one ("DePauw University vs. Wabash College: notable graduates and endowments, side by side.") on the alumni pages, and a neutral one ("DePauw and Wabash, side by side: head-to-head athletics, notable graduates and endowments.") on the landing, heist and 404 pages. Shared footer jokes are emitted once by `site_footer`.
@@ -434,7 +472,7 @@ The bot-managed data files live on the `data` branch, so on a fresh clone run `p
 
 Tests never read the real clock, the network or the bot-updated files in `data/` for an exact count. They use
 fixtures (`tests/fixtures/`, including a frozen copy of `series.json`), a fixed `now` passed to the code, and
-`tests/conftest.py`, which fails any test that opens a connection or runs `gh`, `npm`, `node` or `curl`. The
+`tests/conftest.py`, which fails any test that opens a connection or runs `gh`, `npm`, `npx`, `node`, `curl` or `wget`. The
 checks on the live `data/series.json` are rules that always hold (totals add up, results match scores, the Bell
 era starts in 1932), in `tests/test_real_data_invariants.py`.
 
@@ -455,6 +493,7 @@ python scraper/render.py --now 2026-11-14T13:30   # preview game-day mode as if 
 node --check static/easter-eggs.js   # check the title entrance script (home and alumni pages)
 python scraper/gameday.py gate --schedule "7,37 * * * *" --now 2026-11-14T14:00:00-05:00   # what the game-day gate would decide
 python -m http.server 8000 -d site   # preview at http://localhost:8000
+python scraper/linkcheck.py check    # check the rendered site's outbound links (live, polite; report in link-check/)
 npm ci --ignore-scripts   # once (and after package-lock.json changes): installs the locked HTML validator into node_modules/
 npx --no-install html-validate site/index.html site/404.html site/bell-heist/index.html site/heist-details/index.html site/privacy/index.html site/how-it-works/index.html site/how-it-works/athletics/index.html site/how-it-works/alumni/index.html site/alumni/index.html   # validate every page (what the PR check does)
 npx --yes -p @mermaid-js/mermaid-cli@11.17.0 mmdc -i README.md -o <temp folder>/readme-diagrams.md   # draw the README diagrams (what the PR check does); keep the output outside the repo
@@ -511,12 +550,14 @@ scraper/
   render.py          builds site/ (nine HTML pages, footer, nav, sitemap, downloads, security.txt); images.py draws the PNGs
   snapshot.py        data snapshots and Wayback archiving
   databranch.py      fetch, push and bootstrap for the data branch (where the bot-managed data files live)
+  linkcheck.py       the monthly outbound-link check and its broken-links issue (never changes the site or data)
 static/              styles.css, favicon.svg, easter-eggs.js, three original easter-egg SVGs, fonts/ (Barlow Condensed TTFs for the
                      share images, the Latin woff2 subset the pages load, OFL.txt; SIL Open Font License)
 tests/               one test file per area (scraper, merge, overrides, review, snapshot, game day, render,
-                     footer, how-it-works pages, alumni, swimming ...); fixtures/ holds page markup captured
-                     from both schools' sites and the expected parse of each
-.github/workflows/   update-and-deploy.yml, checks.yml, snapshot.yml
+                     footer, how-it-works pages, alumni, swimming, link check ...); fixtures/ holds page markup
+                     captured from both schools' sites and the expected parse of each, the frozen copy of
+                     series.json, and the small site and data files the link-check tests read (linkcheck/)
+.github/workflows/   update-and-deploy.yml, checks.yml, snapshot.yml, link-check.yml
 .github/ISSUE_TEMPLATE/  data-correction.yml, alumni-correction.yml, enhancement.yml, config.yml (blank issues off)
 .github/dependabot.yml   weekly updates of the pinned GitHub Actions, the locked Python packages (pip) and the locked HTML validator (npm)
 docs/                the plan the alumni page was built from (alumni-endowment-implementation-plan.md)

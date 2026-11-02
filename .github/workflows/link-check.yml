@@ -1,0 +1,92 @@
+name: Link check
+
+# Once a month, checks the site's outbound links and keeps one GitHub issue (label broken-links) listing anything
+# broken, moved or unexpected (scraper/linkcheck.py explains what is checked, what is skipped and why). It never
+# changes the site or the data, writes nothing to the repository, and deploys nothing: a broken link is reported
+# through the issue, never by failing the run.
+
+on:
+  schedule:
+    # The 2nd of every month at 19:41 UTC (3:41 PM EDT, 2:41 PM EST; 12:41 PM PDT, 11:41 AM PST). One day of the
+    # month and any weekday on purpose: a cron with both a day of the month and a day of the week runs on either.
+    - cron: "41 19 2 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Two runs never overlap; a second one waits instead of cancelling the first.
+concurrency:
+  group: link-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    # Read-only. The schedule runs on main; a manual run on a branch checks that branch's code (and opens no issue).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The bot-managed data files live on the data branch; a read-only fetch of this public repository, no token.
+      - name: Get the data files from the data branch
+        run: python3 scraper/databranch.py fetch --remote origin
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install --require-hashes -r requirements.txt
+
+      - name: Render the site
+        run: python scraper/render.py
+
+      # The one live step: one request at a time, at least 2 seconds between requests to a host. Exits 0 whether or
+      # not links are broken; it fails only if the checker itself fails.
+      - name: Check the outbound links
+        run: python scraper/linkcheck.py check --site site --out "$RUNNER_TEMP/link-check"
+
+      - name: Upload the report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: link-report
+          path: ${{ runner.temp }}/link-check
+          retention-days: 90
+
+      - name: Summarize
+        run: cat "$RUNNER_TEMP/link-check/summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+  issues:
+    # The only job that can write, and only issues (contents: read is for the checkout). It runs only on main, so a
+    # manual run on a branch never opens or closes the real issue. Standard library only: nothing is installed.
+    needs: check
+    if: ${{ !cancelled() && needs.check.result == 'success' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scraper
+
+      - name: Get the report from the check job
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: link-report
+          path: ${{ runner.temp }}/link-check
+
+      - name: Open, update or close the broken-links issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python3 scraper/linkcheck.py issue --report "$RUNNER_TEMP/link-check/link-report.json" --run-url "$RUN_URL"

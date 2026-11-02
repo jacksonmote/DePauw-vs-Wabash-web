@@ -3,7 +3,8 @@ Static site generator for the DePauw vs. Wabash page.
 
 Reads data/series.json and data/upcoming.json (both fetched from the data branch by databranch.py; the render
 stops with a message if they are missing) and, if present, the uncommitted .checked-at, plus the
-hand-curated data/alumni.json, data/endowment.json and data/bell-heists.json, and writes a finished site to site/:
+hand-curated data/alumni.json, data/endowment.json, data/bell-heists.json and data/fun-facts.json (and
+data/overrides.json, for the counts on the how-it-works page), and writes a finished site to site/:
   index.html                      the athletics home page (one of two pages with a deferred script)
   alumni/index.html               the alumni and endowment page (alumni.py; the other page with the deferred script)
   how-it-works/index.html         landing page; how-it-works/athletics/ and how-it-works/alumni/ (howitworks.py)
@@ -12,6 +13,7 @@ hand-curated data/alumni.json, data/endowment.json and data/bell-heists.json, an
   privacy/index.html              the privacy policy (privacy.py; no script, base CSP)
   404.html                       root-relative URLs, noindex
   styles.css, the icons, easter-eggs.js (home and alumni only), three original easter-egg SVGs,
+  fonts/ (the Barlow Condensed woff2 subset and OFL.txt),
   og-image.png and alumni-og-image.png (drawn by images.py), site.webmanifest,
   games.csv, data/series.json, data/alumni.json, data/endowment.json, data/bell-heists.json, robots.txt, sitemap.xml, .nojekyll, .well-known/security.txt
 Every page gets its header and nav (site_nav), head tags and footer (site_footer: a page-specific data block,

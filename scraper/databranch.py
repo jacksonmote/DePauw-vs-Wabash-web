@@ -5,7 +5,7 @@ main is protected (a pull request and the `checks` status for every change), and
 added to that ruleset's bypass list, so the bot's data commits go to a separate `data` branch instead. The
 branch holds the BOT_FILES below at the same paths (data/series.json, ...) and nothing else, no code, so its
 history is an audit trail of every data change. The hand-curated files (overrides.json, alumni.json,
-endowment.json, bell-heists.json) stay on main and change only through pull requests.
+endowment.json, bell-heists.json, fun-facts.json) stay on main and change only through pull requests.
 
 Commands (run from anywhere inside the repository; git must be on the PATH):
 

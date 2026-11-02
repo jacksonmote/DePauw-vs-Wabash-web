@@ -1,4 +1,4 @@
-"""How the three workflows get the bot-managed data files (the `data` branch) and how the update workflow
+"""How the workflows get the bot-managed data files (the `data` branch) and how the update workflow
 writes them back. The behaviour itself is tested against real git in test_databranch.py; this pins the wiring."""
 import re
 import sys
@@ -11,6 +11,7 @@ import databranch  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 WORKFLOWS = ROOT / ".github" / "workflows"
+ALL_WORKFLOWS = sorted(p.name for p in WORKFLOWS.glob("*.yml"))   # every workflow, including later ones
 FETCH = "python3 scraper/databranch.py fetch --remote origin"
 REMERGE = "Re-merge series.json from the saved copies"
 
@@ -86,7 +87,7 @@ def test_pull_request_checks_stay_read_only_and_never_use_a_token_for_the_fetch(
 
 
 def test_only_the_build_job_can_write_and_only_through_databranch_push():
-    for name in ("update-and-deploy.yml", "checks.yml", "snapshot.yml"):
+    for name in ALL_WORKFLOWS:
         for job_name, job in load(name)["jobs"].items():
             for step in job["steps"]:
                 assert "git push" not in step.get("run", ""), (name, job_name)
@@ -131,7 +132,7 @@ def test_a_failed_push_to_the_data_branch_still_deploys_warns_and_turns_the_run_
 
 
 def test_every_action_stays_pinned_to_a_full_sha_with_a_version_comment():
-    for name in ("update-and-deploy.yml", "checks.yml", "snapshot.yml"):
+    for name in ALL_WORKFLOWS:
         for line in text(name).splitlines():
             m = re.match(r"\s*(?:- )?uses: (\S+)(.*)", line)
             if m:
@@ -140,7 +141,7 @@ def test_every_action_stays_pinned_to_a_full_sha_with_a_version_comment():
 
 
 def test_the_workflows_never_name_main_as_a_place_to_push_data():
-    for name in ("update-and-deploy.yml", "checks.yml", "snapshot.yml"):
+    for name in ALL_WORKFLOWS:
         assert "HEAD:main" not in text(name) and "git add data/" not in text(name)
 
 

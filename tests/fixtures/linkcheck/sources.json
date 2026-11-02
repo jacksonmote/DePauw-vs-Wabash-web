@@ -1,0 +1,11 @@
+{
+  "base_url": "https://depauwtigers.com",
+  "wabash": {"base_url": "https://sports.wabash.edu"},
+  "sports": [
+    {"key": "football",
+     "path": "/sports/football/opponent-history/wabash/215",
+     "wabash_path": "/sports/football/opponent-history/depauw-university/4",
+     "schedule_path": "/sports/football/schedule",
+     "wabash_schedule_path": "/sports/football/schedule"}
+  ]
+}
