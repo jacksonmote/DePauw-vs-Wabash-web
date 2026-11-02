@@ -337,12 +337,16 @@ def test_the_check_command_writes_the_report_and_exits_zero_even_with_broken_lin
         return linkcheck.Response(404 if "wikipedia" in url else 200)
     monkeypatch.setattr(linkcheck, "requests_transport", lambda: web)
     monkeypatch.setattr(linkcheck.time, "sleep", lambda s: None)
+    monkeypatch.setattr(linkcheck.time, "monotonic", lambda: 0.0)
+    monkeypatch.setattr(linkcheck, "now_utc", lambda: WHEN)
     out = tmp_path / "out"
     code = linkcheck.main(["check", "--site", str(FIX / "rendered"), "--data", str(FIX / "data"), "--out", str(out)])
     assert code == 0
     report = json.loads((out / "link-report.json").read_text(encoding="utf-8"))
     assert report["totals"]["broken"] == 1 and report["links"][0]["url"] == "https://en.wikipedia.org/wiki/Monon_Bell"
-    assert (out / "link-report.md").is_file() and (out / "summary.md").is_file()
+    assert report["checked_at"] == "2026-11-02T19:41:00+00:00"
+    assert (out / "link-report.md").read_text(encoding="utf-8").startswith("# Link check, Nov 2, 2026")
+    assert (out / "summary.md").is_file()
 
 # ---- the workflow ------------------------------------------------------------------------------ #
 

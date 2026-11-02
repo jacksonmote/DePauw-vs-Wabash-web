@@ -1,4 +1,4 @@
-"""How the three workflows get the bot-managed data files (the `data` branch) and how the update workflow
+"""How the workflows get the bot-managed data files (the `data` branch) and how the update workflow
 writes them back. The behaviour itself is tested against real git in test_databranch.py; this pins the wiring."""
 import re
 import sys

@@ -509,6 +509,11 @@ def sync_issue(report: dict, run_url: str = "", run=gh) -> str:
 
 # ---- command line ------------------------------------------------------------------------------ #
 
+def now_utc() -> dt.datetime:
+    """The check time for the report (tests replace it, so they never read the real clock)."""
+    return dt.datetime.now(dt.timezone.utc)
+
+
 def write_report(report: dict, out: Path) -> None:
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
@@ -533,7 +538,7 @@ def main(argv=None) -> int:
     if args.command == "check":
         links, skipped = collect(args.site, args.data)
         results = run_checks(links, requests_transport())
-        report = build_report(results, skipped, dt.datetime.now(dt.timezone.utc))
+        report = build_report(results, skipped, now_utc())
         write_report(report, args.out)
         print(totals_line(report))
         print(skipped_line(report))
