@@ -54,7 +54,8 @@ FREQUENT_CRON = "7,37 * * * *"
 
 # A push to main reads nothing from the schools unless it changed one of these (a parser fix or a new sport
 # should go live with fresh data, not wait for the next daily run).
-SCRAPE_ON_PUSH = ("scraper/scrape.py", "scraper/upcoming.py", "scraper/merge.py", "scraper/sources.json")
+SCRAPE_ON_PUSH = ("scraper/scrape.py", "scraper/upcoming.py", "scraper/merge.py", "scraper/politeness.py",
+                  "scraper/sources.json")
 ALL = "all"     # the scope that reads every sport
 
 NOON = dt.time(12, 0)

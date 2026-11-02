@@ -159,7 +159,7 @@ def simulate(start, posted=None, games=(sched(),), relay_start=dt.timedelta(minu
     runs = []
     while True:
         out = watcher.run(lambda: clock["now"], sleep, refresh, lambda: dispatched.append(clock["now"]),
-                          lambda: None, log=lambda line: None)
+                          lambda *a: None, log=lambda line: None)
         runs.append(out)
         if not out.relayed:
             return runs, [watcher.fmt(t)[11:16] for t in dispatched]
@@ -197,7 +197,7 @@ def test_three_failed_dispatches_in_a_row_stop_the_watcher():
     def boom():
         raise OSError("GitHub said no")
     out = watcher.run(lambda: clock["now"], lambda s: clock.__setitem__("now", clock["now"] + dt.timedelta(seconds=s)),
-                      lambda: world(), boom, lambda: None, log=lambda line: None)
+                      lambda: world(), boom, lambda *a: None, log=lambda line: None)
     assert out.stopped == "3 dispatches failed in a row" and out.dispatches == [] and out.failed
 
 
@@ -215,7 +215,7 @@ def test_a_failed_dispatch_is_tried_again_a_minute_later_and_the_cadence_counts_
         if len(tries) == 1:
             raise OSError("502 from GitHub")
     out = watcher.run(now, sleep, lambda: world(history=[result()] if clock["now"] >= et("2026-11-14 13:20") else []),
-                      flaky, lambda: None, log=lambda line: None)
+                      flaky, lambda *a: None, log=lambda line: None)
     assert [fmt_t(t) for t in tries] == ["13:07", "13:08", "13:23"] and not out.failed
     assert out.stopped.startswith("the result is in")
 
@@ -229,7 +229,7 @@ def test_a_failed_read_of_the_data_branch_is_tried_again_and_never_ends_the_watc
         if len(reads) == 2:
             raise OSError("timed out")
         return world(history=[result()] if clock["now"] >= et("2026-11-14 13:30") else [])
-    out = watcher.run(now, sleep, refresh, lambda: None, lambda: None, log=lambda line: None)
+    out = watcher.run(now, sleep, refresh, lambda: None, lambda *a: None, log=lambda line: None)
     assert fmt_t(reads[2]) == "13:23" and not out.failed and out.stopped.startswith("the result is in")
 
 
@@ -239,7 +239,7 @@ def test_three_failed_reads_in_a_row_stop_the_watcher_and_turn_its_run_red():
     def refresh():
         raise OSError("timed out")
     dispatched = []
-    out = watcher.run(now, sleep, refresh, lambda: dispatched.append(1), lambda: None, log=lambda line: None)
+    out = watcher.run(now, sleep, refresh, lambda: dispatched.append(1), lambda *a: None, log=lambda line: None)
     assert out.failed and "could not be read (3 in a row)" in out.stopped and dispatched == []
 
 
@@ -252,7 +252,7 @@ def test_each_pass_logs_the_eastern_time_the_state_and_the_action():
     lines = []
     watcher.run(lambda: clock["now"], lambda s: clock.__setitem__("now", clock["now"] + dt.timedelta(seconds=s)),
                 lambda: world(history=[result()] if clock["now"] >= et("2026-11-14 13:30") else []),
-                lambda: None, lambda: None, log=lines.append)
+                lambda: None, lambda *a: None, log=lines.append)
     assert lines[0].startswith("2026-11-14 13:00 EST  before  wait")
     assert lines[1].startswith("2026-11-14 13:07 EST  open    dispatch")
     assert lines[-1].startswith("2026-11-14 13:37 EST") and "final" in lines[-1]
@@ -415,6 +415,8 @@ def test_the_30_minute_schedule_does_nothing_outside_a_window_and_stands_aside_f
 
 def test_a_push_reads_nothing_unless_it_changed_the_scraper_or_the_sources():
     assert plan("push", changed=["README.md", "scraper/render.py", "data/overrides.json"])[:2] == (True, "")
+    assert set(gameday.SCRAPE_ON_PUSH) == {"scraper/scrape.py", "scraper/upcoming.py", "scraper/merge.py",
+                                           "scraper/politeness.py", "scraper/sources.json"}
     for path in gameday.SCRAPE_ON_PUSH:
         assert plan("push", changed=["README.md", path])[:2] == (True, "all")
     assert plan("push", changed=None)[:2] == (True, "all")                  # could not tell: read everything
@@ -452,7 +454,7 @@ def two_sport_day(start, football_posted, basketball_posted):
     def sleep(sec):
         clock["now"] += dt.timedelta(seconds=sec)
     while True:
-        out = watcher.run(lambda: clock["now"], sleep, data, dispatch, lambda: None, log=lambda line: None)
+        out = watcher.run(lambda: clock["now"], sleep, data, dispatch, lambda *a: None, log=lambda line: None)
         if not out.relayed:
             return out, [(fmt_t(t), scope) for t, scope in dispatched]
         sleep(60)
@@ -536,7 +538,7 @@ def test_one_watch_job_at_a_time_with_timeouts_under_githubs_limit():
     assert watcher.RELAY_AFTER + watcher.CADENCE < dt.timedelta(minutes=timeout) <= dt.timedelta(hours=6)
     group = jobs["watch"]["concurrency"]
     assert group["cancel-in-progress"] is False and "'gameday-watcher'" in group["group"]
-    assert "dry" in group["group"]                                   # a dry run never queues behind a real watcher
+    assert "inputs.dry_run || inputs.test_dispatch" in group["group"]   # neither queues behind a real watcher
     assert watcher.DRY_TITLE in WATCHER_FLOW["run-name"]              # how the run checks recognise a dry run
     assert "--now \"$PRETEND_NOW\"" in WATCHER_TEXT and "PRETEND_NOW: ${{ inputs.pretend_now }}" in WATCHER_TEXT
 
@@ -600,3 +602,187 @@ def test_the_readme_and_agents_describe_the_watcher_the_politeness_rules_and_the
     for phrase in ("scraper/politeness.py", "Crawl-delay", "Never increase request volume", "gameday-watcher.yml",
                    "never fetches the schools' sites, commits or deploys", "actions: write"):
         assert phrase in agents, phrase
+
+
+# ---- several sports on one day: one final update per game ------------------------------------------------ #
+
+def game_day(start, games, date="2026-11-14"):
+    """Watch `date` from `start` (Eastern), following each relay (and what it hands over) into a fresh run a
+    minute later. `games` maps sport key -> (start time, when its result is posted or None). A result reaches the
+    data branch UPDATE_MINUTES after the first update that started once it was posted. Returns (the last run's
+    outcome, [(HH:MM, scope, "final" or "update") for every dispatch], every relay's hand-over)."""
+    clock = {"now": et(start)}
+    dispatched, handovers = [], []
+    lines = []
+
+    def data():
+        up = {k: {"games": [sched(date=date, time=t)]} for k, (t, _) in games.items()}
+        sports = {}
+        for k, (_, posted) in games.items():
+            known = posted and any(d >= et(posted) and clock["now"] >= d + dt.timedelta(minutes=UPDATE_MINUTES)
+                                   for d, _, _ in dispatched)
+            sports[k] = {"name": k, "games": [result(date)] if known else []}
+        return up, sports
+
+    def dispatch():
+        kind = "final" if "final" in lines[-1] else "update"
+        dispatched.append((clock["now"], gameday.gameday_sports(clock["now"], *data()), kind))
+
+    def sleep(sec):
+        clock["now"] += dt.timedelta(seconds=sec)
+    handed = set()
+    while True:
+        box = {}
+        out = watcher.run(lambda: clock["now"], sleep, data, dispatch, lambda owed: box.setdefault("owed", owed),
+                          log=lines.append, handed_over=handed)
+        if not out.relayed:
+            return out, [(fmt_t(t), scope, kind) for t, scope, kind in dispatched], handovers
+        handed = set(box["owed"])
+        handovers.append(handed)
+        sleep(60)
+
+
+def test_basketball_at_2_and_swimming_at_6_each_get_one_final_update_and_it_waits_between_them():
+    out, runs, _ = game_day("2026-11-14 13:00", {"mens-basketball": ("2:00 PM", "2026-11-14 16:00"),
+                                                 "mens-swimming-and-diving": ("6:00 PM", "2026-11-14 20:30")})
+    finals = [(t, scope) for t, scope, kind in runs if kind == "final"]
+    assert finals == [("16:15", ["mens-basketball"]), ("20:45", ["mens-basketball", "mens-swimming-and-diving"])]
+    times = [t for t, _, _ in runs]
+    assert times[0] == "14:00" and not [t for t in times if "16:15" < t < "18:00"]   # waits for the second game
+    swim = [t for t, scope, kind in runs if kind == "update" and scope == ["mens-swimming-and-diving"]]
+    assert swim[0] == "18:00" and swim == [f"{h}:{m}" for h in range(18, 21) for m in ("00", "15", "30", "45")][:len(swim)]
+    assert all(scope == ["mens-basketball"] for t, scope, kind in runs if kind == "update" and t < "16:15")
+    assert out.stopped.endswith("started one last update") and not out.failed
+
+
+def test_a_final_update_never_comes_sooner_than_15_minutes_after_the_update_before_it():
+    _, runs, _ = game_day("2026-11-14 13:00", {"mens-basketball": ("2:00 PM", "2026-11-14 16:00"),
+                                               "mens-swimming-and-diving": ("6:00 PM", "2026-11-14 20:30")})
+    stamps = [dt.datetime.strptime(t, "%H:%M") for t, _, _ in runs]
+    assert all(b - a >= watcher.CADENCE for a, b in zip(stamps, stamps[1:]))
+
+
+def test_an_earlier_result_while_another_window_is_open_waits_for_a_gap_and_gets_one_final_at_the_end():
+    out, runs, _ = game_day("2026-11-14 13:00", {"mens-basketball": ("2:00 PM", "2026-11-14 15:00"),
+                                                 "mens-swimming-and-diving": ("2:30 PM", "2026-11-14 17:00")})
+    finals = [t for t, _, kind in runs if kind == "final"]
+    assert len(finals) == 1 and finals[0] == runs[-1][0]               # one final, covering both, at the end
+    assert sorted(out.finalized) == [("mens-basketball", "2026-11-14"), ("mens-swimming-and-diving", "2026-11-14")]
+
+
+def test_the_doubleheader_still_needs_both_results_and_gets_one_final():
+    up, sports = world(games=(sched(time="12:00 PM", doubleheader=True), sched(time="3:30 PM", doubleheader=True)),
+                       history=[result()])
+    d = watcher.decide(et("2026-11-14 17:00"), et("2026-11-14 16:00"), None, {("football", "2026-11-14")}, up, sports)
+    assert d.action == "dispatch"                                      # one of two results in: still open
+
+
+# ---- the relay carries what it was watching ---------------------------------------------------------------- #
+
+def test_a_relay_is_handed_the_games_still_owed_a_final_update_and_each_still_gets_exactly_one():
+    games = {"mens-basketball": ("2:00 PM", "2026-11-14 16:00"),
+             "mens-swimming-and-diving": ("6:00 PM", "2026-11-14 20:30")}
+    _, runs, handovers = game_day("2026-11-14 11:00", games)
+    assert handovers[0] == {("mens-basketball", "2026-11-14")}         # 11:00 + 4:45 = 15:45, mid-game
+    finals = [t for t, _, kind in runs if kind == "final"]
+    assert len(finals) == 2 and "16:00" < finals[0] < "16:30" and finals[1] > "20:30"   # the relay runs a minute late
+    _, runs, handovers = game_day("2026-11-14 13:00", games)              # relays at 17:45, between the games
+    assert handovers[0] == set()                                       # basketball already had its final
+    assert [t for t, _, kind in runs if kind == "final"] == ["16:15", "20:45"]
+
+
+def test_a_relay_that_starts_after_the_window_closed_still_starts_the_final_update(data, monkeypatch, capsys):
+    write_data(data, history=[result()])                               # the result is in, nothing left to open
+    monkeypatch.setattr(watcher, "now_utc", lambda: et("2026-11-14 17:00"))
+    out = data / "out.txt"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(out))
+    assert watcher.main(["gate", "--no-fetch", "--relay"]) == 0
+    assert out.read_text() == "watch=false\n"                         # without the hand-over: nothing to do
+    out.unlink()
+    assert watcher.main(["gate", "--no-fetch", "--relay", "--watched", "football:2026-11-14"]) == 0
+    assert out.read_text() == "watch=true\n" and "watched by the run before this relay" in capsys.readouterr().out
+    started = []
+    monkeypatch.setattr(watcher, "dispatch", lambda repo, token, flow, inputs: started.append((flow, inputs)))
+    monkeypatch.setattr(watcher.time, "sleep", lambda s: (_ for _ in ()).throw(AssertionError("slept")))
+    assert watcher.main(["watch", "--no-fetch", "--relay", "--watched", "football:2026-11-14"]) == 0
+    assert started == [("update-and-deploy.yml", {"gameday": "true"})]
+    assert "Final updates for: football 2026-11-14" in capsys.readouterr().out
+
+
+def test_a_hand_over_from_a_day_that_is_over_starts_nothing(data, monkeypatch):
+    write_data(data, history=[result("2026-11-13")], games=())
+    monkeypatch.setattr(watcher, "now_utc", lambda: et("2026-11-14 04:00"))     # past yesterday's 3 AM
+    out = data / "out.txt"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(out))
+    assert watcher.main(["gate", "--no-fetch", "--relay", "--watched", "football:2026-11-13"]) == 0
+    assert out.read_text() == "watch=false\n"
+
+
+def test_the_hand_over_input_round_trips_and_a_bad_one_is_refused(data):
+    games = {("football", "2026-11-14"), ("mens-basketball", "2026-11-14")}
+    assert watcher.decode_watched(watcher.encode_watched(games)) == games
+    assert watcher.decode_watched("") == set()
+    assert watcher.main(["gate", "--no-fetch", "--relay", "--watched", "football:Nov 14"]) == 2
+
+
+def test_the_relay_dispatch_sends_the_hand_over_and_the_workflow_passes_it_on(monkeypatch):
+    sent = []
+    monkeypatch.setattr(watcher, "dispatch", lambda repo, token, flow, inputs: sent.append((flow, inputs)))
+    clock = {"now": et("2026-11-14 13:07")}
+    watcher.run(lambda: clock["now"], lambda s: clock.__setitem__("now", clock["now"] + dt.timedelta(seconds=s)),
+                lambda: world(), lambda: None, lambda owed: sent.append(("relay", watcher.encode_watched(owed))),
+                log=lambda line: None)
+    assert sent[-1] == ("relay", "football:2026-11-14")
+    inputs = WATCHER_FLOW[True]["workflow_dispatch"]["inputs"]
+    assert inputs["watched"]["type"] == "string" and inputs["watched"]["default"] == ""
+    assert WATCHER_TEXT.count('--watched "$WATCHED"') == 2 and WATCHER_TEXT.count("WATCHED: ${{ inputs.watched }}") == 2
+    source = (ROOT / "scraper" / "watcher.py").read_text(encoding="utf-8")
+    assert '{"relay": "true", "watched": encode_watched(owed)}' in source
+
+
+# ---- test dispatch: prove the dispatch works before a game day ------------------------------------------- #
+
+def test_a_test_dispatch_passes_the_gate_on_a_day_without_a_game_and_asks_github_nothing(data, monkeypatch):
+    write_data(data, games=())
+    monkeypatch.setattr(watcher, "active_watchers", lambda *a: (_ for _ in ()).throw(AssertionError("listed runs")))
+    out = data / "out.txt"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(out))
+    assert watcher.main(["gate", "--no-fetch", "--test-dispatch"]) == 0
+    assert out.read_text() == "watch=true\n"
+
+
+def test_a_test_dispatch_starts_exactly_one_game_day_update_and_stops(data, monkeypatch, capsys):
+    started = []
+    monkeypatch.setattr(watcher, "dispatch", lambda repo, token, flow, inputs: started.append((flow, inputs)))
+    monkeypatch.setattr(watcher, "load", lambda fetch: (_ for _ in ()).throw(AssertionError("read the data")))
+    assert watcher.main(["watch", "--test-dispatch"]) == 0
+    assert started == [("update-and-deploy.yml", {"gameday": "true"})]
+    assert "Started update-and-deploy.yml on main with gameday=true" in capsys.readouterr().out
+
+
+def test_a_failed_test_dispatch_turns_the_run_red(monkeypatch, capsys):
+    monkeypatch.setattr(watcher, "dispatch", lambda *a: (_ for _ in ()).throw(OSError("403 Resource not accessible")))
+    assert watcher.main(["watch", "--test-dispatch"]) == 1
+    assert "FAILED to start update-and-deploy.yml" in capsys.readouterr().out
+
+
+def test_a_test_dispatch_cannot_be_a_dry_run_or_take_a_pretend_time():
+    assert watcher.main(["gate", "--test-dispatch", "--dry-run"]) == 2
+    assert watcher.main(["watch", "--test-dispatch", "--dry-run"]) == 2
+    assert watcher.main(["watch", "--test-dispatch", "--now", "2026-11-14T12:30"]) == 2
+
+
+def test_the_test_dispatch_input_is_wired_through_both_jobs_and_ignored_by_the_other_watchers():
+    inputs = WATCHER_FLOW[True]["workflow_dispatch"]["inputs"]
+    assert inputs["test_dispatch"]["type"] == "boolean" and inputs["test_dispatch"]["default"] is False
+    assert WATCHER_TEXT.count("TEST_DISPATCH: ${{ inputs.test_dispatch }}") == 2
+    assert WATCHER_TEXT.count('if [ "$TEST_DISPATCH" = "true" ]; then args="$args --test-dispatch"; fi') == 2
+    assert watcher.TEST_TITLE in WATCHER_FLOW["run-name"]
+    gh = FakeGitHub([{"id": 100, "status": "in_progress", "display_title": "Game-day watcher (test dispatch)"},
+                     {"id": 120, "status": "queued", "display_title": "Game-day watcher"}])
+    assert [r["id"] for r in watcher.active_watchers("o/r", "t", opener=gh)] == [120]
+
+
+def test_a_game_day_update_on_a_day_without_a_game_reads_nothing_and_still_deploys():
+    run, scope, why = gameday.plan(et("2026-11-03 20:00"), "workflow_dispatch", "", True, None, False, *world())
+    assert (run, scope) == (True, "") and "no game today" in why

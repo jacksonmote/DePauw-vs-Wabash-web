@@ -12,8 +12,10 @@ workflow with `gameday: true`, which makes that run read only the sports playing
 
 Commands (each run from .github/workflows/gameday-watcher.yml, standard library only, like the gate):
 
-  python scraper/watcher.py gate [--relay] [--dry-run] [--now T]   should this run watch? (writes watch=)
-  python scraper/watcher.py watch [--dry-run] [--now T]            the loop below
+  python scraper/watcher.py gate  [--relay --watched G] [--dry-run --now T | --test-dispatch]
+                                                                   should this run watch? (writes watch=)
+  python scraper/watcher.py watch [--relay --watched G] [--dry-run --now T | --test-dispatch]
+                                                                   the loop below
   python scraper/watcher.py running                                is a watcher run in progress? (running=)
   python scraper/watcher.py handoff                                a daily run starts the watcher on a game day
 
@@ -25,12 +27,19 @@ once; the newer one always yields, so two gates starting together cannot both st
 The loop, one pass every CADENCE (sooner when the window opens): fetch the data branch again, then
   window not open yet    wait until it opens
   window open            start an update (at most one every CADENCE)
-  window closed, result  start one last update, then stop (with several games that day: only once every
-                         game watched has its result; between games it waits for the next window)
+  window closed, result  start that game's one final update; then stop, or, when a later game's window is
+                         still to open, keep waiting for it (each game gets exactly one final update; while
+                         another window is open the final waits for a gap)
   window closed, 3 AM    stop (a result never arrived; the daily runs pick it up)
   no game left           stop
 and after RELAY_AFTER in the job, while a window is open or still to open, start a fresh watcher run marked
-as a relay, then stop: jobs on GitHub's runners may last 6 hours at most.
+as a relay, then stop: jobs on GitHub's runners may last 6 hours at most. The relay is handed the games still
+owed a final update (`--watched sport:date,...`), so a relay that starts after the last window closed still
+starts that final update.
+
+`--test-dispatch` (a hand-started run with the test_dispatch input) skips the gate's game check and starts one
+"Update data and deploy site" run on main with gameday=true, then stops: proof that the dispatch works, on any
+day. It cannot be combined with --dry-run.
 
 A dry run (`--dry-run`) does all of that except the dispatches, which it logs, and simulates the clock instead
 of sleeping, so a whole game day passes in seconds; the data does not change during it (nothing is
@@ -62,6 +71,7 @@ CADENCE = dt.timedelta(minutes=15)                    # at most one update this 
 RELAY_AFTER = dt.timedelta(hours=4, minutes=45)       # the next pass after this hands over (jobs stop at 6 hours)
 ACTIVE = ("in_progress", "queued", "waiting", "pending", "requested")
 DRY_TITLE = "(dry run)"                               # in a dry run's run name, so the checks below ignore it
+TEST_TITLE = "(test dispatch)"                        # likewise for a test dispatch, which watches nothing
 MAX_FAILURES = 3                                      # in a row (dispatches, or fetches of the data branch), then it gives up, red
 RETRY = dt.timedelta(minutes=1)                       # after a failed dispatch or fetch
 
@@ -96,23 +106,81 @@ def result_in(key: str, date: str, upcoming: dict, sports: dict) -> bool:
     return bool(hist) and len(hist) >= len(sched)
 
 
-def should_watch(now: dt.datetime, upcoming: dict, sports: dict) -> tuple[bool, str]:
+def live(now: dt.datetime, date: str) -> bool:
+    """Can a game on `date` still be updated: today (Eastern), or yesterday until its window ends at 3 AM?"""
+    day = dt.date.fromisoformat(date)
+    today = to_eastern(now)[0].date()
+    return day == today or (day == today - dt.timedelta(days=1) and now < gameday.window_end(day))
+
+
+def owed_finals(now: dt.datetime, watched: set, finalized: set, upcoming: dict, sports: dict) -> set:
+    """Games watched (in this run, or handed over by the run before) whose result is now in and that have not
+    had their final update yet."""
+    return {(k, d) for k, d in set(watched) - set(finalized) if live(now, d) and result_in(k, d, upcoming, sports)}
+
+
+def should_watch(now: dt.datetime, upcoming: dict, sports: dict, watched: set = frozenset()) -> tuple[bool, str]:
+    """Watch when a window is open or still to open today, or when a game handed over by a relay's
+    predecessor has its result in and still needs its final update."""
     state, why, _ = status(now, upcoming, sports)
-    return state in (OPEN, BEFORE), why
+    if state in (OPEN, BEFORE):
+        return True, why
+    owed = owed_finals(now, watched, set(), upcoming, sports)
+    if owed:
+        names = ", ".join(f"{k} {d}" for k, d in sorted(owed))
+        return True, f"the result is in for {names}, watched by the run before this relay: one final update"
+    return False, why
+
+
+def encode_watched(games: set) -> str:
+    """(sport key, date) pairs for the relay input: "football:2026-11-14,mens-basketball:2026-11-14"."""
+    return ",".join(f"{k}:{d}" for k, d in sorted(games))
+
+
+def decode_watched(text: str) -> set:
+    """The relay input back into (sport key, date) pairs; a malformed one raises ValueError."""
+    out = set()
+    for item in (text or "").split(","):
+        item = item.strip()
+        if not item:
+            continue
+        key, _, date = item.partition(":")
+        if not key:
+            raise ValueError(item)
+        dt.date.fromisoformat(date)
+        out.add((key, date))
+    return out
 
 
 @dataclass
 class Decision:
     action: str             # "dispatch", "wait", "final", "stop", "relay"
-    until: dt.datetime | None
+    until: dt.datetime | None   # the next pass; None after a "final" means stop once it is started
     why: str
     state: str = ""
+    finals: frozenset = frozenset()   # for "final": the (sport key, date) this update finishes
 
 
 def decide(now: dt.datetime, started: dt.datetime, last_dispatch: dt.datetime | None, watched: set,
-           upcoming: dict, sports: dict) -> Decision:
-    """One pass of the loop. `watched` holds the (sport key, date) of every window seen open in this run."""
+           upcoming: dict, sports: dict, finalized: set = frozenset()) -> Decision:
+    """One pass of the loop. `watched` holds the (sport key, date) of every window seen open in this run (and
+    those a relay's predecessor handed over); `finalized`, those that have had their final update.
+
+    Each game gets exactly one final update, as soon as no window is open after its result is in: right away
+    when a later game's window is still to open (the watcher then keeps waiting for it), or at the end of the
+    day. While another window is open the regular updates carry on and the final waits for a gap. A final
+    keeps the CADENCE too: never sooner than 15 minutes after the update before it."""
     state, why, start = status(now, upcoming, sports)
+    owed = owed_finals(now, watched, finalized, upcoming, sports)
+    if owed and state != OPEN:
+        if last_dispatch is not None and now - last_dispatch < CADENCE:
+            return Decision("wait", last_dispatch + CADENCE,
+                            "a result is in; its final update comes at the next 15-minute mark", state)
+        names = ", ".join(f"{k} {d}" for k, d in sorted(owed))
+        if state == BEFORE:
+            return Decision("final", min(start, now + CADENCE),
+                            f"the result is in for {names}, so its window closed; {why}", state, frozenset(owed))
+        return Decision("final", None, f"the result is in for {names}, so the window closed", state, frozenset(owed))
     if state in (OPEN, BEFORE) and now - started >= RELAY_AFTER:
         return Decision("relay", None, f"{why}; {fmt_span(now - started)} in this job, so a fresh run takes over", state)
     if state == OPEN:
@@ -121,10 +189,10 @@ def decide(now: dt.datetime, started: dt.datetime, last_dispatch: dt.datetime | 
         return Decision("wait", last_dispatch + CADENCE, why, state)
     if state == BEFORE:
         return Decision("wait", min(start, now + CADENCE), why, state)
-    if watched and all(result_in(k, d, upcoming, sports) for k, d in watched):
-        return Decision("final", None, "the result is in on a history page, so the window closed", state)
-    if watched:
+    if set(watched) - set(finalized):
         return Decision("stop", None, "the window closed at 3 AM Eastern without every result", state)
+    if watched:
+        return Decision("stop", None, "every game watched has had its final update", state)
     return Decision("stop", None, why, state)
 
 
@@ -144,20 +212,23 @@ def open_keys(now: dt.datetime, upcoming: dict, sports: dict) -> set:
 class Outcome:
     dispatches: list = field(default_factory=list)      # when each update was started
     watched: set = field(default_factory=set)
+    finalized: set = field(default_factory=set)         # games that have had their final update
     stopped: str = ""
     relayed: bool = False
     failed: bool = False                                # gave up after repeated failures (the run turns red)
     log: list = field(default_factory=list)
 
 
-def run(clock, sleep, refresh, dispatch_update, dispatch_relay, log=print) -> Outcome:
+def run(clock, sleep, refresh, dispatch_update, dispatch_relay, log=print, handed_over: set = frozenset()) -> Outcome:
     """The watch loop. clock() -> aware UTC now; sleep(seconds); refresh() -> (upcoming, sports) from the data
-    branch; dispatch_update() and dispatch_relay() start the runs (no-ops that log in a dry run).
+    branch; dispatch_update() and dispatch_relay(owed) start the runs (no-ops that log in a dry run), where owed
+    is the set of games watched and still owed a final update, for the relay to carry on. `handed_over` is that
+    set as this run received it from the run before (a relay).
 
     A failed fetch of the data branch is tried again after RETRY (the last data read is never used to start an
     update); a failed dispatch or relay is retried after RETRY, without moving the 15-minute clock. MAX_FAILURES
     in a row of either stop the watcher and mark the outcome failed."""
-    out = Outcome()
+    out = Outcome(watched=set(handed_over))
     started = clock()
     last = None
     data = None
@@ -176,14 +247,17 @@ def run(clock, sleep, refresh, dispatch_update, dispatch_relay, log=print) -> Ou
             continue
         upcoming, sports = data
         now = clock()
-        d = decide(now, started, last, out.watched, upcoming, sports)
+        d = decide(now, started, last, out.watched, upcoming, sports, out.finalized)
         out.watched |= open_keys(now, upcoming, sports)
         line = f"{fmt(now)}  {d.state or '-':<6}  {d.action:<8}  {d.why}"
         out.log.append(line)
         log(line)
         if d.action in ("dispatch", "final", "relay"):
             try:
-                (dispatch_relay if d.action == "relay" else dispatch_update)()
+                if d.action == "relay":
+                    dispatch_relay(out.watched - out.finalized)
+                else:
+                    dispatch_update()
                 failures = 0
             except Exception as exc:  # noqa: BLE001 - one failed dispatch must not end the watch
                 failures += 1
@@ -195,7 +269,8 @@ def run(clock, sleep, refresh, dispatch_update, dispatch_relay, log=print) -> Ou
                 continue
             if d.action != "relay":
                 out.dispatches.append(now)
-        if d.action == "final":
+            out.finalized |= d.finals
+        if d.action == "final" and d.until is None:
             out.stopped = d.why + "; started one last update"
             return out
         if d.action == "stop":
@@ -205,7 +280,7 @@ def run(clock, sleep, refresh, dispatch_update, dispatch_relay, log=print) -> Ou
             out.relayed = True
             out.stopped = d.why
             return out
-        last = now if d.action == "dispatch" else last
+        last = now if d.action in ("dispatch", "final") else last
         sleep(max(1.0, (d.until - now).total_seconds()))
 
 
@@ -223,13 +298,14 @@ def api(method: str, path: str, token: str, body: dict | None = None, opener=Non
 
 
 def active_watchers(repo: str, token: str, opener=None) -> list:
-    """Watcher runs that are queued or in progress, leaving out dry runs."""
+    """Watcher runs that are queued or in progress, leaving out dry runs and test dispatches."""
     runs = {}
     for state in ACTIVE:
         data = api("GET", f"/repos/{repo}/actions/workflows/{WATCHER_WORKFLOW}/runs?status={state}&per_page=50",
                    token, opener=opener)
         for r in (data or {}).get("workflow_runs", []):
-            if DRY_TITLE not in (r.get("display_title") or ""):
+            title = r.get("display_title") or ""
+            if DRY_TITLE not in title and TEST_TITLE not in title:
                 runs[r["id"]] = r
     return sorted(runs.values(), key=lambda r: r["id"])
 
@@ -298,11 +374,29 @@ def describe(out: Outcome, dry: bool) -> str:
     verb = "Would have started" if dry else "Started"
     return (f"## Game-day watcher{' (dry run)' if dry else ''}\n\n"
             f"- Games watched: {games}\n- {verb} {len(out.dispatches)} update(s): {times}\n"
+            f"- Final updates for: {', '.join(f'{k} {d}' for k, d in sorted(out.finalized)) or 'none'}\n"
             f"- {'Would hand over' if dry else 'Handed over'} to a fresh run: {'yes' if out.relayed else 'no'}\n"
             f"- Stopped: {out.stopped}\n")
 
 
 # ---- commands ------------------------------------------------------------------------------------------- #
+
+def test_dispatch(repo: str, token: str) -> int:
+    """Start one game-day update on main and stop: proof that GITHUB_TOKEN may dispatch, on any day."""
+    try:
+        dispatch(repo, token, UPDATE_WORKFLOW, {"gameday": "true"})
+    except Exception as exc:  # noqa: BLE001 - this is the thing being tested: say so plainly, and fail
+        text = (f"## Game-day watcher (test dispatch)\n\n- FAILED to start {UPDATE_WORKFLOW} on {REF} "
+                f"with gameday=true: {exc}\n")
+        print(text)
+        summary(text)
+        return 1
+    text = (f"## Game-day watcher (test dispatch)\n\n- Started {UPDATE_WORKFLOW} on {REF} with gameday=true. "
+            "It should appear under \"Update data and deploy site\" within a minute.\n")
+    print(text)
+    summary(text)
+    return 0
+
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -311,8 +405,24 @@ def main(argv=None) -> int:
     ap.add_argument("--now", default="", help="pretend start time for a dry run (Eastern without an offset)")
     ap.add_argument("--relay", action="store_true", help="this run was started by a watcher handing over")
     ap.add_argument("--no-fetch", action="store_true", help="use data/ as it is (local checks)")
+    ap.add_argument("--watched", default="", help="for a relay: the games the run before watched and still owes a "
+                                                  "final update (sport:YYYY-MM-DD, comma-separated)")
+    ap.add_argument("--test-dispatch", action="store_true",
+                    help="start one game-day update now, whatever the day, and stop (proves the dispatch works)")
     args = ap.parse_args(argv)
     repo, token = os.environ.get("GITHUB_REPOSITORY", ""), os.environ.get("GH_TOKEN", "")
+    if args.test_dispatch and args.dry_run:
+        print("test_dispatch and dry_run cannot be combined: a test dispatch exists to really start a run",
+              file=sys.stderr)
+        return 2
+    if args.test_dispatch and args.now:
+        print("test_dispatch takes no pretend time", file=sys.stderr)
+        return 2
+    try:
+        handed_over = decode_watched(args.watched) if args.relay else set()
+    except ValueError:
+        print(f"--watched must be sport:YYYY-MM-DD, comma-separated: {args.watched!r}", file=sys.stderr)
+        return 2
     pretend = parse_now(args.now)
     if pretend and not args.dry_run:
         print("--now is for dry runs only", file=sys.stderr)
@@ -328,6 +438,13 @@ def main(argv=None) -> int:
         print(f"running={'true' if busy else 'false'}")
         output(running="true" if busy else "false")
         return 0
+
+    if args.test_dispatch and args.command == "gate":
+        print("watch=true: test dispatch (no game check): the watch job starts one game-day update and stops")
+        output(watch="true")
+        return 0
+    if args.test_dispatch and args.command == "watch":
+        return test_dispatch(repo, token)
 
     upcoming, sports = load(not args.no_fetch)
     now = pretend or now_utc()
@@ -350,7 +467,7 @@ def main(argv=None) -> int:
         return 0
 
     if args.command == "gate":
-        watch, why = should_watch(now, upcoming, sports)
+        watch, why = should_watch(now, upcoming, sports, handed_over)
         if watch and not args.relay and not args.dry_run:
             try:
                 runs = active_watchers(repo, token)
@@ -375,18 +492,19 @@ def main(argv=None) -> int:
         def update():
             print(f"  DRY RUN: would start {UPDATE_WORKFLOW} on {REF} with gameday=true")
 
-        def relay():
-            print(f"  DRY RUN: would start a fresh {WATCHER_WORKFLOW} run marked as a relay")
+        def relay(owed):
+            print(f"  DRY RUN: would start a fresh {WATCHER_WORKFLOW} run marked as a relay"
+                  + (f", handing over {encode_watched(owed)}" if owed else ""))
     else:
         clock, sleep = now_utc, time.sleep
 
         def update():
             dispatch(repo, token, UPDATE_WORKFLOW, {"gameday": "true"})
 
-        def relay():
-            dispatch(repo, token, WATCHER_WORKFLOW, {"relay": "true"})
+        def relay(owed):
+            dispatch(repo, token, WATCHER_WORKFLOW, {"relay": "true", "watched": encode_watched(owed)})
 
-    out = run(clock, sleep, lambda: load(not args.no_fetch), update, relay)
+    out = run(clock, sleep, lambda: load(not args.no_fetch), update, relay, handed_over=handed_over)
     text = describe(out, args.dry_run)
     print(text)
     summary(text)

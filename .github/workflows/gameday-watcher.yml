@@ -1,11 +1,11 @@
 name: Game-day watcher
-run-name: ${{ inputs.dry_run && 'Game-day watcher (dry run)' || (inputs.relay && 'Game-day watcher (relay)' || 'Game-day watcher') }}
+run-name: ${{ inputs.dry_run && 'Game-day watcher (dry run)' || (inputs.test_dispatch && 'Game-day watcher (test dispatch)' || (inputs.relay && 'Game-day watcher (relay)' || 'Game-day watcher')) }}
 
 # Keeps the site updating every 15 minutes during a DePauw vs. Wabash game, without depending on GitHub starting
 # more scheduled runs (it drops most of them when busy). Once one run of this workflow starts on a game day, it
 # starts "Update data and deploy site" on main itself (workflow_dispatch with gameday: true, so that run reads only
-# the sports being played) every 15 minutes until the game-day window closes, then once more if every result came in,
-# and stops. scraper/watcher.py has the rules; the window rules are gameday.py's.
+# the sports being played) every 15 minutes while a game-day window is open, plus one final update for each game
+# once its result is in, and stops when the day's last window closes. scraper/watcher.py has the rules; the window rules are gameday.py's.
 #
 # It never fetches the schools' sites, never commits and never deploys: it reads the data branch and starts the
 # existing workflow. Only the watch job holds actions: write, to start those runs.
@@ -18,6 +18,9 @@ run-name: ${{ inputs.dry_run && 'Game-day watcher (dry run)' || (inputs.relay &&
 # One watcher at a time: the gate of a run that is not a relay or a dry run stands aside when an older watcher run
 # is in progress (the newer always yields), and the watch job's concurrency group queues anything that slips past.
 # Dry runs dispatch nothing, simulate the clock instead of sleeping, and take a pretend start time.
+# A test dispatch (test_dispatch, never with dry_run) skips the game check, starts one game-day update on main and
+# stops: proof that the dispatch works before a game day. It has its own concurrency group, so it never waits
+# behind a running watcher, and the other watcher runs ignore it.
 
 on:
   schedule:
@@ -32,10 +35,18 @@ on:
         description: "Dry runs only: a pretend start time, Eastern unless it has an offset (for example 2026-11-14T12:30)"
         type: string
         default: ""
+      test_dispatch:
+        description: "Test dispatch: start one game-day update on main now, whatever the day, and stop (not with dry run)"
+        type: boolean
+        default: false
       relay:
         description: "Set by the watcher itself when it hands over to a fresh run; leave it unticked"
         type: boolean
         default: false
+      watched:
+        description: "Set by the watcher itself on a relay: the games still owed a final update; leave it empty"
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -66,13 +77,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           DRY_RUN: ${{ inputs.dry_run }}
+          TEST_DISPATCH: ${{ inputs.test_dispatch }}
           RELAY: ${{ inputs.relay }}
+          WATCHED: ${{ inputs.watched }}
           PRETEND_NOW: ${{ inputs.pretend_now }}
         run: |
           args="--no-fetch"
           if [ "$DRY_RUN" = "true" ]; then args="$args --dry-run"; fi
+          if [ "$TEST_DISPATCH" = "true" ]; then args="$args --test-dispatch"; fi
           if [ "$RELAY" = "true" ]; then args="$args --relay"; fi
-          python3 scraper/watcher.py gate $args --now "$PRETEND_NOW"
+          python3 scraper/watcher.py gate $args --now "$PRETEND_NOW" --watched "$WATCHED"
 
   watch:
     needs: gate
@@ -80,7 +94,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 330 # the watcher hands over to a fresh run after about 5 hours; GitHub's limit is 6
     concurrency:
-      group: ${{ inputs.dry_run && format('gameday-watcher-dry-{0}', github.run_id) || 'gameday-watcher' }}
+      group: ${{ (inputs.dry_run || inputs.test_dispatch) && format('gameday-watcher-solo-{0}', github.run_id) || 'gameday-watcher' }}
       cancel-in-progress: false
     permissions:
       contents: read
@@ -100,8 +114,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           DRY_RUN: ${{ inputs.dry_run }}
+          TEST_DISPATCH: ${{ inputs.test_dispatch }}
+          RELAY: ${{ inputs.relay }}
+          WATCHED: ${{ inputs.watched }}
           PRETEND_NOW: ${{ inputs.pretend_now }}
         run: |
           args=""
-          if [ "$DRY_RUN" = "true" ]; then args="--dry-run"; fi
-          python3 scraper/watcher.py watch $args --now "$PRETEND_NOW"
+          if [ "$DRY_RUN" = "true" ]; then args="$args --dry-run"; fi
+          if [ "$TEST_DISPATCH" = "true" ]; then args="$args --test-dispatch"; fi
+          if [ "$RELAY" = "true" ]; then args="$args --relay"; fi
+          python3 scraper/watcher.py watch $args --now "$PRETEND_NOW" --watched "$WATCHED"
