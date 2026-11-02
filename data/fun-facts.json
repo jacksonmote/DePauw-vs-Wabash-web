@@ -215,6 +215,242 @@
       ]
     },
     {
+      "id": "depauw-greencastle-bid",
+      "school": "depauw",
+      "text": "Greencastle residents raised $25,000, then a huge sum, to bring the new university to town. Indiana’s General Assembly chartered it on Jan 10, 1837.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-first-students",
+      "school": "depauw",
+      "text": "Indiana Asbury opened with one professor and five students. Its first class graduated three years later.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-simpson",
+      "school": "depauw",
+      "text": "Matthew Simpson, Indiana Asbury’s first president, was a friend and counselor of Abraham Lincoln.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-edifice",
+      "school": "depauw",
+      "text": "East College, whose cornerstone was laid in 1870, was first called “The Edifice.” It once held classrooms, the chapel, the library, and for a short time a telescope in its east tower.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-meharry",
+      "school": "depauw",
+      "text": "Meharry Hall, the chapel on East College’s second floor, was designed to be “one of the most elegant audience rooms in the West.”",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-petrified-turtle",
+      "school": "depauw",
+      "text": "Before it came to DePauw, the Boulder sat on Hiram Thomas’s farm, where he charged visitors 10 cents to see what he called a petrified turtle.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        },
+        {
+          "label": "DePauw archives: Symbols of old DePauw",
+          "url": "https://library.depauw.edu/library/archives/ehistory/chapter2/symbols.html"
+        }
+      ]
+    },
+    {
+      "id": "depauw-boulder-horses",
+      "school": "depauw",
+      "text": "Alumni bought the Boulder and brought it to campus by the Monon Railroad and a wagon drawn by 26 horses.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-first-boulder",
+      "school": "depauw",
+      "text": "The first Boulder, placed by the senior class in 1877, weighed 5,000 pounds and bore the class motto in Greek, “Andrizometha,” or “Let us be manly.”",
+      "sources": [
+        {
+          "label": "DePauw archives: Symbols of old DePauw",
+          "url": "https://library.depauw.edu/library/archives/ehistory/chapter2/symbols.html"
+        }
+      ]
+    },
+    {
+      "id": "depauw-little-5",
+      "school": "depauw",
+      "text": "DePauw’s Little 5 bike race began in 1956, when the Union Board held a men’s race to raise money for the American Cancer Society.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-the-depauw",
+      "school": "depauw",
+      "text": "The DePauw, the student newspaper, began in 1852 as Asbury Notes. It is Indiana’s oldest college newspaper.",
+      "sources": [
+        {
+          "label": "The DePauw: About us",
+          "url": "https://thedepauw.com/about-us/"
+        },
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-old-gold-day",
+      "school": "depauw",
+      "text": "Old Gold Day began in 1907 to end increasingly violent freshman-sophomore class scraps. By 1919 it had grown into a full homecoming weekend.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        }
+      ]
+    },
+    {
+      "id": "depauw-arch",
+      "school": "depauw",
+      "text": "The Arch at the end of Anderson Street, with “DPU” at its peak, was the class of 1890’s gift at its 20th reunion in 1910.",
+      "sources": [
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
+        },
+        {
+          "label": "DePauw archives: Symbols of old DePauw",
+          "url": "https://library.depauw.edu/library/archives/ehistory/chapter2/symbols.html"
+        }
+      ]
+    },
+    {
+      "id": "depauw-yell",
+      "school": "depauw",
+      "text": "An early DePauw college yell was first given at the DePauw-Butler football game in Indianapolis on Nov 1, 1890.",
+      "sources": [
+        {
+          "label": "DePauw archives: Early DePauw customs",
+          "url": "https://library.depauw.edu/library/archives/ehistory/chapter2/Customs.html"
+        }
+      ]
+    },
+    {
+      "id": "depauw-standpipe",
+      "school": "depauw",
+      "text": "DePauw classes began putting their numerals on the standpipe in Feb 1889. One member of the class of 1892 used orange letters seven feet long.",
+      "sources": [
+        {
+          "label": "DePauw archives: Early DePauw customs",
+          "url": "https://library.depauw.edu/library/archives/ehistory/chapter2/Customs.html"
+        }
+      ]
+    },
+    {
+      "id": "depauw-class-hats",
+      "school": "depauw",
+      "text": "In the early 1880s, sophomores began wearing plug hats, starting a custom of each class choosing its own garb. The juniors soon took the “Oxford hat.”",
+      "sources": [
+        {
+          "label": "DePauw archives: Early DePauw customs",
+          "url": "https://library.depauw.edu/library/archives/ehistory/chapter2/Customs.html"
+        }
+      ]
+    },
+    {
+      "id": "depauw-cap-and-gown",
+      "school": "depauw",
+      "text": "Caps and gowns did not arrive at DePauw until 1894, when seniors first wore them. Tradition says juniors tried to confiscate them on their first appearance.",
+      "sources": [
+        {
+          "label": "DePauw archives: Early DePauw customs",
+          "url": "https://library.depauw.edu/library/archives/ehistory/chapter2/Customs.html"
+        }
+      ]
+    },
+    {
+      "id": "depauw-satc",
+      "school": "depauw",
+      "text": "In World War I, 500 men were inducted into DePauw’s Students’ Army Training Corps on Oct 1, 1918, in a ceremony near the Boulder.",
+      "sources": [
+        {
+          "label": "DePauw archives: History",
+          "url": "https://library.depauw.edu/library/archives/ehistory/chapter2/2index13.html"
+        }
+      ]
+    },
+    {
+      "id": "depauw-halfway-house",
+      "school": "depauw",
+      "text": "DePauw rules once forbade couples from riding to Halfway House, a dinner spot known for its cherry preserves, in a “single rig,” or two-seated buggy.",
+      "sources": [
+        {
+          "label": "DePauw archives: Student haunts",
+          "url": "https://library.depauw.edu/library/archives/ehistory/chapter2/haunts.html"
+        }
+      ]
+    },
+    {
+      "id": "depauw-cliffs-of-fern",
+      "school": "depauw",
+      "text": "Cliffs of Fern, an old DePauw student haunt, was once so popular that the railroad ran excursion trains to it from Terre Haute and Indianapolis.",
+      "sources": [
+        {
+          "label": "DePauw archives: Student haunts",
+          "url": "https://library.depauw.edu/library/archives/ehistory/chapter2/haunts.html"
+        }
+      ]
+    },
+    {
+      "id": "depauw-julian",
+      "school": "depauw",
+      "text": "Percy Julian, DePauw’s 1920 valedictorian, later returned to research in its Minshall Laboratory and synthesized physostigmine, a drug used to treat glaucoma.",
+      "sources": [
+        {
+          "label": "DePauw archives: Percy L. Julian",
+          "url": "https://library.depauw.edu/library/archives/ehistory/chapter4/Julian.html"
+        },
+        {
+          "label": "DePauw: Percy Julian life chronology",
+          "url": "https://www.depauw.edu/julian/chronology/"
+        }
+      ]
+    },
+    {
       "id": "wabash-founding",
       "school": "wabash",
       "text": "Wabash was founded on Nov 21, 1832, and its founders knelt in the snow the next day to dedicate the school.",
@@ -395,6 +631,230 @@
         {
           "label": "Wabash: Dear Old Wabash blog",
           "url": "https://blog.wabash.edu/dearoldwabash/2021/12/13/founding-of-the-sphinx-club/"
+        }
+      ]
+    },
+    {
+      "id": "wabash-thomson-meeting",
+      "school": "wabash",
+      "text": "Wabash was born at a meeting in the home of James Thomson, considered the motivating force behind a college in what was then called the Wabash Country.",
+      "sources": [
+        {
+          "label": "Wabash: A Brief History",
+          "url": "https://www.wabash.edu/aboutwabash/history"
+        }
+      ]
+    },
+    {
+      "id": "wabash-high-school",
+      "school": "wabash",
+      "text": "Wabash’s founders planned to begin as “a classical and English high school, rising into a college as soon as the wants of the country demand.”",
+      "sources": [
+        {
+          "label": "Wabash: A Brief History",
+          "url": "https://www.wabash.edu/aboutwabash/history"
+        }
+      ]
+    },
+    {
+      "id": "wabash-forest-hall",
+      "school": "wabash",
+      "text": "On Dec 3, 1833, Caleb Mills met Wabash’s first class of twelve students in Forest Hall. For the next five years, that building was the college.",
+      "sources": [
+        {
+          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
+        }
+      ]
+    },
+    {
+      "id": "wabash-forest-hall-moves",
+      "school": "wabash",
+      "text": "Forest Hall, built in 1833, was bought by Caleb Mills in 1850 and later moved to the present campus. It was moved again in 1951 and reached its current spot in 1965.",
+      "sources": [
+        {
+          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
+        }
+      ]
+    },
+    {
+      "id": "wabash-south-hall-fire",
+      "school": "wabash",
+      "text": "South Hall, Wabash’s first brick building, burned in 1838, soon after it opened. Crawfordsville’s citizens gave $5,000 to rebuild it in time for the fall 1839 term.",
+      "sources": [
+        {
+          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
+        }
+      ]
+    },
+    {
+      "id": "wabash-center-hall",
+      "school": "wabash",
+      "text": "Center Hall, begun in 1856 and built in three stages, is Wabash’s oldest surviving brick building.",
+      "sources": [
+        {
+          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
+        }
+      ]
+    },
+    {
+      "id": "wabash-college-bell",
+      "school": "wabash",
+      "text": "The 811-pound college bell in Center Hall was hung on Nov 8, 1876, at 29 cents a pound. Tugging its rope gives a sense of its heft.",
+      "sources": [
+        {
+          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
+        }
+      ]
+    },
+    {
+      "id": "wabash-senior-bench",
+      "school": "wabash",
+      "text": "Wabash’s Senior Bench is formally the Thomson Memorial Seat. Student groups paint it so often that its inscriptions are hard to read.",
+      "sources": [
+        {
+          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
+        }
+      ]
+    },
+    {
+      "id": "wabash-civil-war-tablet",
+      "school": "wabash",
+      "text": "Gen. Lew Wallace and poet James Whitcomb Riley took part in dedicating the Civil War tablet on Wabash’s Center Hall on June 17, 1902.",
+      "sources": [
+        {
+          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
+        }
+      ]
+    },
+    {
+      "id": "wabash-chickamauga",
+      "school": "wabash",
+      "text": "More Wabash students fought and died at the Battle of Chickamauga than in any other Civil War battle.",
+      "sources": [
+        {
+          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
+        }
+      ]
+    },
+    {
+      "id": "wabash-hovey-rock",
+      "school": "wabash",
+      "text": "Hovey Rock, dedicated by the Class of 1876, honors founder Edmund Otis Hovey, generally considered the most important person in Wabash’s history.",
+      "sources": [
+        {
+          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
+        }
+      ]
+    },
+    {
+      "id": "wabash-pioneer-chapel",
+      "school": "wabash",
+      "text": "Pioneer Chapel was dedicated to the memory of Indiana pioneers on Jan 10, 1929. Before it, Wabash’s main buildings faced east, toward today’s Arboretum.",
+      "sources": [
+        {
+          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
+        }
+      ]
+    },
+    {
+      "id": "wabash-arboretum",
+      "school": "wabash",
+      "text": "Wabash’s Fuller Arboretum holds examples of most tree species native to Indiana.",
+      "sources": [
+        {
+          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
+        }
+      ]
+    },
+    {
+      "id": "wabash-yell",
+      "school": "wabash",
+      "text": "Wabash’s yell, “Wah-hoo-Wah! Wah-hoo-Wah! Wah-hoo! Wah-hoo! Wabash!”, lasted from 1886 until 1932, when it was modernized to “Hoo-Wah-Wah!”",
+      "sources": [
+        {
+          "label": "Wabash Athletics History",
+          "url": "https://sports.wabash.edu/sports/2011/8/1/GEN_0801115020.aspx"
+        }
+      ]
+    },
+    {
+      "id": "wabash-decathlon",
+      "school": "wabash",
+      "text": "The 1956 U.S. Olympic decathlon trials were held at Wabash, where Rafer Johnson, Milt Campbell, and Bob Richards competed before a capacity crowd at Ingalls Field.",
+      "sources": [
+        {
+          "label": "Wabash: When Wabash took center stage",
+          "url": "https://www.wabash.edu/news/story/3694"
+        },
+        {
+          "label": "Wabash Athletics History",
+          "url": "https://sports.wabash.edu/sports/2011/8/1/GEN_0801115020.aspx"
+        }
+      ]
+    },
+    {
+      "id": "wabash-1982-title",
+      "school": "wabash",
+      "text": "Wabash won the 1982 NCAA Division III men’s basketball championship, beating Potsdam State 83–62.",
+      "sources": [
+        {
+          "label": "Wabash Athletics History",
+          "url": "https://sports.wabash.edu/sports/2011/8/1/GEN_0801115020.aspx"
+        }
+      ]
+    },
+    {
+      "id": "wabash-jesse-harper",
+      "school": "wabash",
+      "text": "Before he went to Notre Dame and coached Knute Rockne, Jesse Harper was Wabash’s football coach.",
+      "sources": [
+        {
+          "label": "Wabash Athletics History",
+          "url": "https://sports.wabash.edu/sports/2011/8/1/GEN_0801115020.aspx"
+        }
+      ]
+    },
+    {
+      "id": "wabash-little-giant-club",
+      "school": "wabash",
+      "text": "The Wabash Little Giant Club was formed at Homecoming 1920 to honor every letterman since 1866, plus managers, cheerleaders, and champion orators.",
+      "sources": [
+        {
+          "label": "Wabash Athletics History",
+          "url": "https://sports.wabash.edu/sports/2011/8/1/GEN_0801115020.aspx"
+        }
+      ]
+    },
+    {
+      "id": "wabash-mills-house",
+      "school": "wabash",
+      "text": "Caleb Mills built his house in 1836. His descendants gave it to Wabash in 1926, and it became the home of Presidents Hopkins, Sparks, and Trippet.",
+      "sources": [
+        {
+          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
+        }
+      ]
+    },
+    {
+      "id": "wabash-elston-homestead",
+      "school": "wabash",
+      "text": "Since 1966, the Elston Homestead has been the official residence of Wabash’s presidents.",
+      "sources": [
+        {
+          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
         }
       ]
     },
