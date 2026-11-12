@@ -308,7 +308,10 @@ def alumni_content(data: dict, endowment: dict, *, repo_url: str) -> list:
         '<h3>Who counts</h3>',
         '<p>Only people who <strong>earned a degree</strong> from the school count. Honorary degrees, attending '
         'without graduating, nominees, finalists, and people who were part of a winning team or film without an '
-        'individual prize or office do not. Graduates of any gender count, under the school’s historical names too.</p>',
+        'individual prize or office do not. The one team exception is a Pulitzer Prize won by a newsroom’s staff: a '
+        'graduate a source names as part of that staff counts. Graduates of any gender count, under the school’s '
+        'historical names too. An entry names the degree (such as B.A.) only when a cited source states it; '
+        'otherwise it gives the class year.</p>',
         f'<p>Names come only from public information, meaning {esc(privacy.PUBLIC_INFO)} To ask for an entry to be reviewed '
         'or removed, see the <a href="../../privacy/">privacy page</a>.</p>',
         f'<p>The two schools are not the same size or makeup. {esc(alumni_page.context_note(endowment))}</p>',

@@ -28,10 +28,10 @@ def test_committed_records_cover_ten_categories_and_derive_counts():
     assert len(data["categories"]) == 10
     assert all(set(category["review"]) == {"depauw", "wabash"} for category in data["categories"])
     assert alumni.counts(data)["academy-awards"] == {"depauw": 1, "wabash": 0}
-    assert alumni.counts(data)["pulitzer"] == {"depauw": 3, "wabash": 1}
+    assert alumni.counts(data)["pulitzer"] == {"depauw": 4, "wabash": 1}
     assert alumni.counts(data)["rhodes-scholars"] == {"depauw": 3, "wabash": 9}
     assert alumni.counts(data)["representatives"] == {"depauw": 19, "wabash": 11}
-    assert alumni.counts(data)["fortune-500-ceos"] == {"depauw": 8, "wabash": 3}
+    assert alumni.counts(data)["fortune-500-ceos"] == {"depauw": 10, "wabash": 3}
     assert "james-keyes" not in {person["id"] for person in data["people"]}
     assert all(alumni.counts(data)[c["id"]]["depauw"] + alumni.counts(data)[c["id"]]["wabash"]
                for c in alumni.visible_categories(data))
@@ -309,17 +309,18 @@ def test_degree_labels_say_what_is_recorded_and_never_the_vague_graduate():
     assert alumni.degree_label({"degree": "B.A.", "degree_year": 1969}) == "B.A., 1969"
     assert alumni.degree_label({"degree": "Graduate", "degree_year": 1885}) == "Class of 1885"
     assert alumni.degree_label({"degree": "Law department graduate", "degree_year": 1866}) == "Law department graduate, 1866"
-    assert alumni.degree_label(people["mike-braun"]) == "Class of 1976"
+    assert alumni.degree_label(people["mike-braun"]) == "B.A., 1976"
     demotte = next(p for p in people.values() if p["degree"].startswith("Literary department"))
     assert alumni.degree_label(demotte) == demotte["degree"]          # already names its years
     page = committed_page()
-    assert "Graduate (" not in page and "Class of 1976" in page and "B.A., 1955" in page
+    assert "Graduate (" not in page and "B.A., 1976" in page and "Class of 1955" in page
 
 
-def test_open_terms_read_present_and_only_braun_has_one():
+def test_open_terms_read_present():
     data = read_data()
-    open_terms = [(p["id"], c) for p in data["people"] for c, q in p["qualifications"].items() if q.get("present")]
-    assert open_terms == [("mike-braun", "governors")]
+    open_terms = {(p["id"], c) for p in data["people"] for c, q in p["qualifications"].items() if q.get("present")}
+    assert open_terms == {("mike-braun", "governors"), ("jeff-harmening", "fortune-500-ceos"),
+                          ("jim-rechtin", "fortune-500-ceos")}
     page = committed_page()
     assert "Governor of Indiana (2025–present)" in page and "U.S. senator from Indiana (2019–2025)" in page
     assert alumni._format_years([2025], True) == "2025–present"
@@ -593,3 +594,23 @@ def test_the_higher_count_underline_is_on_the_number_not_the_cell():
 def test_the_alumni_subtitle_matches_the_athletics_capitalization_after_the_colon():
     after = lambda text: text.split(": ", 1)[1]
     assert after(alumni.SUBTITLE)[0].islower() and after(render.SUBTITLE)[0].islower()
+
+
+def test_audit_decisions_of_2026_11_12_hold():
+    """Jackson's rulings: staff Pulitzers and special citations count, a territorial Delegate is not a U.S.
+    representative, and a managing partner counts as CEO only where a filing gives the CEO title."""
+    people = {p["id"]: p for p in read_data()["people"]}
+    assert "pulitzer" in people["ben-solomon"]["categories"] and "pulitzer" in people["byron-price"]["categories"]
+    assert not any("bennett" in pid for pid in people)
+    weddle = people["jim-weddle"]["qualifications"]["fortune-500-ceos"]
+    assert "Chief Executive Officer" in weddle["source"]["label"] and weddle["rank_year"] == 2018
+    assert people["newton-booth"]["qualifications"]["governors"]["years"] == [1871, 1875]
+    rechtin = people["jim-rechtin"]["qualifications"]["fortune-500-ceos"]
+    assert rechtin["rank_year"] == 2025 and rechtin["years"][0] == 2024     # became CEO after the 2024 list
+
+
+def test_fortune_entries_record_a_tenure_not_just_the_ranking_year():
+    for p in read_data()["people"]:
+        q = p["qualifications"].get("fortune-500-ceos")
+        if q and p["id"] != "paul-tippett":                                  # tenure not yet sourced
+            assert len(q["years"]) >= 2 and q["years"][0] <= q["rank_year"] <= q["years"][-1], p["id"]
