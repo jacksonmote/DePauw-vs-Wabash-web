@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "verified_at": "2026-11-02",
-  "methodology": "Named earned-degree holders found by reviewing each school's notable-alumni material and the relevant official award or office records. Count a person once per school and category. Include all genders and historical school names; exclude honorary-only degrees, attendance without an earned degree, nominees, finalists, team members without an individual award, and executives without the qualifying title and year overlap. These are verified named graduates in the reviewed sources, not a claim of complete all-time coverage.",
+  "verified_at": "2026-11-12",
+  "methodology": "Named earned-degree holders found by reviewing each school’s notable-alumni material and the relevant official award or office records. Count a person once per school and category. Include all genders and historical school names; exclude honorary-only degrees, attendance without an earned degree, nominees, finalists, members of a winning team or film without an individual award, and executives without the qualifying CEO title and year overlap. The one team exception is a Pulitzer Prize awarded to a newsroom’s staff: a graduate a source names as part of that staff counts. A degree type such as B.A. is shown only where a cited source states it; otherwise the entry gives the class year. These are verified named graduates in the reviewed sources, not a claim of complete all-time coverage.",
   "categories": [
     {
       "id": "nobel",
@@ -108,7 +108,7 @@
       "definition": "People who served in the U.S. House of Representatives; state legislative service does not qualify.",
       "review": {
         "depauw": {
-          "notes": "Reviewed the official Congressional Biographical Directory biographies for DePauw graduates and House service. The directory provides degree and federal House-term evidence for listed members; state or territorial legislative service alone is excluded.",
+          "notes": "Reviewed the official Congressional Biographical Directory biographies for DePauw graduates and House service. The directory provides degree and federal House-term evidence for listed members; state or territorial legislative service alone is excluded. Thomas W. Bennett (Asbury law department, 1854) served only as a nonvoting territorial Delegate and is excluded.",
           "sources": [
             {
               "label": "Official U.S. Congressional Biographical Directory entries, with individual page links in each record",
@@ -154,7 +154,7 @@
           ]
         },
         "wabash": {
-          "notes": "Reviewed Wabash graduates against National Governors Association state governor biographies. Thomas R. Marshall and Mike Braun are included; Richard Ristine is excluded because he was lieutenant governor, not governor.",
+          "notes": "Reviewed Wabash graduates against National Governors Association state governor biographies. Thomas R. Marshall and Mike Braun are included; Richard Ristine is excluded because he was lieutenant governor, not governor, and Dwight H. Green and Jim Edgar attended Wabash without graduating.",
           "sources": [
             {
               "label": "Wabash College alumni records",
@@ -174,7 +174,7 @@
       "definition": "People who served as chief executive officer of a company on the U.S. Fortune 500 during an overlapping ranking year; subsidiaries and chair-only roles do not qualify.",
       "review": {
         "depauw": {
-          "notes": "Reviewed named DePauw business leaders in College records against company leadership biographies and dated U.S. Fortune 500 lists. Each displayed graduate has a sourced CEO tenure and at least one matching Fortune ranking year; chair-only roles are excluded.",
+          "notes": "Reviewed named DePauw business leaders in College records against company leadership biographies, SEC filings, and dated U.S. Fortune 500 lists. Each displayed graduate has a sourced CEO tenure and at least one matching Fortune ranking year; chair-only roles are excluded. Richard D. Wood earned his degree at Purdue, Judson Green led a Disney division rather than the company, and Robert R. Frederick (RCA, 1985 to 1986) is not shown because no dated Fortune ranking for RCA could be checked.",
           "sources": [
             {
               "label": "DePauw Board of Trustees roster",
@@ -187,7 +187,7 @@
           ]
         },
         "wabash": {
-          "notes": "Reviewed named Wabash business leaders against school class records, company biographies, historical U.S. Fortune 500 lists, and the Congressional Research Service 1983 executive directory. Robert E. Allen, W. Paul Tippett, and Walter Y. Elisha have sourced degree evidence, CEO service, and an overlapping rank. James L. Keyes is excluded: he is not the Johnson Controls CEO James H. Keyes.",
+          "notes": "Reviewed named Wabash business leaders against school class records, company biographies, SEC filings, historical U.S. Fortune 500 lists, and the Congressional Research Service 1983 executive directory. Robert E. Allen, W. Paul Tippett, and Walter Y. Elisha have sourced degree evidence, CEO service, and an overlapping rank. James L. Keyes is excluded: he is not the Johnson Controls CEO James H. Keyes. John Bachmann is excluded: Jones Financial is on none of the Fortune 500 lists reviewed for his years as managing partner.",
           "sources": [
             {
               "label": "Wabash political science alumni: Robert E. Allen ’57",
@@ -204,10 +204,10 @@
     {
       "id": "pulitzer",
       "name": "Pulitzer Prize winners",
-      "definition": "Named individual Pulitzer Prize recipients; nominees, finalists, and contributors to a winning organization without an individual prize are excluded.",
+      "definition": "Named Pulitzer Prize recipients, including special citations and staff prizes where a source names the graduate as part of the winning staff; nominees and finalists are excluded.",
       "review": {
         "depauw": {
-          "notes": "Reviewed the DePauw official alumni roster and Pulitzer recipients. Named DePauw graduate recipients are Barbara Kingsolver, James B. Stewart, and Albert J. Beveridge.",
+          "notes": "Reviewed the DePauw official alumni roster and Pulitzer recipients. Named DePauw graduate recipients are Barbara Kingsolver, James B. Stewart, Albert J. Beveridge, and Ben C. Solomon, who was part of The New York Times staff that won the 2015 prize for International Reporting.",
           "sources": [
             {
               "label": "DePauw 100 CLAS Alumni",
@@ -220,7 +220,7 @@
           ]
         },
         "wabash": {
-          "notes": "Reviewed Wabash alumni records against the Pulitzer database. Byron Price (Wabash 1912) received the 1944 Pulitzer special citation for distinguished public service in war reporting. Faculty, visitors, honorary alumni, nominees, and contributors without a named prize are excluded.",
+          "notes": "Reviewed Wabash alumni records against the Pulitzer database. Byron Price (Wabash 1912) received the 1944 Pulitzer special citation for distinguished public service in war reporting. Faculty, visitors, honorary alumni, nominees, and finalists are excluded.",
           "sources": [
             {
               "label": "Pulitzer Prize special citations, 1944",
@@ -400,8 +400,8 @@
             1911
           ],
           "source": {
-            "label": "Biographical Directory of Congress",
-            "url": "https://bioguide.congress.gov/search/bio/B000429"
+            "label": "Official Congressional Biographical Directory: Albert J. Beveridge (PDF p. 658)",
+            "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=658"
           }
         },
         "pulitzer": {
@@ -420,7 +420,7 @@
       "id": "barbara-kingsolver",
       "name": "Barbara Kingsolver",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1977,
       "categories": [
         "pulitzer"
@@ -500,7 +500,7 @@
       "id": "dan-quayle",
       "name": "Dan Quayle",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1969,
       "categories": [
         "vice-presidents",
@@ -592,14 +592,14 @@
       "id": "douglas-hallward-driemeier",
       "name": "Douglas Hallward-Driemeier",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1989,
       "categories": [
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "Ropes & Gray biography",
-        "url": "https://www.ropesgray.com/en/people/h/douglas-hallward-driemeier"
+        "label": "DePauw story: Douglas Hallward-Driemeier ’89, Rhodes Scholar",
+        "url": "https://www.depauw.edu/stories/details/rectors-changing-lives-changing-an-institution-changing-the-world/"
       },
       "qualifications": {
         "rhodes-scholars": {
@@ -608,8 +608,8 @@
             1989
           ],
           "source": {
-            "label": "Rhodes Scholar directory",
-            "url": "https://www.rhodeshouse.ox.ac.uk/scholar-network/rhodes-scholar-database/"
+            "label": "Rhodes Trust Scholar API record: Douglas Hallward-Driemeier, Missouri & Hertford 1989",
+            "url": "https://www.rhodeshouse.ox.ac.uk/umbraco/api/ScholarApi/Scholars?year=1989&lastname=Hallward-Driemeier"
           }
         }
       }
@@ -618,7 +618,7 @@
       "id": "ferid-murad",
       "name": "Ferid Murad",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1958,
       "categories": [
         "nobel"
@@ -698,7 +698,7 @@
       "id": "henry-buchtel",
       "name": "Henry Augustus Buchtel",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1872,
       "categories": [
         "governors"
@@ -725,7 +725,7 @@
       "id": "ian-rolland",
       "name": "Ian M. Rolland",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1955,
       "categories": [
         "fortune-500-ceos"
@@ -738,7 +738,8 @@
         "fortune-500-ceos": {
           "achievement": "CEO of Lincoln National Corporation",
           "years": [
-            1996
+            1977,
+            1998
           ],
           "source": {
             "label": "Trine University biography: Lincoln National CEO 1977–1998",
@@ -785,7 +786,7 @@
       "id": "james-stewart",
       "name": "James B. Stewart",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1973,
       "categories": [
         "pulitzer"
@@ -881,7 +882,7 @@
       "id": "jeffrey-mezger",
       "name": "Jeffrey T. Mezger",
       "school": "depauw",
-      "degree": "B.S.",
+      "degree": "Graduate",
       "degree_year": 1977,
       "categories": [
         "fortune-500-ceos"
@@ -894,7 +895,8 @@
         "fortune-500-ceos": {
           "achievement": "President and CEO of KB Home",
           "years": [
-            2008
+            2006,
+            2026
           ],
           "source": {
             "label": "KB Home 2026 proxy: CEO until 2026 transition",
@@ -914,7 +916,7 @@
       "id": "jim-rechtin",
       "name": "Jim Rechtin",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1993,
       "categories": [
         "fortune-500-ceos"
@@ -927,19 +929,21 @@
         "fortune-500-ceos": {
           "achievement": "CEO of Humana",
           "years": [
-            2024
+            2024,
+            2026
           ],
           "source": {
-            "label": "DePauw profile identifying Rechtin as Humana CEO",
-            "url": "https://www.depauw.edu/stories/details/jim-rechtin-93-featured-in-fortune-magazine/"
+            "label": "Humana 8-K, May 13, 2024: Rechtin to become President and CEO on July 1, 2024",
+            "url": "https://www.sec.gov/Archives/edgar/data/49071/000004907124000025/hum-20240513.htm"
           },
           "company": "Humana",
-          "rank_year": 2024,
-          "rank": 38,
+          "rank_year": 2025,
+          "rank": 39,
           "ranking_source": {
-            "label": "Fortune U.S. Fortune 500 ranking, 2024",
-            "url": "https://fortune.com/ranking/fortune500/2024/"
-          }
+            "label": "Fortune U.S. Fortune 500 ranking, 2025",
+            "url": "https://fortune.com/ranking/fortune500/2025/"
+          },
+          "present": true
         }
       }
     },
@@ -974,7 +978,7 @@
       "id": "john-mcnaughton",
       "name": "John McNaughton",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1942,
       "categories": [
         "rhodes-scholars"
@@ -990,8 +994,8 @@
             1948
           ],
           "source": {
-            "label": "Rhodes Scholar directory",
-            "url": "https://www.rhodeshouse.ox.ac.uk/scholar-network/rhodes-scholar-database/"
+            "label": "Rhodes Trust Scholar API record: John McNaughton, Indiana & Oriel 1948",
+            "url": "https://www.rhodeshouse.ox.ac.uk/umbraco/api/ScholarApi/Scholars?year=1948&lastname=McNaughton"
           }
         }
       }
@@ -1000,7 +1004,7 @@
       "id": "elmer-thomas",
       "name": "John William Elmer Thomas",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "Graduate department",
       "degree_year": 1900,
       "categories": [
         "senators",
@@ -1084,8 +1088,8 @@
         "astronauts"
       ],
       "school_source": {
-        "label": "DePauw biography identifying Joe Allen as a 1959 graduate",
-        "url": "https://www.depauw.edu/stories/details/rectors-changing-lives-changing-an-institution-changing-the-world/"
+        "label": "NASA biographical data: B.A. in math-physics, DePauw University, 1959",
+        "url": "https://www.nasa.gov/wp-content/uploads/2016/01/allen_joseph_p.pdf"
       },
       "qualifications": {
         "astronauts": {
@@ -1096,7 +1100,7 @@
           ],
           "source": {
             "label": "NASA Joseph P. Allen astronaut biographical data",
-            "url": "https://www.nasa.gov/wp-content/uploads/2016/01/allen_joseph_p.pdf?emrc=68a4bfbf8de9b"
+            "url": "https://www.nasa.gov/wp-content/uploads/2016/01/allen_joseph_p.pdf"
           }
         }
       }
@@ -1132,7 +1136,7 @@
       "id": "lee-hamilton",
       "name": "Lee H. Hamilton",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1952,
       "categories": [
         "representatives"
@@ -1239,11 +1243,11 @@
           "achievement": "Governor of California",
           "years": [
             1871,
-            1874
+            1875
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Newton Booth (PDF p. 686)",
-            "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=686"
+            "label": "National Governors Association: Newton Booth, Governor of California 1871–1875",
+            "url": "https://www.nga.org/governor/newton-booth/"
           }
         }
       }
@@ -1252,7 +1256,7 @@
       "id": "r-david-hoover",
       "name": "R. David Hoover",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Bachelor’s degree",
       "degree_year": 1967,
       "categories": [
         "fortune-500-ceos"
@@ -1265,7 +1269,8 @@
         "fortune-500-ceos": {
           "achievement": "President and CEO of Ball Corporation",
           "years": [
-            2008
+            2001,
+            2011
           ],
           "source": {
             "label": "Ball Corporation announcement: Hoover CEO since 2001, successor effective January 2011",
@@ -1338,7 +1343,7 @@
       "id": "samuel-elrod",
       "name": "Samuel H. Elrod",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1882,
       "categories": [
         "governors"
@@ -1365,7 +1370,7 @@
       "id": "stephen-sanger",
       "name": "Stephen W. Sanger",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1968,
       "categories": [
         "fortune-500-ceos"
@@ -1378,7 +1383,8 @@
         "fortune-500-ceos": {
           "achievement": "Chairman and CEO of General Mills",
           "years": [
-            1996
+            1995,
+            2007
           ],
           "source": {
             "label": "SEC proxy identifying Sanger as General Mills CEO from 1995",
@@ -1398,7 +1404,7 @@
       "id": "steven-rales",
       "name": "Steven Rales",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1973,
       "categories": [
         "academy-awards",
@@ -1422,7 +1428,8 @@
         "fortune-500-ceos": {
           "achievement": "Chief executive officer of Danaher",
           "years": [
-            1989
+            1984,
+            1990
           ],
           "source": {
             "label": "Danaher biography of Steven Rales identifying his CEO service",
@@ -1448,14 +1455,15 @@
         "fortune-500-ceos"
       ],
       "school_source": {
-        "label": "DePauw Board of Trustees and SEC proxy biography: class of 1969",
+        "label": "Cummins 2009 SEC proxy: B.A., DePauw University, 1969",
         "url": "https://investor.cummins.com/sec-filings/all-sec-filings/content/0001047469-09-003649/0001047469-09-003649.pdf"
       },
       "qualifications": {
         "fortune-500-ceos": {
           "achievement": "Chairman and CEO of Cummins",
           "years": [
-            2000
+            2000,
+            2011
           ],
           "source": {
             "label": "Cummins press release, Jul 12, 2011: Solso, chairman and CEO since 2000, to retire",
@@ -1475,7 +1483,7 @@
       "id": "winfield-denton",
       "name": "Winfield Kirkpatrick Denton",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1919,
       "categories": [
         "representatives"
@@ -1547,8 +1555,8 @@
             1931
           ],
           "source": {
-            "label": "Wabash College Trippet Hall history: Byron K. Trippet, Rhodes Scholar",
-            "url": "https://trippet.wabash.edu/"
+            "label": "Rhodes Trust Scholar API record: Byron Trippet, 1931",
+            "url": "https://www.rhodeshouse.ox.ac.uk/umbraco/api/ScholarApi/Scholars?year=1931&lastname=Trippet"
           }
         }
       }
@@ -1557,13 +1565,13 @@
       "id": "byron-price",
       "name": "Byron Price",
       "school": "wabash",
-      "degree": "Graduate",
+      "degree": "B.A.",
       "degree_year": 1912,
       "categories": [
         "pulitzer"
       ],
       "school_source": {
-        "label": "Indiana Journalism Hall of Fame biography: Wabash graduate, class of 1912",
+        "label": "Indiana Journalism Hall of Fame biography: B.A., Wabash College, 1912",
         "url": "https://www.ijhf.org/members/1979/byron-price"
       },
       "qualifications": {
@@ -1642,8 +1650,8 @@
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "Wabash Rhodes Scholar record",
-        "url": "https://www.wabash.edu/news/story/3014"
+        "label": "Wabash Magazine, 2001: Kendall graduated from Wabash in 1966",
+        "url": "https://www.wabash.edu/Magazine/2001/FallWinter2001/Kendall.html"
       },
       "qualifications": {
         "rhodes-scholars": {
@@ -1652,8 +1660,8 @@
             1966
           ],
           "source": {
-            "label": "Wabash Rhodes Scholar record",
-            "url": "https://www.wabash.edu/news/story/3014"
+            "label": "Rhodes Trust Scholar API record: David Kendall, Indiana & Worcester 1966",
+            "url": "https://www.rhodeshouse.ox.ac.uk/umbraco/api/ScholarApi/Scholars?year=1966&lastname=Kendall"
           }
         }
       }
@@ -1678,8 +1686,8 @@
             1947
           ],
           "source": {
-            "label": "Wabash Rhodes Scholar record",
-            "url": "https://www.wabash.edu/news/story/3014"
+            "label": "Rhodes Trust Scholar API record: Frank Barnett, 1947",
+            "url": "https://www.rhodeshouse.ox.ac.uk/umbraco/api/ScholarApi/Scholars?year=1947&lastname=Barnett"
           }
         }
       }
@@ -1730,8 +1738,8 @@
             2015
           ],
           "source": {
-            "label": "Rhodes Scholar directory",
-            "url": "https://www.rhodeshouse.ox.ac.uk/scholar-network/rhodes-scholar-database/"
+            "label": "Rhodes Trust Scholar API record: Jacob Burnett, 2015",
+            "url": "https://www.rhodeshouse.ox.ac.uk/umbraco/api/ScholarApi/Scholars?year=2015&lastname=Burnett"
           }
         }
       }
@@ -1783,8 +1791,8 @@
             2006
           ],
           "source": {
-            "label": "Wabash Rhodes Scholar record",
-            "url": "https://www.wabash.edu/news/story/3014"
+            "label": "Rhodes Trust Scholar API record: Jeremy Robinson, Indiana & Balliol 2006",
+            "url": "https://www.rhodeshouse.ox.ac.uk/umbraco/api/ScholarApi/Scholars?year=2006&lastname=Robinson"
           }
         }
       }
@@ -1886,15 +1894,15 @@
       "id": "mike-braun",
       "name": "Mike Braun",
       "school": "wabash",
-      "degree": "Graduate",
+      "degree": "B.A.",
       "degree_year": 1976,
       "categories": [
         "senators",
         "governors"
       ],
       "school_source": {
-        "label": "Wabash alumni news, Mike Braun ’76",
-        "url": "https://blog.wabash.edu/alumninews/2023/02/09/braun-76-named-2023-business-hall-of-fame-laureates/"
+        "label": "Congressional Directory, 2022: B.A., economics, Wabash College, 1976",
+        "url": "https://www.govinfo.gov/content/pkg/CDIR-2022-10-26/html/CDIR-2022-10-26-IN-S-2.htm"
       },
       "qualifications": {
         "senators": {
@@ -1941,8 +1949,8 @@
             1920
           ],
           "source": {
-            "label": "Wabash Rhodes Scholar record",
-            "url": "https://www.wabash.edu/news/story/3014"
+            "label": "Rhodes Trust Scholar API record: Norman Littell, Indiana & Christ Church 1920",
+            "url": "https://www.rhodeshouse.ox.ac.uk/umbraco/api/ScholarApi/Scholars?year=1920&lastname=Littell"
           }
         }
       }
@@ -2005,7 +2013,7 @@
       "id": "robert-allen",
       "name": "Robert E. Allen",
       "school": "wabash",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1957,
       "categories": [
         "fortune-500-ceos"
@@ -2018,7 +2026,8 @@
         "fortune-500-ceos": {
           "achievement": "CEO of AT&T Corporation",
           "years": [
-            1997
+            1988,
+            1998
           ],
           "source": {
             "label": "Wabash obituary: elected AT&T chairman and CEO in 1988; held the post until 1998",
@@ -2054,8 +2063,8 @@
             1960
           ],
           "source": {
-            "label": "Wabash Rhodes Scholar record",
-            "url": "https://www.wabash.edu/news/story/3014"
+            "label": "Rhodes Trust Scholar API record: Robert Ashman, 1960",
+            "url": "https://www.rhodeshouse.ox.ac.uk/umbraco/api/ScholarApi/Scholars?year=1960&lastname=Ashman"
           }
         }
       }
@@ -2103,14 +2112,14 @@
       "id": "todd-rokita",
       "name": "Todd Rokita",
       "school": "wabash",
-      "degree": "Graduate",
+      "degree": "B.A.",
       "degree_year": 1992,
       "categories": [
         "representatives"
       ],
       "school_source": {
-        "label": "Wabash profile, class of 1992",
-        "url": "https://www.wabash.edu/news/story/1981"
+        "label": "U.S. House History, Art & Archives biography: B.A., Wabash College, 1992",
+        "url": "https://history.house.gov/People/Detail/20822"
       },
       "qualifications": {
         "representatives": {
@@ -2215,7 +2224,7 @@
       "id": "jeff-harmening",
       "name": "Jeffrey L. Harmening",
       "school": "depauw",
-      "degree": "B.A.",
+      "degree": "Graduate",
       "degree_year": 1989,
       "categories": [
         "fortune-500-ceos"
@@ -2228,7 +2237,8 @@
         "fortune-500-ceos": {
           "achievement": "Chairman and CEO of General Mills",
           "years": [
-            2018
+            2017,
+            2026
           ],
           "source": {
             "label": "General Mills announcement naming Harmening CEO, effective 2017",
@@ -2240,7 +2250,8 @@
           "ranking_source": {
             "label": "Fortune U.S. Fortune 500 ranking, 2018; General Mills #182",
             "url": "https://fortune.com/ranking/fortune500/2018/"
-          }
+          },
+          "present": true
         }
       }
     },
@@ -2294,11 +2305,12 @@
         "fortune-500-ceos": {
           "achievement": "CEO of Springs Industries",
           "years": [
-            1989
+            1981,
+            1997
           ],
           "source": {
-            "label": "First-person Springs Industries company biography (NARA archive), p. 13",
-            "url": "https://s3.amazonaws.com/NARAprodstorage/lz/presidential-libraries/clinton/foia/2019/Batch0002/42-t-7431945-20140483S-005-014-2015.pdf"
+            "label": "Springs Industries 1998 SEC proxy: CEO from April 1981 through December 1997",
+            "url": "https://www.sec.gov/Archives/edgar/data/93102/0000950144-98-002432.txt"
           },
           "company": "Springs Industries",
           "rank_year": 1989,
@@ -2320,8 +2332,8 @@
         "representatives"
       ],
       "school_source": {
-        "label": "Wabash alumni record: Luke Messer, class of 1991",
-        "url": "https://www.wabash.edu/alumni/news.cfm?news_ID=1142"
+        "label": "U.S. House History, Art & Archives biography: B.A., Wabash College, 1991",
+        "url": "https://history.house.gov/People/Detail/15032387501"
       },
       "qualifications": {
         "representatives": {
@@ -2333,6 +2345,100 @@
           "source": {
             "label": "U.S. House History, Art & Archives biography: House service 2013–2019",
             "url": "https://history.house.gov/People/Detail/15032387501"
+          }
+        }
+      }
+    },
+    {
+      "id": "jim-weddle",
+      "name": "James D. Weddle",
+      "school": "depauw",
+      "degree": "Graduate",
+      "degree_year": 1975,
+      "categories": [
+        "fortune-500-ceos"
+      ],
+      "school_source": {
+        "label": "DePauw news, Oct 11, 2014 (archived): Weddle, 1975 graduate of DePauw University",
+        "url": "https://web.archive.org/web/20251118201323/https://www.depauw.edu/news-media/latest-news/details/31252/"
+      },
+      "qualifications": {
+        "fortune-500-ceos": {
+          "achievement": "Managing Partner and CEO of Edward Jones",
+          "years": [
+            2006,
+            2018
+          ],
+          "source": {
+            "label": "Jones Financial 10-K for 2017: Managing Partner and Chief Executive Officer since January 2006",
+            "url": "https://www.sec.gov/Archives/edgar/data/815917/000156459018005773/ck0000815917-10k_20171231.htm"
+          },
+          "company": "Jones Financial (Edward Jones)",
+          "rank_year": 2018,
+          "rank": 376,
+          "ranking_source": {
+            "label": "Fortune U.S. Fortune 500 ranking, 2018",
+            "url": "https://fortune.com/ranking/fortune500/2018/"
+          }
+        }
+      }
+    },
+    {
+      "id": "robert-darnall",
+      "name": "Robert J. Darnall",
+      "school": "depauw",
+      "degree": "Graduate",
+      "degree_year": 1960,
+      "categories": [
+        "fortune-500-ceos"
+      ],
+      "school_source": {
+        "label": "DePauw University Archives: Robert Joseph Darnall, class of 1960",
+        "url": "https://depauw.libraryhost.com/agents/people/2446"
+      },
+      "qualifications": {
+        "fortune-500-ceos": {
+          "achievement": "Chairman, President and CEO of Inland Steel Industries",
+          "years": [
+            1992,
+            1998
+          ],
+          "source": {
+            "label": "Inland Steel Industries 1998 SEC proxy: chairman, president and CEO since 1992",
+            "url": "https://www.sec.gov/Archives/edgar/data/790528/0000950131-98-002666.txt"
+          },
+          "company": "Inland Steel Industries",
+          "rank_year": 1997,
+          "rank": 307,
+          "ranking_source": {
+            "label": "Fortune U.S. Fortune 500 ranking, 1997",
+            "url": "https://fortune.com/ranking/fortune500/1997/"
+          }
+        }
+      }
+    },
+    {
+      "id": "ben-solomon",
+      "name": "Ben C. Solomon",
+      "school": "depauw",
+      "degree": "Graduate",
+      "degree_year": 2010,
+      "categories": [
+        "pulitzer"
+      ],
+      "school_source": {
+        "label": "DePauw news, Apr 20, 2015 (archived): Solomon, 2010 graduate of DePauw University",
+        "url": "https://web.archive.org/web/20240917193906/https://www.depauw.edu/news-media/latest-news/details/31618/"
+      },
+      "qualifications": {
+        "pulitzer": {
+          "achievement": "Pulitzer Prize for International Reporting, as part of The New York Times staff",
+          "years": [
+            2015
+          ],
+          "source": {
+            "label": "DePauw news, Apr 20, 2015 (archived): Times staff prize for Ebola coverage",
+            "url": "https://web.archive.org/web/20240917193906/https://www.depauw.edu/news-media/latest-news/details/31618/"
           }
         }
       }
