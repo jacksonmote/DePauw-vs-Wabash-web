@@ -1219,8 +1219,6 @@ def site_footer(now: dt.datetime, *, prefix: str = "", data: dict | None = None,
         f'<a href="{esc(REPO_URL)}">Built in the open: code and data on GitHub</a></p>',
         *([f'<p>{esc(MEN_ONLY)}</p>'] if men_note else []),
         f'<p>{esc(DISCLAIMER)}</p>',
-        '<details class="impartiality"><summary>A note on impartiality</summary>'
-        '<p>The data is independently sourced. The developers were educated correctly.</p></details>',
         f'<p class="copyright">{esc(copyright_line(now))}</p>',
         '</div>',
         '</footer>',

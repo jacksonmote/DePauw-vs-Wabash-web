@@ -156,14 +156,15 @@ def test_history_reward_keeps_ties_undated_games_and_swimming_rows_intact():
     assert soup.find("table").find_next_sibling("p", class_="history-reward") is not None
 
 
-def test_alumni_disclosure_is_scoped_and_native(site):
-    alumni = page(site, "alumni/index.html")
-    assert alumni.count("How can Wabash improve these numbers?") == 1
-    assert "We recommend transferring to DePauw." in alumni
+def test_the_removed_side_taking_jokes_are_on_no_page(site):
+    """The footer's impartiality note and the alumni page's admissions note took DePauw's side; both were removed."""
     for name in PAGES:
-        if name != "alumni/index.html":
-            assert "How can Wabash improve these numbers?" not in page(site, name)
-    assert '<details class="admissions-note"><summary>' in alumni
+        source = page(site, name)
+        for gone in ("impartiality", "A note on impartiality", "The developers were educated correctly.",
+                     "admissions-note", "How can Wabash improve these numbers?", "We recommend transferring to DePauw."):
+            assert gone not in source, (name, gone)
+    css = (ROOT / "static/styles.css").read_text(encoding="utf-8")
+    assert ".impartiality" not in css and ".admissions-note" not in css
 
 
 def test_title_entrance_is_progressive_and_uses_one_native_click_handler(site):
@@ -181,7 +182,6 @@ def test_title_entrance_is_progressive_and_uses_one_native_click_handler(site):
     assert "@media (prefers-reduced-motion: reduce)" in css
     assert ".entrance-button:focus-visible" in css and ".tiger-note summary:focus-visible" in css
     assert re.search(r"\.site-footer summary\s*\{[^}]*min-height:\s*44px", css)
-    assert re.search(r"\.admissions-note summary\s*\{[^}]*min-height:\s*44px", css)
 
 
 def test_title_button_focus_outline_contrasts_with_header_in_light_and_dark_modes():
@@ -213,14 +213,13 @@ def test_title_button_focus_outline_contrasts_with_header_in_light_and_dark_mode
         assert (max(outline, background) + 0.05) / (min(outline, background) + 0.05) >= 3
 
 
-def test_shared_footer_comment_and_disclosure_are_exactly_once_on_all_nine_pages(site):
+def test_shared_footer_comment_is_exactly_once_and_no_impartiality_note_on_all_nine_pages(site):
     for name in PAGES:
         source = page(site, name)
         assert source.count("<!-- Both schools supplied the records. Only one supplied the developers. -->") == 1
-        assert source.count("A note on impartiality") == 1
-        assert source.count("The data is independently sourced. The developers were educated correctly.") == 1
+        assert "A note on impartiality" not in source and "The developers were educated correctly." not in source
         assert source.index("<!-- Both schools supplied") < source.index('<p class="footer-links">')
-        assert source.index("Unofficial fan site") < source.index("A note on impartiality") < source.index('class="copyright"')
+        assert source.index("Unofficial fan site") < source.index('class="copyright"')
         without_comments = re.sub(r"<!--.*?-->", "", source, flags=re.S)
         assert "Only one supplied the developers." not in without_comments
     for export in ("games.csv", "data/series.json", "data/alumni.json", "data/endowment.json", "site.webmanifest"):
