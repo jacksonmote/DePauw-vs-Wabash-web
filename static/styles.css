@@ -314,13 +314,7 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .tiger-facts { list-style: none; margin: 0.5rem 0 0; padding: 0; max-width: 40rem; }
 .tiger-fact-school { font-weight: 650; }
 .tiger-fact-source { font-size: var(--text-sm); white-space: nowrap; }
-.admissions-note { border: 1px solid var(--color-border); border-radius: var(--radius); padding: 0.75rem 1rem; }
-.admissions-note summary { cursor: pointer; font-weight: 650; min-height: 44px; padding-block: 0.5rem; }
-.admissions-note p { margin: 0.5rem 0 0; }
 .history-reward { color: var(--color-text-muted); font-style: italic; }
-.impartiality { color: var(--color-text-muted); }
-.impartiality summary { font-weight: 600; }
-.impartiality p { margin: 0.25rem 0 0; }
 .bell-heist { display: block; }   /* block flow: the shared main grid stacked its gap on every paragraph's own margin */
 .bell-heist h2 { margin-bottom: 0.75rem; }
 .bell-heist p { margin: 0 0 0.75rem; }
@@ -329,7 +323,7 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 @media (forced-colors: active) {
   .entrance-button:focus-visible, .bell-heist-link:focus-visible, .tiger-note summary:focus-visible { outline: 2px solid ButtonText; }
   .site-header .entrance-button:focus-visible { outline-color: ButtonText; }
-  .tiger-note, .admissions-note { border-color: CanvasText; }
+  .tiger-note { border-color: CanvasText; }
 }
 
 /* Fun facts and the season-by-season list */
