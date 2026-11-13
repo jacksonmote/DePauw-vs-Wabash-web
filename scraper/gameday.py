@@ -9,7 +9,8 @@ Three things use this, and all need only the stored data (data/upcoming.json and
       game-day run (the 30-minute schedule inside  only the sports whose window is open (when none is, the
         a window, or a run the watcher started)    sports whose game today has started or finished): `gameday_sports`
       push to main                                 nothing (stored data, re-merged), unless the push changed the
-                                                   scraper or sources.json (SCRAPE_ON_PUSH): then every sport
+                                                   scraper, sources.json or the locked Python packages
+                                                   (requirements.txt; SCRAPE_ON_PUSH): then every sport
     The 30-minute schedule does nothing outside a window, and inside one it also stands aside while the
     game-day watcher (watcher.py) is running, since the watcher already starts an update every 15 minutes.
   * the game-day watcher (watcher.py), which reuses the window rules below.
@@ -53,9 +54,12 @@ SERIES = ROOT / "data" / "series.json"
 FREQUENT_CRON = "7,37 * * * *"
 
 # A push to main reads nothing from the schools unless it changed one of these (a parser fix or a new sport
-# should go live with fresh data, not wait for the next daily run).
+# should go live with fresh data, not wait for the next daily run). requirements.txt is here so a change to the
+# locked Python packages (a Dependabot pip update, say a new HTML parser) is tested against the live pages as
+# soon as it merges; requirements.in only changes together with it, and the npm lock (the HTML validator) does
+# not affect scraping.
 SCRAPE_ON_PUSH = ("scraper/scrape.py", "scraper/upcoming.py", "scraper/merge.py", "scraper/politeness.py",
-                  "scraper/sources.json")
+                  "scraper/sources.json", "requirements.txt")
 ALL = "all"     # the scope that reads every sport
 
 NOON = dt.time(12, 0)

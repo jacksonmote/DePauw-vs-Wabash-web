@@ -55,7 +55,8 @@ jobs:
     # frequent game-day schedule can say no (outside a game-day window, or while the game-day watcher runs).
     # Scope: every sport for the two daily schedules and a hand-started manual run; only the sports playing today
     # for a game-day run (the frequent schedule inside a window, or a run the watcher started with gameday);
-    # nothing for a push to main, unless the push changed the scraper or sources.json (gameday.SCRAPE_ON_PUSH).
+    # nothing for a push to main, unless the push changed the scraper, sources.json or requirements.txt
+    # (gameday.SCRAPE_ON_PUSH).
     # Reads only the data files (fetched from the data branch) with the runner's own Python: no dependencies, no
     # scrape, no commit, no deploy. A fetch that fails fails the job; it never reads a missing schedule as "no games".
     runs-on: ubuntu-24.04
