@@ -413,13 +413,23 @@ def test_the_30_minute_schedule_does_nothing_outside_a_window_and_stands_aside_f
     assert run is False and "watcher is running" in why
 
 
-def test_a_push_reads_nothing_unless_it_changed_the_scraper_or_the_sources():
+def test_a_push_reads_nothing_unless_it_changed_the_scraper_the_sources_or_the_python_lock():
     assert plan("push", changed=["README.md", "scraper/render.py", "data/overrides.json"])[:2] == (True, "")
     assert set(gameday.SCRAPE_ON_PUSH) == {"scraper/scrape.py", "scraper/upcoming.py", "scraper/merge.py",
-                                           "scraper/politeness.py", "scraper/sources.json"}
+                                           "scraper/politeness.py", "scraper/sources.json", "requirements.txt"}
     for path in gameday.SCRAPE_ON_PUSH:
         assert plan("push", changed=["README.md", path])[:2] == (True, "all")
     assert plan("push", changed=None)[:2] == (True, "all")                  # could not tell: read everything
+
+
+def test_a_push_that_changes_the_python_lock_reads_every_sport_but_the_npm_lock_does_not():
+    # a Dependabot pip update changes only requirements.txt: test the new packages on the live pages at once
+    run, scope, why = plan("push", changed=["requirements.txt"])
+    assert (run, scope) == (True, "all") and "requirements.txt" in why
+    # requirements.in only ever changes together with requirements.txt, and the HTML validator does not scrape
+    for changed in (["package-lock.json"], ["package.json", "package-lock.json"], ["README.md"],
+                    ["requirements.in"], ["requirements-clock.txt"]):
+        assert plan("push", changed=changed)[:2] == (True, ""), changed
 
 
 def test_game_day_scope_reads_only_open_windows_and_never_a_game_that_has_not_started():
