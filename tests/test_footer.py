@@ -11,6 +11,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scraper"))
 import alumni  # noqa: E402
+import heists  # noqa: E402
 import render  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -47,6 +48,13 @@ PAGES = {
     "heist-details/index.html": ("../", "how-it-works/athletics/", "heists"),
     "privacy/index.html": ("../", "how-it-works/", "neutral"),
 }
+
+
+def curated_line(noun, iso, shown, correction):
+    """The hand-curated notice at the top of the alumni and heist data blocks, with the correction link inside it."""
+    return (f'<p>Updated by hand, not automatically. {noun} last verified <time datetime="{iso}">{shown}</time> and '
+            f'may be incomplete or out of date. See something missing or wrong? '
+            f'<a href="{correction.replace("&", "&amp;")}">Suggest a correction</a>.</p>')
 
 
 def privacy_link(name):
@@ -106,7 +114,7 @@ def test_the_alumni_footer_has_the_alumni_data_block_and_nothing_athletics_only(
     prefix = PAGES[name][0]
     f = footer(site, name)
     endowment = alumni.load_json(ROOT / "data" / "endowment.json", "endowment")
-    assert "Records last verified <time datetime=\"2026-11-12\">Nov 12, 2026</time>." in f
+    assert curated_line("Records", "2026-11-12", "Nov 12, 2026", alumni.correction_url()) in f
     assert f'<a href="{prefix}data/alumni.json">alumni.json</a>' in f
     assert f'<a href="{prefix}data/endowment.json">endowment.json</a>' in f
     assert f'<a href="{alumni.correction_url()}">Suggest a correction</a>' in f
@@ -115,7 +123,8 @@ def test_the_alumni_footer_has_the_alumni_data_block_and_nothing_athletics_only(
     for item in endowment["schools"].values():
         assert f'<a href="{item["source_url"]}">FY2025 audited financial statements</a>' in f
         assert f'<a href="{item["enrollment"]["source_url"]}">College Navigator (IPEDS)</a>' in f
-    assert f.index("Records last verified") < f.index('class="sources"') < f.index("How the numbers work")
+    assert (f.index("Updated by hand") < f.index("Download the data") < f.index('<p class="feedback">')
+            < f.index('class="sources"') < f.index("How the numbers work"))
     for athletics_only in ATHLETICS_ONLY:
         assert athletics_only not in f, athletics_only
     assert "Alumni and endowment records use manually reviewed sources" not in f
@@ -188,14 +197,14 @@ def test_the_feedback_links_sit_on_their_own_line_between_the_downloads_and_the_
     f = footer(site, name)
     para = re.search(r'<p class="feedback">(.*?)</p>', f).group(1)
     kind = PAGES[name][2]
-    first = {"athletics": "Report a data error. ", "alumni": "Suggest a correction. ", "heists": "Suggest a correction. ",
-             "neutral": ""}[kind]
+    first = {"athletics": "Report a data error. "}.get(kind, "")    # alumni and heists: the correction is in the notice
     assert re.sub(r"<[^>]+>", "", para) == f"{first}Suggest an enhancement."
     if kind == "neutral":                                 # the neutral pages: before the shared links line
         assert f.index('<p class="feedback">') < f.index('<p class="footer-links">')
     else:
         assert f.index("Download the data") < f.index('<p class="feedback">') < f.index("Data from")
-        assert first.strip(". ") not in f[f.index("Download the data"):f.index('<p class="feedback">')]
+        between = f[f.index("Download the data"):f.index('<p class="feedback">')]
+        assert "Report a data error" not in between and "Suggest a correction" not in between
 
 
 @pytest.mark.parametrize("name", ["index.html", "alumni/index.html"])
@@ -218,10 +227,34 @@ def test_the_totals_heading_is_renamed_and_keeps_its_anchor(site):
 
 def test_the_heist_footer_has_its_own_data_block_before_the_shared_lines(site):
     f = footer(site, "heist-details/index.html")
-    assert 'Stories last verified <time datetime="2026-11-02">Nov 2, 2026</time>.' in f
+    assert curated_line("Stories", "2026-11-02", "Nov 2, 2026", heists.correction_url()) in f
     assert '<a href="../data/bell-heists.json">bell-heists.json</a>' in f
     assert 'Suggest a correction</a>' in f and "Suggest an enhancement" in f
     assert "template=data-correction.yml" in f and "Monon%20Bell%20heist%20history" in f
     assert "Data from: the sources listed with each story." in f
-    assert f.index("Stories last verified") < f.index("How the numbers work") < f.index(MEN_ONLY)
+    assert (f.index("Updated by hand") < f.index("Download the data") < f.index('<p class="feedback">')
+            < f.index("Data from") < f.index("How the numbers work") < f.index(MEN_ONLY))
     assert "series.json" not in f and "alumni.json" not in f and 'class="sources"' not in f
+
+
+@pytest.mark.parametrize("name", PAGES)
+def test_only_the_hand_curated_pages_say_they_are_updated_by_hand(site, name):
+    f = footer(site, name)
+    kind = PAGES[name][2]
+    assert f.count("Updated by hand, not automatically.") == (1 if kind in ("alumni", "heists") else 0)
+    assert "last verified" not in f.replace("Records last verified", "").replace("Stories last verified", "")
+    if kind in ("alumni", "heists"):                       # the old standalone line is gone
+        assert "<p>Records last verified" not in f and "<p>Stories last verified" not in f
+
+
+@pytest.mark.parametrize("make, noun, correction", [
+    (lambda v: render.alumni_footer_block("../", {"verified_at": v}, {"verified_at": "2000-01-01", "fiscal_year": "FY2025",
+                                                                     "schools": {}}), "Records", alumni.correction_url),
+    (lambda v: render.heists_footer_block("../", {"verified_at": v}), "Stories", heists.correction_url),
+])
+def test_the_curated_notice_takes_its_date_from_verified_at_in_the_site_date_style(make, noun, correction, monkeypatch):
+    monkeypatch.setattr(render.alumni_page, "SCHOOLS", {})
+    block = make("2027-03-05")
+    assert block[0] == curated_line(noun, "2027-03-05", "Mar 5, 2027", correction())
+    assert render.esc(correction()) in block[0] and correction().startswith(render.REPO_URL + "/issues/new?template=")
+    assert sum(">Suggest a correction</a>" in line for line in block) == 1
