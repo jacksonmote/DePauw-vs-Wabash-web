@@ -1152,9 +1152,18 @@ def alumni_verified_date(alumni_data: dict, endowment: dict) -> str:
     return max(alumni_data["verified_at"], endowment["verified_at"])
 
 
+def curated_notice(noun: str, verified: str, correction: str) -> str:
+    """The first line of a hand-curated page's footer block (alumni, heist history): that the data is kept by
+    hand, when it was last verified, that it may be incomplete, and the correction form."""
+    return (f'<p>Updated by hand, not automatically. {esc(noun)} last verified <time datetime="{esc(verified)}">'
+            f'{esc(fmt_date(verified))}</time> and may be incomplete or out of date. See something missing or '
+            f'wrong? <a href="{esc(correction)}">Suggest a correction</a>.</p>')
+
+
 def alumni_footer_block(prefix: str, alumni_data: dict, endowment: dict) -> list:
-    """The alumni part of the footer: when the records were last verified, downloads, the correction form
-    and the sources (the two audited statements and the two College Navigator pages)."""
+    """The alumni part of the footer: the hand-curated notice (when the records were last verified, with the
+    correction form), downloads, the enhancement link and the sources (the two audited statements and the two
+    College Navigator pages)."""
     verified = alumni_verified_date(alumni_data, endowment)
     fy = endowment["fiscal_year"]
     sources = "\n".join(
@@ -1162,12 +1171,11 @@ def alumni_footer_block(prefix: str, alumni_data: dict, endowment: dict) -> list
         f'statements</a> · <a href="{esc(endowment["schools"][key]["enrollment"]["source_url"])}">College '
         f'Navigator (IPEDS)</a></li>' for key, name in alumni_page.SCHOOLS.items())
     return [
-        f'<p>Records last verified <time datetime="{esc(verified)}">{esc(fmt_date(verified))}</time>.</p>',
+        curated_notice("Records", verified, alumni_page.correction_url()),
         f'<p class="downloads">Download the data: <a href="{esc(prefix)}data/alumni.json">alumni.json</a> '
         f'(named graduates and their sources) · <a href="{esc(prefix)}data/endowment.json">endowment.json</a> '
         f'(endowment, enrollment and basis).</p>',
-        f'<p class="feedback"><a href="{esc(alumni_page.correction_url())}">Suggest a correction</a>. '
-        f'{enhancement_link(AREA_ALUMNI)}.</p>',
+        f'<p class="feedback">{enhancement_link(AREA_ALUMNI)}.</p>',
         '<details class="sources-details"><summary>Data sources</summary>',
         f'<p>Data from: DePauw and Wabash audited {esc(fy)} financial statements, the U.S. Department of '
         f'Education’s College Navigator (IPEDS), and the sources listed with each name. Source pages:</p>',
@@ -1177,14 +1185,14 @@ def alumni_footer_block(prefix: str, alumni_data: dict, endowment: dict) -> list
 
 
 def heists_footer_block(prefix: str, heists_data: dict) -> list:
-    """The heist page's part of the footer: when the stories were last verified, the download, the correction link."""
+    """The heist page's part of the footer: the hand-curated notice (when the stories were last verified, with the
+    correction form), the download and the enhancement link."""
     verified = heists_data["verified_at"]
     return [
-        f'<p>Stories last verified <time datetime="{esc(verified)}">{esc(fmt_date(verified))}</time>.</p>',
+        curated_notice("Stories", verified, heists_page.correction_url()),
         f'<p class="downloads">Download the data: <a href="{esc(prefix)}data/bell-heists.json">bell-heists.json</a> '
         f'(every story and its sources).</p>',
-        f'<p class="feedback"><a href="{esc(heists_page.correction_url())}">Suggest a correction</a>. '
-        f'{enhancement_link(AREA_ATHLETICS)}.</p>',
+        f'<p class="feedback">{enhancement_link(AREA_ATHLETICS)}.</p>',
         '<p>Data from: the sources listed with each story.</p>',
     ]
 
