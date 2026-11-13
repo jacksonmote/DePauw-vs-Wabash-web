@@ -7,7 +7,7 @@ The "How the numbers work" pages, written for fans. Three pages share render.py'
                                                      "Who counts" repeats privacy.PUBLIC_INFO (the privacy page's
                                                      definition of public information) and links to /privacy/
 Every number comes from the data (alumni.json and endowment.json through the alumni.py functions, series.json,
-overrides.json, or the constants in merge.py and gameday.py that the code actually uses), never from this file,
+overrides.json, or the constants in merge.py and watcher.py that the code actually uses), never from this file,
 so a page cannot go out of date when the data changes.
 
 render.py supplies the page shell and footer.

@@ -5,7 +5,7 @@ changed, the network was down) would stop the site updating on a game day. These
 causes fail loudly in the test that causes them, on any day:
 
   * the network: any attempt to open a connection, or to run gh, npm, npx, node, curl or wget, raises;
-  * the environment: GITHUB_* and GH_* variables from a CI runner are removed, so a test never writes to a
+  * the environment: GITHUB_* and GH_* variables, CI and RUNNER_TEMP from a CI runner are removed, so a test never writes to a
     real run summary or output file and behaves the same on a laptop and in Actions;
   * the clock: `--fake-now` (or FAKE_NOW) runs the whole process at a fixed moment, see fakeclock.py.
 

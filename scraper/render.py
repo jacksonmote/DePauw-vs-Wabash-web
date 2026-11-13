@@ -1203,9 +1203,10 @@ def site_footer(now: dt.datetime, *, prefix: str = "", data: dict | None = None,
     """The footer of every page: one function with a page-specific data block and the same structure and
     lines after it. `prefix` reaches the site root from the page ("" on the home page, "../" one folder
     down, the root path on 404.html). With `data` the block is the athletics one, with `alumni` (the alumni
-    and endowment data) the alumni one; with neither (404 and the how-it-works landing page) only the shared
-    lines show. "How the numbers work" links to the matching page, and the men's head-to-head note shows
-    only on the athletics pages (it is about athletics, so the alumni and the neutral pages leave it out). The
+    and endowment data) the alumni one, with `heists` the heist history's one; with none (404, the how-it-works
+    landing, Bell-heist and privacy pages) the block is only the enhancement line, then the shared lines.
+    "How the numbers work" links to the matching page, and the men's head-to-head note shows only on the
+    athletics pages (it is about athletics, so the alumni and the neutral pages leave it out). The
     how-it-works landing page passes link_how=False: a link from that page to itself would go nowhere. Every
     footer links to the privacy page, except the privacy page itself (privacy_self=True), which shows the word as
     plain text marked aria-current="page"."""

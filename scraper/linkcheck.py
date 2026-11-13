@@ -56,7 +56,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import parse_qsl, urldefrag, urljoin, urlparse
 
-from politeness import USER_AGENT  # the one user agent the project sends anywhere; standard library only
+from politeness import USER_AGENT  # the scraper's user agent (the watcher sends it too; snapshot.py has its own); standard library only
 from timeutil import to_eastern   # standard library only, like this module
 
 ROOT = Path(__file__).resolve().parent.parent

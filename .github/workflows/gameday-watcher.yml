@@ -12,7 +12,7 @@ run-name: ${{ inputs.dry_run && 'Game-day watcher (dry run)' || (inputs.test_dis
 #
 # Ways it starts (any one is enough): this schedule (every 10 minutes; on a day without a game the gate ends the run
 # within seconds), the two daily runs of update-and-deploy.yml on a game day, a hand start (Actions, "Game-day
-# watcher", Run workflow; the backstop on game morning), and a relay: after about 5 hours in its job (GitHub stops a
+# watcher", Run workflow; the backstop on game morning), and a relay: after 4 hours 45 minutes in its job (GitHub stops a
 # job at 6) a watcher starts a fresh run of itself, marked as a relay, and stops.
 #
 # One watcher at a time: the gate of a run that is not a relay or a dry run stands aside when an older watcher run
@@ -92,7 +92,7 @@ jobs:
     needs: gate
     if: ${{ needs.gate.outputs.watch == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 330 # the watcher hands over to a fresh run after about 5 hours; GitHub's limit is 6
+    timeout-minutes: 330 # the watcher hands over to a fresh run after 4 h 45 min (watcher.RELAY_AFTER); GitHub's limit is 6 h
     concurrency:
       group: ${{ (inputs.dry_run || inputs.test_dispatch) && format('gameday-watcher-solo-{0}', github.run_id) || 'gameday-watcher' }}
       cancel-in-progress: false
