@@ -114,7 +114,7 @@ def test_the_alumni_footer_has_the_alumni_data_block_and_nothing_athletics_only(
     prefix = PAGES[name][0]
     f = footer(site, name)
     endowment = alumni.load_json(ROOT / "data" / "endowment.json", "endowment")
-    assert curated_line("Records", "2026-11-12", "Nov 12, 2026", alumni.correction_url()) in f
+    assert curated_line("Records", "2026-11-13", "Nov 13, 2026", alumni.correction_url()) in f
     assert f'<a href="{prefix}data/alumni.json">alumni.json</a>' in f
     assert f'<a href="{prefix}data/endowment.json">endowment.json</a>' in f
     assert f'<a href="{alumni.correction_url()}">Suggest a correction</a>' in f
