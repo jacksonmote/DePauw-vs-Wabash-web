@@ -85,7 +85,7 @@ def pick_tag(day: dt.date, existing: set) -> str:
 
 
 def source_urls(cfg: dict) -> list:
-    """Every history page the site reads: DePauw's six, then Wabash's six."""
+    """Every history page the site reads: DePauw's, then Wabash's, one per sport in sources.json (seven each)."""
     d, w = cfg["base_url"].rstrip("/"), cfg["wabash"]["base_url"].rstrip("/")
     return [d + s["path"] for s in cfg["sports"]] + [w + s["wabash_path"] for s in cfg["sports"]]
 
