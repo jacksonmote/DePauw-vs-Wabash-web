@@ -7,9 +7,9 @@
       "name": "Football",
       "source_url": "https://depauwtigers.com/sports/football/opponent-history/wabash/215",
       "total_label": "points",
-      "games_played": 131,
+      "games_played": 132,
       "record": {
-        "depauw_wins": 59,
+        "depauw_wins": 60,
         "wabash_wins": 63,
         "ties": 9
       },
@@ -1454,6 +1454,17 @@
           "wabash": 20,
           "note": null,
           "boxscore": "https://depauwtigers.com/boxscore.aspx?id=18817&path=football"
+        },
+        {
+          "date": "2026-11-14",
+          "season": "2026",
+          "location": "neutral",
+          "site": "Scheumann Stadium; Muncie, Ind.",
+          "result": "W",
+          "depauw": 16,
+          "wabash": 10,
+          "note": null,
+          "boxscore": "https://depauwtigers.com/boxscore.aspx?id=19495&path=football"
         }
       ],
       "skipped_rows": []

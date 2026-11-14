@@ -4,18 +4,7 @@
     "football": {
       "schedule_url": "https://depauwtigers.com/sports/football/schedule",
       "wabash_schedule_url": "https://sports.wabash.edu/sports/football/schedule",
-      "games": [
-        {
-          "date": "2026-11-14",
-          "time": "1:07 PM",
-          "time_note": null,
-          "location": "neutral",
-          "site": "Scheumann Stadium, Muncie, IN",
-          "status": "scheduled",
-          "doubleheader": false,
-          "source": "wabash"
-        }
-      ]
+      "games": []
     },
     "mens-basketball": {
       "schedule_url": "https://depauwtigers.com/sports/mens-basketball/schedule",
