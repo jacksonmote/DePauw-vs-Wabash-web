@@ -9,8 +9,9 @@ render.build validates them on every build (a bad file fails the render instead 
                                          every person and award, enrollment for the fall before the fiscal year)
   counts, visible_categories             named graduates per school and category (once per school and category)
   comparable_amount, per_student,        endowment per student on one basis (pooled endowment net assets),
-  about_even, per_student_note           from the exact integers; "about even" within EVEN_PERCENT; none of
-                                         these figures is stored in the JSON
+  exact_per_student, about_even,         calculated from the exact integers; "about even" when the higher is
+  gap_text, arithmetic_parts,            at most EVEN_PERCENT above the lower; the arithmetic line, the
+  endowment_caveat, even_text            caveat and the "about even" line; none of these is stored in the JSON
   scoreboard, context_note, render_page  the scoreboard table, the size and history note under it, and the page
                                          (render.py supplies the head and the shared footer)
   correction_url                         the prefilled link to .github/ISSUE_TEMPLATE/alumni-correction.yml
@@ -23,7 +24,6 @@ import datetime as dt
 import html
 import json
 import re
-from decimal import Decimal, ROUND_HALF_UP
 from fractions import Fraction
 from pathlib import Path
 from urllib.parse import quote, urlparse
@@ -220,10 +220,18 @@ def validate_endowment(data: dict) -> dict:
         for field in ("source_label", "source_note"):
             _text(item.get(field), f"endowment.schools.{key}.{field}")
         _url(item.get("source_url"), f"endowment.schools.{key}.source_url")
+        note = item.get("note")
+        if not isinstance(note, str) or not re.fullmatch(r"Note [1-9]\d*", note):
+            _fail(f"endowment.schools.{key}.note must read like 'Note 12' (the note the amount is in)")
+        if not item["source_note"].startswith(f"{note},"):
+            _fail(f"endowment.schools.{key}.source_note must start with its note ({note!r})")
         comparable = item.get("comparable")
         if not isinstance(comparable, dict):
             _fail(f"endowment.schools.{key}.comparable must be an object")
         _text(data.get("comparable_basis"), "endowment.comparable_basis")
+        if not data["comparable_basis"].endswith(" net assets"):
+            _fail("endowment.comparable_basis must end with ' net assets'")
+        _text(data.get("basis_detail"), "endowment.basis_detail")
         if comparable.get("basis") != data["comparable_basis"]:
             _fail(f"endowment.schools.{key}.comparable.basis must be {data['comparable_basis']!r}")
         _text(comparable.get("source_note"), f"endowment.schools.{key}.comparable.source_note")
@@ -234,6 +242,7 @@ def validate_endowment(data: dict) -> dict:
             if not isinstance(part, dict):
                 _fail(f"endowment.schools.{key}.comparable.excluded[{i}] must be an object")
             _text(part.get("label"), f"endowment.schools.{key}.comparable.excluded[{i}].label")
+            _text(part.get("short_label"), f"endowment.schools.{key}.comparable.excluded[{i}].short_label")
             part_amount = part.get("amount_usd")
             if isinstance(part_amount, bool) or not isinstance(part_amount, int) or part_amount <= 0:
                 _fail(f"endowment.schools.{key}.comparable.excluded[{i}].amount_usd must be a positive integer")
@@ -256,7 +265,7 @@ def validate_endowment(data: dict) -> dict:
     return data
 
 
-EVEN_PERCENT = 5      # per-student figures within this share of each other are shown as "about even"
+EVEN_PERCENT = 5      # "about even" when the higher per-student figure is at most this % above the lower one
 
 
 def comparable_amount(item: dict) -> int:
@@ -275,11 +284,32 @@ def per_student(endowment: dict) -> dict:
     return result
 
 
+def exact_per_student(item: dict) -> int:
+    """The per-student figure to the nearest whole dollar, half up (516418 for DePauw's 516,417.98), for the
+    arithmetic line. Never stored."""
+    amount, students = comparable_amount(item), item["enrollment"]["count"]
+    return (2 * amount + students) // (2 * students)
+
+
+def _exact(endowment: dict) -> list:
+    return sorted(Fraction(comparable_amount(i), i["enrollment"]["count"]) for i in endowment["schools"].values())
+
+
 def about_even(endowment: dict) -> bool:
-    """True when the higher per-student figure is no more than EVEN_PERCENT above the lower one. Judged on
-    the exact quotients, not the rounded figures, and no school is marked higher when it holds."""
-    exact = sorted(Fraction(comparable_amount(i), i["enrollment"]["count"]) for i in endowment["schools"].values())
+    """True when the higher per-student figure is no more than EVEN_PERCENT above the lower one (exactly
+    EVEN_PERCENT counts as even). Judged on the exact quotients, not the rounded figures, and no school is
+    marked higher when it holds."""
+    exact = _exact(endowment)
     return (exact[-1] - exact[0]) * 100 <= EVEN_PERCENT * exact[0]
+
+
+def gap_text(endowment: dict) -> str:
+    """"1.0%": how far the higher per-student figure is above the lower one, from the exact quotients, to one
+    decimal, half up."""
+    exact = _exact(endowment)
+    tenths = (exact[-1] / exact[0] - 1) * 1000
+    whole = (2 * tenths.numerator + tenths.denominator) // (2 * tenths.denominator)
+    return f"{whole // 10}.{whole % 10}%"
 
 
 def counts(data: dict) -> dict:
@@ -309,40 +339,50 @@ def fmt_date(iso: str) -> str:
     return f"{MONTHS[d.month - 1]} {d.day}, {d.year}"
 
 
-def compact_usd(amount: int) -> tuple[str, str]:
-    """("$1.04", "billion") or ("$443", "million"): billions to two decimals, millions to whole numbers,
-    always from the exact integer (half up), so two figures are rounded the same way."""
-    if amount >= 1_000_000_000:
-        return f"${(Decimal(amount) / 1_000_000_000).quantize(Decimal('0.01'), ROUND_HALF_UP)}", "billion"
-    if amount >= 1_000_000:
-        return f"${(Decimal(amount) / 1_000_000).quantize(Decimal('1'), ROUND_HALF_UP):,}", "million"
-    return f"${amount:,}", ""
-
-
-def _money_list(parts: list) -> str:
-    items = [f'${p["amount_usd"]:,} of {p["label"]}' for p in parts]
+def _and(items: list) -> str:
     return items[0] if len(items) == 1 else ", ".join(items[:-1]) + (", and " if len(items) > 2 else " and ") + items[-1]
 
 
-def per_student_note(endowment: dict) -> str:
-    """Which basis the per-student headline uses and how it is made. Shown wherever a per-student figure is."""
-    term = next(iter(endowment["schools"].values()))["enrollment"]["term"].lower()
-    basis = endowment["comparable_basis"]
-    adjusted = [(SCHOOLS[k], i["comparable"]["excluded"]) for k, i in endowment["schools"].items()
-                if i["comparable"]["excluded"]]
-    text = (f"The per-student figures are on one basis, {basis}: ")
-    text += " ".join(f"{name}’s total is shown without its {_money_list(parts)}." for name, parts in adjusted) \
-        if adjusted else "every figure is the amount each school reports."
-    text += (f" Each is divided by the school’s {term} total undergraduate headcount from the U.S. Department "
-             f"of Education’s College Navigator (IPEDS) and rounded to the nearest $1,000.")
-    if about_even(endowment):
-        text += f" The two are within {EVEN_PERCENT}% of each other, so neither is marked higher."
-    return text
+def arithmetic_parts(item: dict, per: int) -> list:
+    """The steps from the audited amount to the headline, as pieces the card keeps whole when the line wraps:
+    ["$1,041,801,089 total", "− $38,817,699 pledges", "− $13,010,125 perpetual trusts", "= $989,973,265",
+    "÷ 1,917 students", "= $516,418,", "rounded to $516,000"]. A school with nothing taken out starts at its
+    amount. Every number is read from the data or worked out from it."""
+    excluded = item["comparable"]["excluded"]
+    parts = []
+    if excluded:
+        parts.append(f'${item["amount_usd"]:,} total')
+        parts += [f'− ${p["amount_usd"]:,} {p["short_label"]}' for p in excluded]
+        parts.append(f"= ${comparable_amount(item):,}")
+    else:
+        parts.append(f"${comparable_amount(item):,}")
+    return parts + [f'÷ {item["enrollment"]["count"]:,} students', f"= ${exact_per_student(item):,},",
+                    f"rounded to ${per:,}"]
 
 
-def _compact_text(amount: int) -> str:
-    figure, unit = compact_usd(amount)
-    return f"{figure} {unit}" if unit else figure
+def endowment_caveat(endowment: dict) -> str:
+    """The scope caveat under the endowment card: the figure is calculated, both are on one basis, and what is
+    taken out of which school's total and why."""
+    schools = endowment["schools"]
+    adjusted = [(SCHOOLS[k], i["comparable"]["excluded"]) for k, i in schools.items() if i["comparable"]["excluded"]]
+    plain = [SCHOOLS[k] for k, i in schools.items() if not i["comparable"]["excluded"]]
+    basis = endowment["comparable_basis"].removesuffix(" net assets")
+    text = (f"Calculated by this site, not reported by either school. Both are {basis} "
+            f"({endowment['basis_detail']}) at {fmt_date(endowment['as_of'])}")
+    if adjusted and plain:
+        owners = _and([f"{name}’s" for name in plain])
+        text += "; " + "; ".join(
+            f"{name}’s {_and([p['short_label'] for p in parts])} are taken out because {owners} pool leaves them out"
+            for name, parts in adjusted)
+    return text + ". Neither is cash a school can spend freely."
+
+
+def even_text(endowment: dict) -> str:
+    """The "about even" line's text: "the higher figure is no more than 5% above the lower ($516,418 and
+    $511,498, 1.0% apart).\""""
+    figures = _and([f"${exact_per_student(i):,}" for i in endowment["schools"].values()])
+    return (f"the higher figure is no more than {EVEN_PERCENT}% above the lower ({figures}, "
+            f"{gap_text(endowment)} apart).")
 
 
 def degree_label(person: dict) -> str:
@@ -521,21 +561,18 @@ def render_page(data: dict, endowment: dict, *, head_html: str, footer_html: str
     for key, label in SCHOOLS.items():
         item = endowment["schools"][key]
         enrolled = item["enrollment"]
-        same = comparable_amount(item)
-        lines = ""
-        if item["comparable"]["excluded"]:
-            lines = (f'<p class="money-line">Total endowment, including pledges and trusts: '
-                     f'<span class="nowrap">{_compact_text(item["amount_usd"])}</span> '
-                     f'<span class="nowrap">(${item["amount_usd"]:,})</span></p>')
+        # an operator stays with its number ("− $13,010,125"), but the words after it may wrap in a narrow tile
+        steps = " ".join(
+            f'<span class="nowrap">{_esc(m.group(1))}</span>{_esc(m.group(2))}'
+            for m in (re.fullmatch(r"((?:[−=÷] )?\S+)(.*)", part) for part in arithmetic_parts(item, per[key])))
         endow_cards.append(
             f'<div class="tile tile-{key} endowment-value"><h3 class="tile-name">{label}</h3>'
-            f'<p class="tile-num money">${per[key]:,}</p><p class="tile-label">endowment per student</p>'
-            f'<p class="money-line">Endowment on the common basis: <span class="nowrap">{_compact_text(same)}</span> '
-            f'<span class="nowrap">(${same:,})</span></p>{lines}'
-            f'<p class="money-line">Enrollment: <span class="nowrap">{enrolled["count"]:,}</span> students, '
-            f'{_esc(enrolled["term"].lower())}</p>'
-            f'<p class="money-line"><a href="{_esc(item["source_url"])}">Endowment source</a> · '
-            f'<a href="{_esc(enrolled["source_url"])}">Enrollment source</a></p></div>')
+            f'<p class="tile-num money">${per[key]:,}</p><p class="tile-label">endowment per student, calculated</p>'
+            f'<p class="money-line">{steps}</p>'
+            f'<p class="money-line">Endowment: <a href="{_esc(item["source_url"])}">'
+            f'{_esc(endowment["fiscal_year"])} audited statements, {_esc(item["note"])}</a> · '
+            f'Enrollment: <a href="{_esc(enrolled["source_url"])}">College Navigator (IPEDS), '
+            f'{_esc(enrolled["term"].lower())}</a></p></div>')
     return "\n".join([
         head_html, '<body>',
         header_html if header_html is not None else
@@ -558,9 +595,9 @@ def render_page(data: dict, endowment: dict, *, head_html: str, footer_html: str
         f'<p>Audited {_esc(endowment["fiscal_year"])} figures as of {_esc(fmt_date(endowment["as_of"]))}; reported accounting scopes differ.</p>'
         f'<div class="tiles endowment-values">{"".join(endow_cards)}</div>'
         + ('' if even else bars.record_bar(per["depauw"], 0, per["wabash"]))
-        + ('<p class="endowment-even"><strong>About even:</strong> the per-student figures are within '
-           f'{EVEN_PERCENT}% of each other.</p>' if even else '') +
-        f'<p class="endowment-caveat">{_esc(endowment["explanation"])} {_esc(per_student_note(endowment))}</p>'
+        + (f'<p class="endowment-even"><strong>About even:</strong> {_esc(even_text(endowment))}</p>'
+           if even else '') +
+        f'<p class="endowment-caveat">{_esc(endowment_caveat(endowment))}</p>'
         f'<p class="alumni-report"><a href="{_esc(correction_url("Endowment", repo_url))}">Suggest a correction</a></p>'
         f'<p>Verified {_esc(fmt_date(endowment["verified_at"]))}.</p></section>',
         *cards,

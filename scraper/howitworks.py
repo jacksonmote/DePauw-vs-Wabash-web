@@ -16,7 +16,6 @@ render.py supplies the page shell and footer.
 from __future__ import annotations
 
 import html
-from fractions import Fraction
 
 import alumni as alumni_page
 import gameday
@@ -264,9 +263,7 @@ def alumni_content(data: dict, endowment: dict, *, repo_url: str) -> list:
     verified = alumni_page.fmt_date(max(data["verified_at"], endowment["verified_at"]))
     per = alumni_page.per_student(endowment)
     even = alumni_page.about_even(endowment)
-    exact = {k: Fraction(alumni_page.comparable_amount(i), i["enrollment"]["count"])
-             for k, i in endowment["schools"].items()}
-    gap = (max(exact.values()) / min(exact.values()) - 1) * 100
+    gap = alumni_page.gap_text(endowment)
     term = next(iter(endowment["schools"].values()))["enrollment"]["term"]
     basis = endowment["comparable_basis"]
 
@@ -294,9 +291,13 @@ def alumni_content(data: dict, endowment: dict, *, repo_url: str) -> list:
         f'<a href="{esc(endowment["schools"][key]["enrollment"]["source_url"])}">{esc(name)}’s College Navigator page</a>'
         for key, name in schools.items())
     figures = " and ".join(f'{esc(name)} {_dollars(per[key])}' for key, name in schools.items())
-    even_html = (f'Right now the two figures are about {gap:.1f}% apart, so the page says “about even” and does '
+    math_items = "".join(f'<li>{esc(name)}: {esc(" ".join(alumni_page.arithmetic_parts(endowment["schools"][key], per[key])))}</li>'
+                         for key, name in schools.items())
+    notes = " and ".join(f'{esc(endowment["schools"][key]["note"])} of {esc(name)}’s'
+                         for key, name in schools.items())
+    even_html = (f'Right now the two figures are about {gap} apart, so the page says “about even” and does '
                  f'not mark either school as higher.' if even else
-                 f'Right now the two figures are about {gap:.1f}% apart, which is more than '
+                 f'Right now the two figures are about {gap} apart, which is more than '
                  f'{alumni_page.EVEN_PERCENT}%, so the page marks the higher one.')
     return [
         '<section class="prose" aria-labelledby="how-h">',
@@ -343,17 +344,20 @@ def alumni_content(data: dict, endowment: dict, *, repo_url: str) -> list:
         f'goes live.</p>',
 
         '<h3>Endowment per student</h3>',
-        f'<p>The endowment amounts come from each school’s audited {esc(fy)} financial statements, as of '
+        '<p>Endowment per student is <strong>calculated by this site</strong>, not reported by either school. '
+        f'The endowment amounts come from {notes} audited {esc(fy)} financial statements, as of '
         f'{esc(as_of)}. The two statements do not measure the same thing, so the page puts them on one basis, '
-        f'{esc(basis)}. {basis_html} The page still shows the full total as a supporting line.</p>',
+        f'{esc(basis)} ({esc(endowment["basis_detail"])}). {basis_html}</p>',
         f'<p>Each amount on that basis is divided by the school’s {esc(term.lower())} total undergraduate '
         f'headcount from the U.S. Department of Education’s College Navigator (IPEDS): {enrolled}. Fall '
         f'{esc(term.split()[-1])} is the academic year that ends with the {esc(as_of)} endowment date. See '
         f'{enroll_links}.</p>',
-        f'<p>The result is rounded to the nearest $1,000, from the exact amounts rather than from the rounded '
-        f'totals shown on the page: {figures}.</p>',
-        f'<p>When the higher per-student figure is within {alumni_page.EVEN_PERCENT}% of the lower one, the page '
-        f'calls them <strong>about even</strong> instead of marking one school higher. {even_html} None of the '
+        f'<p>The result is rounded to the nearest $1,000, from the exact amounts: {figures}. The endowment card '
+        f'shows the whole calculation:</p>',
+        f'<ul>{math_items}</ul>',
+        f'<p>When the higher per-student figure is no more than {alumni_page.EVEN_PERCENT}% above the lower one '
+        f'(judged on the exact figures, not the rounded ones), the page calls them <strong>about even</strong> '
+        f'instead of marking one school higher. {even_html} None of the '
         f'figures is cash a school can spend freely.</p>',
 
         '<h3>Suggest a correction</h3>',

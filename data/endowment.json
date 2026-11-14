@@ -1,11 +1,12 @@
 {
   "schema_version": 1,
-  "verified_at": "2026-10-29",
+  "verified_at": "2026-11-13",
   "fiscal_year": "FY2025",
   "as_of": "2025-06-30",
   "basis": "Audited fiscal-year endowment amounts reported by each institution; accounting scope and presentation differ by school.",
   "explanation": "Both values are from audited statements for June 30, 2025, but the statements use different scopes. DePauw reports total endowment net assets including pledges receivable and perpetual trusts; Wabash reports pooled endowment net assets only. Neither is cash available for general spending.",
   "comparable_basis": "pooled endowment net assets",
+  "basis_detail": "donor-restricted and board-designated funds",
   "schools": {
     "depauw": {
       "enrollment": {
@@ -14,7 +15,7 @@
         "measure": "Total enrollment (all undergraduate)",
         "source_label": "U.S. Department of Education, College Navigator (IPEDS): DePauw University",
         "source_url": "https://nces.ed.gov/collegenavigator/?id=150400",
-        "verified_at": "2026-10-29"
+        "verified_at": "2026-11-13"
       },
       "amount_usd": 1041801089,
       "comparable": {
@@ -22,17 +23,20 @@
         "excluded": [
           {
             "label": "pledges receivable",
-            "amount_usd": 38817699
+            "amount_usd": 38817699,
+            "short_label": "pledges"
           },
           {
             "label": "perpetual trusts",
-            "amount_usd": 13010125
+            "amount_usd": 13010125,
+            "short_label": "perpetual trusts"
           }
         ],
         "source_note": "Note 12, printed pp. 20–21 (PDF pp. 22–23), reports these two components inside DePauw's total; they are taken out so DePauw is on the same pooled basis as Wabash"
       },
       "source_label": "DePauw FY2025 audited financial statements",
       "source_url": "https://app.fac.gov/dissemination/report/pdf/2025-06-GSAFAC-0000409544",
+      "note": "Note 12",
       "source_note": "Note 12, printed pp. 20–21 (PDF pp. 22–23): total endowment net assets at June 30, 2025, including $38,817,699 of pledges receivable and $13,010,125 of perpetual trusts"
     },
     "wabash": {
@@ -42,16 +46,17 @@
         "measure": "Total enrollment (all undergraduate)",
         "source_label": "U.S. Department of Education, College Navigator (IPEDS): Wabash College",
         "source_url": "https://nces.ed.gov/collegenavigator/?id=152673",
-        "verified_at": "2026-10-29"
+        "verified_at": "2026-11-13"
       },
       "amount_usd": 442957416,
       "comparable": {
         "basis": "pooled endowment net assets",
         "excluded": [],
-        "source_note": "Checked 2026-10-29: Note 11 reports pooled endowment net assets only, and Wabash's audited statements give no endowment total that includes pledges or perpetual trusts (its contributions receivable are Note 3 and its perpetual trust interests Note 5, separate balance-sheet items), so no adjustment is made"
+        "source_note": "Checked 2026-11-13: Note 11 reports pooled endowment net assets only (donor-restricted and board-designated funds), and Wabash's audited statements give no endowment total that includes pledges or perpetual trusts (its contributions receivable are Note 3 and its perpetual trust interests, $11,259,766, Note 5, separate balance-sheet items), so no adjustment is made"
       },
       "source_label": "Wabash FY2025 audited financial statements",
       "source_url": "https://www.wabash.edu/businessoffice/docs/2025-Wabash-College-Audited-Financial-Statements.pdf",
+      "note": "Note 11",
       "source_note": "Note 11, printed pp. 23–24 (PDF pp. 25–26): pooled endowment net assets at June 30, 2025"
     }
   }

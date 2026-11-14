@@ -96,6 +96,16 @@ def test_invalid_curated_data_is_rejected(mutation, message):
     (lambda x: x["schools"].pop("depauw"), "exactly depauw and wabash"),
     (lambda x: x["schools"]["depauw"].update(source_url="file:///tmp/a"), r"https URL"),
     (lambda x: x.update(as_of="2024-06-30"), "match the fiscal-year end date"),
+    (lambda x: x["schools"]["depauw"].pop("note"), "note must read like"),
+    (lambda x: x["schools"]["wabash"].update(note="note 11"), "note must read like"),
+    (lambda x: x["schools"]["wabash"].update(note="Note 0"), "note must read like"),
+    (lambda x: x["schools"]["wabash"].update(note="Note 11a"), "note must read like"),
+    (lambda x: x["schools"]["wabash"].update(note="Note 3"), r"source_note must start with its note"),
+    (lambda x: x.pop("basis_detail"), "basis_detail"),
+    (lambda x: x.update(basis_detail=" "), "basis_detail"),
+    (lambda x: x.update(comparable_basis="pooled endowment"), "must end with ' net assets'"),
+    (lambda x: x["schools"]["depauw"]["comparable"]["excluded"][0].pop("short_label"), "short_label"),
+    (lambda x: x["schools"]["depauw"]["comparable"]["excluded"][1].update(short_label=""), "short_label"),
 ])
 def test_invalid_endowment_data_is_rejected(mutation, message):
     data = read_endowment()
@@ -167,7 +177,7 @@ def test_build_emits_navigation_alumni_and_auditable_json(tmp_path):
     assert "Albert J. Beveridge" in page and "The Life of John Marshall" in page
     assert 'id="endowment"' in page and "$1,041,801,089" in page and "$442,957,416" in page
     assert "reported accounting scopes differ" in page
-    assert page.count(">Endowment source</a>") == 2 and page.count(">Enrollment source</a>") == 2
+    assert page.count(">FY2025 audited statements, Note ") == 2 and page.count(">College Navigator (IPEDS), fall 2024</a>") == 2
     assert "FY2025" in page and "Jun 30, 2025" in page
     assert page.count("<script") == 1 and '<script src="../easter-eggs.js" defer></script>' in page   # the title script only
     assert "ranked #340 in the 2008 Fortune 500" in page
@@ -207,32 +217,59 @@ def committed_page():
 def test_no_iso_date_shows_in_visible_text_and_dates_match_the_athletics_style():
     text = visible_text(committed_page())
     assert not re.search(r"\d{4}-\d{2}-\d{2}", text)
-    assert "Verified Oct 29, 2026" in text and "as of Jun 30, 2025" in text
+    assert "Verified Nov 13, 2026" in text and "as of Jun 30, 2025" in text
     for iso in ("2025-06-30", "2026-10-29", "2026-01-05", "1999-12-31"):
         assert alumni.fmt_date(iso) == render.fmt_date(iso)
 
 
-@pytest.mark.parametrize("amount, expected", [
-    (1_041_801_089, ("$1.04", "billion")), (442_957_416, ("$443", "million")),
-    (1_005_000_000, ("$1.01", "billion")), (999_500_000, ("$1,000", "million")),
-    (442_500_000, ("$443", "million")), (442_499_999, ("$442", "million")), (950_000, ("$950,000", "")),
-])
-def test_compact_endowment_rounds_half_up_from_the_exact_amount(amount, expected):
-    assert alumni.compact_usd(amount) == expected
-
-
-def test_endowment_card_leads_with_the_common_basis_and_shows_the_full_total_as_support():
+def test_endowment_card_is_labeled_calculated_and_shows_the_arithmetic_and_sources():
     page = committed_page()
     text = visible_text(page)
-    assert '<p class="tile-num money">$516,000</p><p class="tile-label">endowment per student</p>' in page
-    assert '<p class="tile-num money">$511,000</p>' in page
-    assert "Endowment on the common basis: $990 million ($989,973,265)" in text
-    assert "Total endowment, including pledges and trusts: $1.04 billion ($1,041,801,089)" in text
-    assert "Endowment on the common basis: $443 million ($442,957,416)" in text
-    assert text.count("including pledges and trusts") == 1          # Wabash has no such total
-    assert "Enrollment: 1,917 students, fall 2024" in text and "Enrollment: 866 students, fall 2024" in text
-    assert 'href="https://nces.ed.gov/collegenavigator/?id=150400"' in page
-    assert 'href="https://nces.ed.gov/collegenavigator/?id=152673"' in page
+    label = '<p class="tile-label">endowment per student, calculated</p>'
+    assert f'<p class="tile-num money">$516,000</p>{label}' in page and f'<p class="tile-num money">$511,000</p>{label}' in page
+    assert ("$1,041,801,089 total − $38,817,699 pledges − $13,010,125 perpetual trusts = $989,973,265 "
+            "÷ 1,917 students = $516,418, rounded to $516,000") in text
+    assert "$442,957,416 ÷ 866 students = $511,498, rounded to $511,000" in text
+    assert text.count(" total − ") == 1                               # Wabash has nothing taken out
+    # an operator stays with its number when the line wraps on a phone; the words after it may wrap
+    assert ('<span class="nowrap">− $38,817,699</span> pledges <span class="nowrap">− $13,010,125</span> perpetual trusts '
+            '<span class="nowrap">= $989,973,265</span> <span class="nowrap">÷ 1,917</span> students') in page
+    assert ("Endowment: FY2025 audited statements, Note 12 · Enrollment: College Navigator (IPEDS), fall 2024") in text
+    assert ("Endowment: FY2025 audited statements, Note 11 · Enrollment: College Navigator (IPEDS), fall 2024") in text
+    e = read_endowment()
+    for item in e["schools"].values():
+        assert f'href="{item["source_url"]}">FY2025 audited statements, {item["note"]}</a>' in page
+        assert f'href="{item["enrollment"]["source_url"]}">College Navigator (IPEDS), fall 2024</a>' in page
+    assert "Endowment on the common basis" not in text and "Endowment source" not in text
+
+
+def test_the_arithmetic_line_is_built_from_the_data_file():
+    e = read_endowment()
+    per = alumni.per_student(e)
+    for key, item in e["schools"].items():
+        parts = alumni.arithmetic_parts(item, per[key])
+        start = item["amount_usd"] if item["comparable"]["excluded"] else alumni.comparable_amount(item)
+        assert parts[0].startswith(f"${start:,}")
+        for part in item["comparable"]["excluded"]:
+            assert f'− ${part["amount_usd"]:,} {part["short_label"]}' in parts
+        assert parts[-3:] == [f'÷ {item["enrollment"]["count"]:,} students',
+                              f"= ${alumni.exact_per_student(item):,},", f"rounded to ${per[key]:,}"]
+    # a change in the data changes the line
+    e["schools"]["wabash"]["comparable"]["excluded"] = [{"label": "pledges receivable", "short_label": "pledges",
+                                                         "amount_usd": 957_416}]
+    assert " ".join(alumni.arithmetic_parts(e["schools"]["wabash"], alumni.per_student(e)["wabash"])) == (
+        "$442,957,416 total − $957,416 pledges = $442,000,000 ÷ 866 students = $510,393, rounded to $510,000")
+
+
+def test_exact_per_student_rounds_half_up_to_the_dollar_from_the_exact_amounts():
+    e = read_endowment()
+    assert alumni.exact_per_student(e["schools"]["depauw"]) == 516418        # 989,973,265 / 1,917 = 516,417.98
+    assert alumni.exact_per_student(e["schools"]["wabash"]) == 511498        # 442,957,416 / 866 = 511,498.17
+    item = {"amount_usd": 5, "comparable": {"excluded": []}, "enrollment": {"count": 2}}
+    assert alumni.exact_per_student(item) == 3                               # 2.5 rounds up
+    item["amount_usd"] = 4_999
+    item["enrollment"]["count"] = 2
+    assert alumni.exact_per_student(item) == 2500                            # 2,499.5 rounds up
 
 
 def test_depauw_is_put_on_wabashs_pooled_basis_before_dividing_by_headcount():
@@ -240,7 +277,7 @@ def test_depauw_is_put_on_wabashs_pooled_basis_before_dividing_by_headcount():
     depauw, wabash = e["schools"]["depauw"], e["schools"]["wabash"]
     assert alumni.comparable_amount(depauw) == 1_041_801_089 - 38_817_699 - 13_010_125 == 989_973_265
     assert alumni.comparable_amount(wabash) == 442_957_416 and wabash["comparable"]["excluded"] == []
-    assert alumni.per_student(e) == {"depauw": 516000, "wabash": 511000}     # 516,423.6 and 511,498.2
+    assert alumni.per_student(e) == {"depauw": 516000, "wabash": 511000}     # 516,417.98 and 511,498.17
     assert round(1_041_801_089 / 1917, -3) == 543000                       # the unadjusted figure, no longer used
     assert [p["label"] for p in depauw["comparable"]["excluded"]] == ["pledges receivable", "perpetual trusts"]
 
@@ -290,16 +327,17 @@ def test_enrollment_term_follows_the_fiscal_year():
     assert alumni.validate_endowment(data)
 
 
-def test_the_caveat_names_the_basis_the_headline_uses_wherever_per_student_figures_show():
-    text = visible_text(committed_page())
+def test_the_caveat_says_calculated_and_names_the_basis_wherever_per_student_figures_show():
+    page = committed_page()
+    text = visible_text(page)
     assert "$516,000" in text
-    assert "DePauw reports total endowment net assets including pledges receivable and perpetual trusts" in text
-    assert "Wabash reports pooled endowment net assets only" in text
-    assert "Neither is cash available for general spending" in text
-    assert ("The per-student figures are on one basis, pooled endowment net assets: DePauw’s total is shown without "
-            "its $38,817,699 of pledges receivable and $13,010,125 of perpetual trusts.") in text
-    assert "fall 2024 total undergraduate headcount" in text and "College Navigator (IPEDS)" in text
-    assert "within 5% of each other, so neither is marked higher" in text
+    caveat = ("Calculated by this site, not reported by either school. Both are pooled endowment (donor-restricted "
+              "and board-designated funds) at Jun 30, 2025; DePauw’s pledges and perpetual trusts are taken out "
+              "because Wabash’s pool leaves them out. Neither is cash a school can spend freely.")
+    assert alumni.endowment_caveat(read_endowment()) == caveat
+    assert f'<p class="endowment-caveat">{caveat}</p>' in page
+    assert ("About even: the higher figure is no more than 5% above the lower ($516,418 and $511,498, "
+            "1.0% apart).") in text
     # the scoreboard's own note points at the scope difference
     assert "cover different scopes (see Endowment below)" in text
 
@@ -486,11 +524,18 @@ def even_endowment(depauw_amount, wabash_amount=100_000_000, students=100):
 
 def test_about_even_means_within_five_percent_judged_on_exact_figures():
     assert alumni.EVEN_PERCENT == 5
-    assert alumni.about_even(read_endowment())                                 # 516,424 against 511,498: 1.0%
+    assert alumni.about_even(read_endowment())                                 # 516,418 against 511,498: 1.0%
+    assert alumni.gap_text(read_endowment()) == "1.0%"                         # 0.96%
     assert alumni.about_even(even_endowment(100_000_000))
     assert alumni.about_even(even_endowment(105_000_000))                      # exactly 5%
+    assert alumni.gap_text(even_endowment(105_000_000)) == "5.0%"
     assert not alumni.about_even(even_endowment(105_000_001))
+    assert alumni.gap_text(even_endowment(105_000_001)) == "5.0%"              # shows 5.0% but is over the line
     assert alumni.about_even(even_endowment(95_238_096)) and not alumni.about_even(even_endowment(95_000_000))
+    assert alumni.gap_text(even_endowment(100_050_000)) == "0.1%"              # 0.05% rounds half up
+    assert alumni.gap_text(even_endowment(100_049_999)) == "0.0%"
+    assert alumni.even_text(even_endowment(105_000_000)) == (
+        "the higher figure is no more than 5% above the lower ($1,050,000 and $1,000,000, 5.0% apart).")
     unadjusted = read_endowment()
     for item in unadjusted["schools"].values():
         item["comparable"]["excluded"] = []
