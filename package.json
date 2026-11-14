@@ -3,6 +3,6 @@
   "private": true,
   "description": "Build tooling only (the HTML validator CI runs on the generated pages). The site itself ships no JavaScript dependencies.",
   "devDependencies": {
-    "html-validate": "11.19.0"
+    "html-validate": "11.21.0"
   }
 }
