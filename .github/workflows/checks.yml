@@ -52,7 +52,7 @@ jobs:
         run: node --check static/easter-eggs.js
 
       - name: Validate generated HTML
-        run: npx --no-install html-validate site/index.html site/404.html site/bell-heist/index.html site/heist-details/index.html site/privacy/index.html site/how-it-works/index.html site/how-it-works/athletics/index.html site/how-it-works/alumni/index.html site/alumni/index.html
+        run: npx --no-install html-validate site/index.html site/404.html site/bell-heist/index.html site/heist-details/index.html site/privacy/index.html site/accessibility/index.html site/how-it-works/index.html site/how-it-works/athletics/index.html site/how-it-works/alumni/index.html site/alumni/index.html
 
       # Draws every mermaid block in README.md with the Mermaid CLI, so a diagram with a syntax error fails the
       # PR instead of showing an error box on GitHub. The CLI exits 0 when a file has no blocks, so the count
@@ -113,3 +113,49 @@ jobs:
 
       - name: Run tests with the clock frozen
         run: python -m pytest -q tests --fake-now="${{ matrix.now }}"
+
+  # Accessibility: axe-core (WCAG 2.2 A and AA rules plus best practices) on every rendered page, in light and dark
+  # at 320, 375 and 1280 px, with every disclosure open, plus a check that no page scrolls sideways (axe/run.js).
+  # Separate from the `checks` job on purpose, and not a required status check for now: a headless browser on the
+  # runner is a new moving part, so a failure here shows red on the pull request without blocking the merge. The
+  # contrast and structure rules that need no browser are ordinary tests (tests/test_accessibility.py), and those
+  # do block. axe-core and the browser driver come from their own lockfile in axe/, so the validator's install in
+  # the production workflow is unchanged; the browser is the Chrome already on the runner image, and nothing is
+  # downloaded at run time. Read-only like the other jobs: no write token, no saved credentials.
+  axe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The bot-managed data files (series.json and the rest) live on the data branch, not on main. This is a
+      # read-only fetch of this repository (the base repository, for a pull request from a fork), so it needs
+      # no token and a fork gets no extra access. It fails the job if the branch or a file is missing.
+      - name: Get the data files from the data branch
+        run: python3 scraper/databranch.py fetch --remote origin
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install --require-hashes -r requirements.txt
+
+      - name: Re-merge series.json from the saved copies
+        run: python scraper/scrape.py --remerge-only
+
+      - name: Render site
+        run: python scraper/render.py
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+
+      - name: Install axe-core and the browser driver from their own lockfile
+        working-directory: axe
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run axe-core on every page
+        run: node axe/run.js site

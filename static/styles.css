@@ -411,6 +411,8 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .board-w { color: var(--color-board-wabash); }
 .board-t { color: var(--color-board-tie); align-content: end; padding-inline: var(--space-1); }
 .board-t .board-num { font-size: clamp(2.25rem, 11vw, 4.5rem); }
+/* High contrast paints a backplate behind each number that would cover the school name above it */
+@media (forced-colors: active) { .board-name { position: relative; z-index: 1; } }
 /* Record bars: widths come from the .w-N classes below, never inline styles */
 .rbar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--color-tie-accent); }
 .rbar-sm { height: 6px; }

@@ -11,6 +11,7 @@ data/overrides.json, for the counts on the how-it-works page), and writes a fini
   bell-heist/index.html           public, unindexed fictional story
   heist-details/index.html        the sourced Monon Bell heist history (heists.py)
   privacy/index.html              the privacy policy (privacy.py; no script, base CSP)
+  accessibility/index.html        the accessibility page (accessibility.py; no script, base CSP)
   404.html                       root-relative URLs, noindex
   styles.css, the icons, easter-eggs.js (home and alumni only), three original easter-egg SVGs,
   fonts/ (the Barlow Condensed woff2 subset and OFL.txt),
@@ -43,6 +44,7 @@ import sys
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
+import accessibility
 import bars
 import chart
 import databranch
@@ -212,8 +214,21 @@ def report_url(sport_name: str | None = None) -> str:
     return f"{REPO_URL}/issues/new?{query}"
 
 
+def link_label(text: str, context: str | None) -> str:
+    """An aria-label attribute (with its leading space) for a link whose text repeats on every card: the visible
+    text first, then what it is about ("DePauw history: football"), so the accessible name still starts with what
+    a sighted visitor reads (WCAG 2.5.3 Label in Name). Empty when there is no context to add."""
+    return f' aria-label="{esc(text)}: {esc(context)}"' if context else ""
+
+
+def sport_label(name: str) -> str:
+    """A sport's name inside a label or a caption: "men's basketball", "football"."""
+    return name.lower()
+
+
 def report_link(sport_name: str | None = None) -> str:
-    return f'<a href="{esc(report_url(sport_name))}">Report a data error</a>'
+    label = link_label("Report a data error", sport_label(sport_name) if sport_name else None)
+    return f'<a href="{esc(report_url(sport_name))}"{label}>Report a data error</a>'
 
 
 def enhancement_url(area: str) -> str:
@@ -585,12 +600,13 @@ def title_entrance_html() -> str:
     """The title block of the home and alumni pages. The h1 is plain text, so a screen reader announces the title as
     a heading; the tiger-entrance button sits after it, hidden until the script (static/easter-eggs.js) runs, and
     covers the title as a transparent tap target. Without the script only the plain title shows, and the empty
-    status line takes no room."""
+    status line takes no room. The hint carries `hidden`: it is read only as the button's description
+    (aria-describedby still reads a hidden element), never as loose text in the header."""
     return "\n".join([
         '<div class="entrance-wrap"><h1>DePauw vs. Wabash</h1>'
         '<button id="tiger-entrance" class="entrance-button" type="button" hidden aria-label="Tiger entrance" '
         'aria-describedby="entrance-hint"></button></div>',
-        '<span id="entrance-hint" class="sr-only">Activate five times, with no speed requirement, to unlock a message.</span>',
+        '<span id="entrance-hint" class="sr-only" hidden>Activate five times, with no speed requirement, to unlock a message.</span>',
         '<p id="entrance-status" class="entrance-status" role="status" aria-live="polite"></p>',
     ])
 
@@ -604,9 +620,10 @@ def tiger_note_html(facts_data: dict, today: dt.date) -> str:
     items = []
     for i, fact in enumerate(facts):
         many = len(fact["sources"]) > 1
+        # the accessible name starts with the visible text ("Source 2: ..."), WCAG 2.5.3 Label in Name
+        named = [(f"Source {n}" if many else "Source", src) for n, src in enumerate(fact["sources"], 1)]
         links = " · ".join(
-            f'<a href="{esc(src["url"])}" aria-label="Source: {esc(src["label"])}">Source{f" {n}" if many else ""}</a>'
-            for n, src in enumerate(fact["sources"], 1))
+            f'<a href="{esc(src["url"])}" aria-label="{text}: {esc(src["label"])}">{text}</a>' for text, src in named)
         items.append(f'<li class="tiger-fact"{"" if i == shown else " hidden"}>'
                      f'<span class="tiger-fact-school">{esc(funfacts.SCHOOL_LABELS[fact["school"]])}</span> '
                      f'{esc(fact["text"])} <span class="tiger-fact-source">{links}</span></li>')
@@ -751,7 +768,11 @@ def result_html(g: dict) -> str:
     return esc(score_text(g))      # DePauw's version, the one that counts; a dispute is spelled out in the notes
 
 
-def games_table(key: str, games: list, words: tuple = ("game", "games"), merged: bool = False) -> str:
+def games_table(key: str, games: list, words: tuple = ("game", "games"), merged: bool = False,
+                name: str | None = None) -> str:
+    """One card's every-game list. `name` is the sport's name for the table's hidden caption ("men's basketball");
+    without it the caption falls back to the key with its hyphens removed."""
+    captioned = sport_label(name) if name else key.replace("-", " ")
     rows = []
     # games arrive oldest first (doubleheaders in playing order), so reverse for newest first
     for g in reversed(games):
@@ -774,7 +795,7 @@ def games_table(key: str, games: list, words: tuple = ("game", "games"), merged:
         f'{series_html(facts.season_series(games))}'
         '<p class="hint">Newest first. Home and away are from DePauw’s point of view.</p>\n'
         '<table>\n'
-        f'<caption class="sr-only">Every {esc(key.replace("-", " "))} {esc(words[0])}, newest first</caption>\n'
+        f'<caption class="sr-only">Every {esc(captioned)} {esc(words[0])}, newest first</caption>\n'
         '<thead><tr><th scope="col">Date</th><th scope="col">Site</th><th scope="col">Result</th>'
         '<th scope="col">Notes</th><th scope="col">Box score</th></tr></thead>\n'
         '<tbody>\n' + "\n".join(rows) + '\n</tbody>\n</table>\n'
@@ -875,7 +896,8 @@ def card(key: str, s: dict, ahead: list, pending: list, up: dict | None, today: 
     def dl(rows):
         return '<dl class="facts">\n' + "\n".join(f'<div><dt>{esc(k)}</dt><dd>{v}</dd></div>' for k, v in rows) + '\n</dl>'
     merged = bool(s.get("sources"))
-    links = [f'<a href="{esc(u)}">{esc(label)}</a>' for label, u in page_links(s, up)]
+    links = [f'<a href="{esc(u)}"{link_label(label, sport_label(s["name"]))}>{esc(label)}</a>'
+             for label, u in page_links(s, up)]
     links.append(report_link(s["name"]))
     provenance = provenance_text(s)
     source = (f'<p class="provenance">{esc(provenance)}</p>\n' if provenance else "") + \
@@ -898,7 +920,7 @@ def card(key: str, s: dict, ahead: list, pending: list, up: dict | None, today: 
         f'{chart.series_chart(key, s["name"], games, unit_many, words)}\n'
         f'{fun_facts_html(fun_facts(key, s), (bell_heist_fact(),) if key == "football" and facts.bell(games) else ())}\n'
         f'{source}\n'
-        f'{games_table(key, games, words, merged)}\n</article>'
+        f'{games_table(key, games, words, merged, s["name"])}\n</article>'
     )
 
 
@@ -1125,7 +1147,8 @@ def footer_source(key: str, s: dict, up: dict | None) -> str:
         first = safe_url(s["source_url"])
         return f'<li><a href="{esc(first)}">{esc(s["name"])}</a></li>' if first else ""
     return (f'<li>{esc(s["name"])}: '
-            + " · ".join(f'<a href="{esc(u)}">{esc(label)}</a>' for label, u in links) + '</li>')
+            + " · ".join(f'<a href="{esc(u)}"{link_label(label, sport_label(s["name"]))}>{esc(label)}</a>'
+                         for label, u in links) + '</li>')
 
 
 def athletics_footer_block(now: dt.datetime, prefix: str, data: dict, checked: str | None,
@@ -1199,17 +1222,19 @@ def heists_footer_block(prefix: str, heists_data: dict) -> list:
 
 def site_footer(now: dt.datetime, *, prefix: str = "", data: dict | None = None, checked: str | None = None,
                 upcoming: dict | None = None, alumni: tuple | None = None, link_how: bool = True,
-                heists: dict | None = None, privacy_self: bool = False) -> list:
+                heists: dict | None = None, privacy_self: bool = False, accessibility_self: bool = False) -> list:
     """The footer of every page: one function with a page-specific data block and the same structure and
     lines after it. `prefix` reaches the site root from the page ("" on the home page, "../" one folder
     down, the root path on 404.html). With `data` the block is the athletics one, with `alumni` (the alumni
     and endowment data) the alumni one, with `heists` the heist history's one; with none (404, the how-it-works
-    landing, Bell-heist and privacy pages) the block is only the enhancement line, then the shared lines.
+    landing, Bell-heist, privacy and accessibility pages) the block is only the enhancement line, then the shared lines.
     "How the numbers work" links to the matching page, and the men's head-to-head note shows only on the
     athletics pages (it is about athletics, so the alumni and the neutral pages leave it out). The
     how-it-works landing page passes link_how=False: a link from that page to itself would go nowhere. Every
-    footer links to the privacy page, except the privacy page itself (privacy_self=True), which shows the word as
-    plain text marked aria-current="page"."""
+    footer links to the privacy page and then the accessibility page, except that each of those two shows its own
+    name (privacy_self=True, accessibility_self=True) as plain text marked aria-current="page"."""
+    def own_or_link(label: str, path: str, own: bool) -> str:
+        return f'<span aria-current="page">{label}</span>' if own else f'<a href="{esc(prefix + path)}">{label}</a>'
     block, how, men_note = [], HOW_PATH, False
     if heists:                                      # athletics-side, but its data block is the curated stories
         block, how, men_note = heists_footer_block(prefix, heists), HOW_ATHLETICS_PATH, True
@@ -1224,7 +1249,8 @@ def site_footer(now: dt.datetime, *, prefix: str = "", data: dict | None = None,
         *block,
         '<!-- Both schools supplied the records. Only one supplied the developers. -->',
         '<p class="footer-links">' + (f'<a href="{esc(prefix + how)}">How the numbers work</a> · ' if link_how else "") +
-        ('<span aria-current="page">Privacy</span>' if privacy_self else f'<a href="{esc(prefix + privacy.PATH)}">Privacy</a>') + ' · ' +
+        own_or_link("Privacy", privacy.PATH, privacy_self) + ' · ' +
+        own_or_link("Accessibility", accessibility.PATH, accessibility_self) + ' · ' +
         f'<a href="{esc(REPO_URL)}">Built in the open: code and data on GitHub</a></p>',
         *([f'<p>{esc(MEN_ONLY)}</p>'] if men_note else []),
         f'<p>{esc(DISCLAIMER)}</p>',
@@ -1437,6 +1463,18 @@ def render_privacy(data: dict, now: dt.datetime | None = None, upcoming: dict | 
         footer=site_footer(now, prefix="../", privacy_self=True), subtitle=NEUTRAL_SUBTITLE)
 
 
+def render_accessibility(data: dict, now: dt.datetime | None = None, upcoming: dict | None = None) -> str:
+    """/accessibility/: what the site aims for (WCAG 2.2 AA), what was tested and how to report a problem. Built
+    like the privacy page: one folder down, base CSP (no script), neutral header, no nav item current."""
+    now = now or dt.datetime.now(dt.timezone.utc)
+    return how_page(
+        accessibility.TITLE, accessibility.DESCRIPTION, prefix="../", path=accessibility.PATH, current="",
+        preview=athletics_preview(data, now, upcoming or {}),
+        back=[("../", BACK_ATHLETICS), ("../alumni/", BACK_ALUMNI)],
+        body=accessibility.content(repo_url=REPO_URL, suggestion_url=enhancement_url(AREA_SITE)),
+        footer=site_footer(now, prefix="../", accessibility_self=True), subtitle=NEUTRAL_SUBTITLE)
+
+
 def render_bell_heist(now: dt.datetime | None = None) -> str:
     return "\n".join([
         head("Mission accomplished | DePauw vs. Wabash", "An entirely fictional Monon Bell mission.",
@@ -1471,6 +1509,7 @@ def render_sitemap(data: dict, checked: str | None = None, alumni_verified: str 
             (f'  <url><loc>{esc(SITE_URL + HEIST_PATH)}</loc><lastmod>{esc(heists_verified)}</lastmod></url>\n'
              if heists_verified else '') +
             f'  <url><loc>{esc(SITE_URL + privacy.PATH)}</loc><lastmod>{esc(privacy.UPDATED)}</lastmod></url>\n'
+            f'  <url><loc>{esc(SITE_URL + accessibility.PATH)}</loc><lastmod>{esc(accessibility.UPDATED)}</lastmod></url>\n'
             '</urlset>\n')
 
 
@@ -1550,6 +1589,7 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
         "bell-heist/index.html": render_bell_heist(now),
         HEIST_PATH + "index.html": render_heist_details(data, heists_data, now, upcoming),
         privacy.PATH + "index.html": render_privacy(data, now, upcoming),
+        accessibility.PATH + "index.html": render_accessibility(data, now, upcoming),
         "games.csv": render_csv(data),
         "site.webmanifest": render_manifest(),
         "sitemap.xml": render_sitemap(data, checked_at, alumni_verified_date(alumni_data, endowment_data),

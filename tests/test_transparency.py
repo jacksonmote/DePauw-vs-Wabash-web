@@ -78,7 +78,8 @@ def test_footer_links_both_downloads_and_the_error_report(tmp_path):
 def test_each_card_reports_with_its_own_sport_prefilled(tmp_path):
     _, html = build(tmp_path, {"football": football(), "mens-basketball": basketball()})
     card = html[html.index('id="mens-basketball"'):]
-    link = re.search(r'<a href="([^"]+)">Report a data error</a>', card).group(1).replace("&amp;", "&")
+    link = re.search(r'<a href="([^"]+)" aria-label="Report a data error: men’s basketball">Report a data error</a>',
+                     card).group(1).replace("&amp;", "&")
     url = urlparse(link)
     assert (url.scheme, url.netloc, url.path) == ("https", "github.com", "/jacksonmote/DePauw-vs-Wabash-web/issues/new")
     q = parse_qs(url.query)
