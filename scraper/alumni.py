@@ -555,8 +555,8 @@ def render_page(data: dict, endowment: dict, *, head_html: str, footer_html: str
                      f'{_heading(cid, category["name"])}'
                      f'<p>{_esc(category["definition"])}</p><div class="tiles">{"".join(tiles_html)}</div>{count_bar}'
                      f'<div class="alumni-schools">{"".join(schools_html)}</div>'
-                     f'<p class="alumni-report"><a href="{_esc(correction_url(category["name"], repo_url))}">'
-                     f'Suggest a correction</a></p></section>')
+                     f'<p class="alumni-report"><a href="{_esc(correction_url(category["name"], repo_url))}" '
+                     f'aria-label="Suggest a correction: {_esc(category["name"])}">Suggest a correction</a></p></section>')
     endow_cards = []
     for key, label in SCHOOLS.items():
         item = endowment["schools"][key]
@@ -598,7 +598,8 @@ def render_page(data: dict, endowment: dict, *, head_html: str, footer_html: str
         + (f'<p class="endowment-even"><strong>About even:</strong> {_esc(even_text(endowment))}</p>'
            if even else '') +
         f'<p class="endowment-caveat">{_esc(endowment_caveat(endowment))}</p>'
-        f'<p class="alumni-report"><a href="{_esc(correction_url("Endowment", repo_url))}">Suggest a correction</a></p>'
+        f'<p class="alumni-report"><a href="{_esc(correction_url("Endowment", repo_url))}" '
+        f'aria-label="Suggest a correction: Endowment">Suggest a correction</a></p>'
         f'<p>Verified {_esc(fmt_date(endowment["verified_at"]))}.</p></section>',
         *cards,
         '</main>', footer_html,

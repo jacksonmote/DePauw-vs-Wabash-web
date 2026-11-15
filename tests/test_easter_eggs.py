@@ -23,6 +23,7 @@ PAGES = (
     "index.html", "alumni/index.html", "how-it-works/index.html",
     "how-it-works/athletics/index.html", "how-it-works/alumni/index.html",
     "404.html", "bell-heist/index.html", "heist-details/index.html", "privacy/index.html",
+    "accessibility/index.html",
 )
 
 
@@ -41,7 +42,7 @@ def csp(source):
     return html.unescape(re.search(r'http-equiv="Content-Security-Policy" content="([^"]+)"', source).group(1))
 
 
-def test_nine_page_inventory_and_script_csp_are_exact(site):
+def test_ten_page_inventory_and_script_csp_are_exact(site):
     assert {p.relative_to(site).as_posix() for p in site.rglob("*.html")} == set(PAGES)
     for name in PAGES:
         source = page(site, name)
@@ -173,7 +174,7 @@ def test_title_entrance_is_progressive_and_uses_one_native_click_handler(site):
     assert '<div class="entrance-wrap"><h1>DePauw vs. Wabash</h1><button id="tiger-entrance" class="entrance-button" type="button" hidden aria-label="Tiger entrance"' in home
     assert "entrance-fallback" not in home and "entrance-fallback" not in script
     assert 'id="entrance-status" class="entrance-status" role="status" aria-live="polite"' in home
-    assert 'id="entrance-hint"' in home and "five times" in home
+    assert '<span id="entrance-hint" class="sr-only" hidden>' in home and "five times" in home   # only a description
     assert script.count('addEventListener("click"') == 1
     assert 'activations === 5' in script and 'activations = Math.min(5, activations + 1)' in script
     assert 'status.textContent = "Your education has been verified."' in script

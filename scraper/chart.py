@@ -3,7 +3,8 @@ The every-game chart on a sport card: one bar per game, oldest to newest, drawn 
 
 Pure functions over the games in data/series.json; no JavaScript, no inline styles (the CSP forbids both), no
 images. Bars above the baseline are DePauw wins, bars below are Wabash wins, taller means a bigger margin, and a
-tie is a short gray mark on the baseline. The bars are three <path> elements (one per kind of result), not one
+tie is a short gray mark on the baseline; the legend says so in words ("DePauw win (above the line)"), so nobody has
+to tell gold from scarlet to read it (WCAG 1.4.1 Use of Color). The bars are three <path> elements (one per kind of result), not one
 element per game, so a 314-game chart is three nodes. Colors come from classes in static/styles.css.
 
 Bars are placed by the game's position in the list, not by its season, so a sport that meets several times a year
@@ -137,9 +138,9 @@ def series_chart(key: str, name: str, games: list, unit_many: str = "points", wo
         f'<line class="c-base" x1="0" x2="{WIDTH}" y1="{MID}" y2="{MID}"/>{shapes}</svg>\n'
         f'<p class="chart-axis" aria-hidden="true">{"".join(f"<span>{esc(y)}</span>" for y in years)}</p>\n'
         '<ul class="chart-legend">'
-        '<li><span class="sw sw-d" aria-hidden="true"></span>DePauw win</li>'
-        '<li><span class="sw sw-w" aria-hidden="true"></span>Wabash win</li>'
-        '<li><span class="sw sw-t" aria-hidden="true"></span>Tie</li></ul>\n'
+        '<li><span class="sw sw-d" aria-hidden="true"></span>DePauw win (above the line)</li>'
+        '<li><span class="sw sw-w" aria-hidden="true"></span>Wabash win (below the line)</li>'
+        '<li><span class="sw sw-t" aria-hidden="true"></span>Tie (short mark on the line)</li></ul>\n'
         f'<p class="hint">One bar per {esc(words[0])}, oldest to newest. Taller means a bigger margin; a margin of '
         f'{esc(facts.num(cap))} {esc(unit_many)} or more is drawn full height.</p>\n'
         '</div>'

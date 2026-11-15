@@ -18,6 +18,7 @@ from bs4 import BeautifulSoup
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scraper"))
+import accessibility  # noqa: E402
 import heists  # noqa: E402
 import privacy  # noqa: E402
 import render  # noqa: E402
@@ -114,7 +115,7 @@ def test_the_policy_makes_the_promises_the_other_tests_check(site):
 
 def test_every_footer_has_a_privacy_link_that_resolves_to_the_page_and_the_page_does_not_link_to_itself(site):
     target = site / "privacy" / "index.html"
-    assert target.exists() and len(pages(site)) == 9
+    assert target.exists() and len(pages(site)) == 10
     for page in pages(site):
         footer = soup(page).find("footer", class_="site-footer")
         links = [a for a in footer.find_all("a") if a.get_text() == "Privacy"]
@@ -188,13 +189,17 @@ def test_no_page_loads_anything_from_another_origin(site):
     assert "http" not in manifest
 
 
-def test_no_form_field_or_phone_link_exists_and_mailto_only_on_the_privacy_page(site):
+# Each contact address appears only on its own page: page folder -> the mailto links that page holds.
+MAILTO = {"privacy": ["mailto:" + privacy.PRIVACY_EMAIL] * 2, "accessibility": ["mailto:" + accessibility.ACCESSIBILITY_EMAIL]}
+
+
+def test_no_form_field_or_phone_link_exists_and_mailto_only_on_each_contacts_own_page(site):
     for page in pages(site):
         s = soup(page)
         assert not s.find_all(["form", "input", "textarea", "select"]), page
         assert not [a for a in s.find_all("a", href=True) if a["href"].lower().startswith("tel:")], page
-        assert [a["href"] for a in s.find_all("a", href=True) if a["href"].lower().startswith("mailto:")] == (
-            [] if page.name != "index.html" or page.parent.name != "privacy" else ["mailto:" + privacy.PRIVACY_EMAIL] * 2), page
+        own = MAILTO.get(page.parent.name, []) if page.name == "index.html" and page.parent.parent == site else []
+        assert [a["href"] for a in s.find_all("a", href=True) if a["href"].lower().startswith("mailto:")] == own, page
 
 
 # ---- issue links ----------------------------------------------------------------------------------------
@@ -240,16 +245,20 @@ def test_the_hosting_section_names_no_network_and_links_githubs_own_statements(s
     assert "don’t see or receive those logs" in text
 
 
-def test_the_privacy_email_is_on_the_privacy_page_only_as_one_mailto_link_and_nowhere_else_on_the_site(site):
+def test_each_contact_address_is_on_its_own_page_only_as_a_mailto_link_and_nowhere_else_on_the_site(site):
+    """privacy@ only on /privacy/, accessibility@ only on /accessibility/, and no other address anywhere."""
     email = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
-    target = site / "privacy" / "index.html"
-    s = soup(target)
-    mailto = [a for a in s.find_all("a", href=True) if a["href"].lower().startswith("mailto:")]
-    assert mailto and {a["href"] for a in mailto} == {"mailto:" + privacy.PRIVACY_EMAIL}
-    assert all(a.get_text() == privacy.PRIVACY_EMAIL for a in mailto)
-    assert set(email.findall(target.read_text(encoding="utf-8"))) == {privacy.PRIVACY_EMAIL}
+    own = {site / "privacy" / "index.html": privacy.PRIVACY_EMAIL,
+           site / "accessibility" / "index.html": accessibility.ACCESSIBILITY_EMAIL}
+    assert privacy.PRIVACY_EMAIL != accessibility.ACCESSIBILITY_EMAIL
+    for target, address in own.items():
+        s = soup(target)
+        mailto = [a for a in s.find_all("a", href=True) if a["href"].lower().startswith("mailto:")]
+        assert mailto and {a["href"] for a in mailto} == {"mailto:" + address}
+        assert all(a.get_text() == address for a in mailto)
+        assert set(email.findall(target.read_text(encoding="utf-8"))) == {address}       # never the other page's
     for path in site.rglob("*"):
-        if path.is_file() and path != target and path.suffix in {".html", ".txt", ".json", ".csv", ".xml", ".webmanifest", ".css", ".js", ".svg"}:
+        if path.is_file() and path not in own and path.suffix in {".html", ".txt", ".json", ".csv", ".xml", ".webmanifest", ".css", ".js", ".svg"}:
             assert not email.search(path.read_text(encoding="utf-8")), path
             assert "mailto:" not in path.read_text(encoding="utf-8"), path
     security = (site / ".well-known" / "security.txt").read_text(encoding="utf-8")

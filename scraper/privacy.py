@@ -8,9 +8,10 @@ personal data in any issue link. Adding a script, analytics, cookies, storage, a
 request means changing this text, UPDATED and those tests in the same pull request.
 
 UPDATED is a constant, not the build date: it moves only when the policy text changes (set it to the day the
-change merges). The sitemap's lastmod for the page comes from it. PRIVACY_EMAIL is the one email address on the
-whole site: it appears on this page only (never in the footer, and never in security.txt, which lists no email
-address). SOURCE_PATH is this file's own path in the repository; the "Changes" links are built from it and a
+change merges). The sitemap's lastmod for the page comes from it. PRIVACY_EMAIL is the privacy contact:
+it appears on this page only (never in the footer, and never in security.txt, which lists no email address).
+The only other address on the site is the accessibility contact, which appears only on /accessibility/
+(accessibility.py); each contact address stays on its own page. SOURCE_PATH is this file's own path in the repository; the "Changes" links are built from it and a
 test checks that it exists.
 """
 

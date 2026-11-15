@@ -65,6 +65,10 @@ def test_every_fact_is_in_the_page_with_its_school_label_and_source_links():
     assert [a.get_text() for a in items[1].select("a")] == ["Source 1", "Source 2"]      # several sources are numbered
     assert [a.get_text() for a in items[0].select("a")] == ["Source"]
     assert items[0].select_one("a")["aria-label"] == "Source: Source 0"
+    # a numbered link's accessible name starts with its visible text (WCAG 2.5.3 Label in Name)
+    for item in items:
+        for a in item.select(".tiger-fact-source a"):
+            assert a["aria-label"].startswith(a.get_text() + ": "), a
 
 
 def test_the_disclosure_is_the_summary_the_art_and_the_facts_with_no_closing_line():

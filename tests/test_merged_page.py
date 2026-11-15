@@ -161,7 +161,7 @@ def test_the_tennis_card_says_matches_where_other_cards_say_games(tmp_path):
     t = text_of(card(html, "mens-tennis"))
     assert "Matches played 3" in t and "All 3 matches" in t
     assert re.search(r"\bgames?\b", t, re.I) is None
-    assert "Every mens tennis match, newest first" in card(html, "mens-tennis")
+    assert "Every men’s tennis match, newest first" in card(html, "mens-tennis")   # the name, not the key
     f = text_of(card(html, "football"))
     assert "Games played 5" in f and "All 5 games" in f and "match" not in f.lower()
 
@@ -192,8 +192,13 @@ def test_every_card_and_the_footer_link_both_schools_history_and_schedule_pages(
                 WABASH_SRC.format("football"),
                 "https://depauwtigers.com/sports/football/schedule",
                 "https://sports.wabash.edu/sports/football/schedule"):
-        assert f'<a href="{url}">' in card(html, "football"), url
-        assert f'<a href="{url}">' in html[html.index("<footer"):], url
+        assert f'<a href="{url}" aria-label="' in card(html, "football"), url
+        assert f'<a href="{url}" aria-label="' in html[html.index("<footer"):], url
+    # the same four link texts repeat on every card, so each one's accessible name adds its sport after the text
+    for where in (card(html, "football"), html[html.index("<footer"):]):
+        assert re.findall(r'aria-label="([^"]+)">(?:DePauw|Wabash) (?:history|schedule)</a>', where) == [
+            "DePauw history: football", "Wabash history: football",
+            "DePauw schedule: football", "Wabash schedule: football"]
     c = text_of(card(html, "football"))
     assert "Sources: DePauw history · Wabash history · DePauw schedule · Wabash schedule · Report a data error" in c
 

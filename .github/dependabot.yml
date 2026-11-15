@@ -16,3 +16,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  # axe/package.json and axe/package-lock.json lock axe-core and the browser driver for the accessibility check
+  # (the `axe` job in checks.yml). A separate folder, so the validator's install above never changes with them.
+  - package-ecosystem: npm
+    directory: /axe
+    schedule:
+      interval: weekly
