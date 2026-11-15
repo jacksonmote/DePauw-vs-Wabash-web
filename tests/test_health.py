@@ -6,9 +6,12 @@ from a table, the live page is a string, and the issue sync gets a fake gh runne
 import ast
 import datetime as dt
 import email.message
+import io
 import json
 import re
 import urllib.error
+import urllib.request
+import urllib.response
 from pathlib import Path
 
 import pytest
@@ -66,13 +69,30 @@ def test_every_scheduled_workflow_enabled_is_ok():
     assert "`health-check.yml`" in c["detail"] and "checks.yml" not in c["detail"]
 
 
-@pytest.mark.parametrize("state", ["disabled_inactivity", "disabled_manually"])
-def test_a_scheduled_workflow_that_is_off_is_a_problem_that_says_how_to_enable_it(state):
+@pytest.mark.parametrize("state, words", [
+    ("disabled_inactivity", "switched off by GitHub for inactivity"),
+    ("disabled_manually", "switched off by hand"),
+    ("disabled_fork", "in the state `disabled_fork`"),
+])
+def test_a_scheduled_workflow_that_is_off_is_a_problem_that_says_how_to_enable_it(state, words):
     c = health.check_workflows(SCHEDULED, listed(update_and_deploy=state, link_check=state))
     assert c["status"] == "problem"
-    assert f"`update-and-deploy.yml` is {state.replace('_', ' ')}" in c["detail"] and "`link-check.yml`" in c["detail"]
+    assert c["detail"] == f"Not enabled: `link-check.yml` is {words}; `update-and-deploy.yml` is {words}."
     assert "`gh workflow enable link-check.yml` and `gh workflow enable update-and-deploy.yml`" in c["todo"]
     assert "Enable workflow" in c["todo"] and "gameday-watcher" not in c["detail"]
+    merge_first = "First merge a real pull request into `main`: enabling alone does not meet the 60-day rule"
+    assert (merge_first in c["todo"]) == (state == "disabled_inactivity")     # only then is a commit needed too
+    if state == "disabled_inactivity":
+        assert c["todo"].index(merge_first) < c["todo"].index("To enable a workflow")
+    assert "By users' reports" in c["todo"]                                    # not from GitHub's documentation
+
+
+def test_a_state_that_is_not_a_switch_is_shown_as_github_names_it():
+    c = health.check_workflows(SCHEDULED, listed(snapshot="deleted", link_check="disabled_inactivity"))
+    assert "`snapshot.yml` is in the state `deleted`" in c["detail"]
+    assert "`link-check.yml` is switched off by GitHub for inactivity" in c["detail"]
+    assert "gh workflow enable snapshot.yml" not in c["todo"] and "gh workflow enable link-check.yml" in c["todo"]
+    assert "For any other state, open the workflow on the Actions tab" in c["todo"]
 
 
 def test_a_scheduled_workflow_github_does_not_list_is_a_problem():
@@ -107,27 +127,41 @@ def test_the_warning_starts_at_exactly_45_days():
     assert c["status"] == "problem"
 
 
-def test_the_warning_says_what_to_do_and_the_date_by_which():
+def test_the_warning_says_what_to_do_and_the_moment_before_which():
     last = dt.datetime(2026, 10, 6, 15, 0, tzinfo=dt.timezone.utc)          # 45 days and a few hours before NOW
     c = health.check_activity(NOW, commit(last))
     assert c["status"] == "problem"
     assert "from Oct 6, 2026, 45 days ago" in c["detail"]
-    assert "that is Dec 5, 2026, 14 days from now" in c["detail"]            # Oct 6 + 60 days
+    assert "that is Dec 5, 2026, 10:00 AM EST, 14 days from now" in c["detail"]   # Oct 6, 11 AM EDT + 60 days
     assert "Merge any real pull request into `main`" in c["todo"] and "Dependabot pull request" in c["todo"]
-    assert "It must happen by Dec 5, 2026" in c["todo"]
+    assert "If none is waiting, open one with any small real improvement" in c["todo"]
+    assert "It must be merged before Dec 5, 2026, 10:00 AM EST" in c["todo"]
     assert "Do not make an empty commit" in c["todo"]
+    assert f"After that {health.SCHEDULED_WORK} all stop." in c["todo"]
 
 
-def test_the_date_is_the_eastern_date_of_the_commit_plus_60_days():
+def test_the_limit_is_the_eastern_time_of_the_commit_plus_60_days():
     late = dt.datetime(2026, 10, 2, 2, 30, tzinfo=dt.timezone.utc)           # Oct 1, 10:30 PM EDT
     c = health.check_activity(NOW, commit(late))
-    assert "from Oct 1, 2026" in c["detail"] and "that is Nov 30, 2026" in c["detail"]
+    assert "from Oct 1, 2026" in c["detail"] and "that is Nov 30, 2026, 9:30 PM EST" in c["detail"]
+
+
+def test_a_late_evening_commit_never_reads_as_a_whole_extra_day():
+    """A commit at 11:30 PM EST on Jan 20, 2027 reaches 60 days at 12:30 AM EDT on Mar 22. "By Mar 22" would be read
+    as the end of that day, almost a day too late, so the limit is given with its time."""
+    last = dt.datetime(2027, 1, 21, 4, 30, tzinfo=dt.timezone.utc)
+    now = dt.datetime(2027, 3, 10, 20, 28, tzinfo=dt.timezone.utc)
+    c = health.check_activity(now, commit(last))
+    assert c["status"] == "problem" and "from Jan 20, 2027, 48 days ago" in c["detail"]
+    assert "that is Mar 22, 2027, 12:30 AM EDT, 11 days from now" in c["detail"]
+    assert "It must be merged before Mar 22, 2027, 12:30 AM EDT" in c["todo"]
+    assert "by Mar 22" not in c["detail"] + c["todo"]
 
 
 def test_after_60_days_it_says_the_workflows_may_already_be_off():
     assert "days from now" in health.check_activity(NOW, commit(ago(days=60) + dt.timedelta(seconds=1)))["detail"]
     c = health.check_activity(NOW, commit(ago(days=60)))
-    assert c["status"] == "problem" and "that limit passed on Nov 20, 2026" in c["detail"]
+    assert c["status"] == "problem" and "that limit passed on Nov 20, 2026, 3:28 PM EST" in c["detail"]
     assert "may already be off" in c["detail"] and "enable every workflow that is off" in c["todo"]
     assert "a commit does not switch them back on" in c["todo"]
 
@@ -139,7 +173,8 @@ def test_after_60_days_it_says_the_workflows_may_already_be_off():
     lambda when: health.check_deploy(NOW, when, "in the last 7 days (9 runs looked at)"),
     lambda when: health.check_last_checked(
         NOW, f'<p>Data last changed <time datetime="2026-11-14T21:25:16+00:00">Nov 14, 4:25 PM</time> · Last checked '
-             f'<time datetime="{when.isoformat()}">x</time> (Eastern time).</p>' if when else "<p>no time here</p>"),
+             f'<time datetime="{when.isoformat()}">x</time> (Eastern time).</p>' if when else
+        '<p>Data last changed <time datetime="2026-11-14T21:25:16+00:00">Nov 14, 4:25 PM</time> (Eastern time).</p>'),
 ], ids=["scrape", "deploy", "last-checked"])
 def test_each_time_check_is_ok_up_to_48_hours_and_a_problem_after(make):
     assert make(ago(hours=3))["status"] == "ok"
@@ -160,22 +195,35 @@ def test_the_time_checks_say_when_and_how_long_ago_in_eastern_time():
         "No successful run that read every sport was found in the last 7 days (40 runs looked at).")
 
 
+def without_time(tmp_path):
+    """The home page as the renderer writes it when the time of the last real scrape is not known."""
+    return build_site(tmp_path, {"football": football()}, now=dt.datetime(2026, 11, 20, 12, 0, tzinfo=dt.timezone.utc))[1]
+
+
 def test_last_checked_is_read_from_a_page_the_renderer_really_writes(tmp_path):
     _, page = build_site(tmp_path, {"football": football()}, checked_at="2026-11-19T10:19:44+00:00",
                          now=dt.datetime(2026, 11, 20, 12, 0, tzinfo=dt.timezone.utc))
     assert health.parse_last_checked(page) == dt.datetime(2026, 11, 19, 10, 19, 44, tzinfo=dt.timezone.utc)
     assert health.check_last_checked(NOW, page)["status"] == "ok"
-    _, without = build_site(tmp_path, {"football": football()}, now=dt.datetime(2026, 11, 20, 12, 0, tzinfo=dt.timezone.utc))
+    assert health.OUR_PAGE in page and health.OUR_PAGE in without_time(tmp_path)
+    without = without_time(tmp_path)
     assert health.parse_last_checked(without) is None
     c = health.check_last_checked(NOW, without)
     assert c["status"] == "problem" and "shows no \"Last checked\" time" in c["detail"]
 
 
-def test_a_live_page_that_does_not_load_is_a_problem():
+def test_a_live_page_that_does_not_load_could_not_be_checked():
     c = health.check_last_checked(NOW, None, "HTTP 503")
-    assert c["status"] == "problem" and c["detail"] == "The live home page did not load: HTTP 503."
-    assert health.SITE_URL in c["todo"]
+    assert c["status"] == "unknown"
+    assert c["detail"] == "Could not be checked: the live home page did not load (HTTP 503)."
     assert health.SITE_URL.rstrip("/") == render.SITE_URL.rstrip("/")
+
+
+def test_an_answer_that_is_not_our_home_page_could_not_be_checked():
+    """A 200 answer from something else (a parking page, a login wall) says nothing about our updates."""
+    c = health.check_last_checked(NOW, "<html><body><h1>Site not found</h1></body></html>")
+    assert c["status"] == "unknown" and "answered, but not with our home page" in c["detail"]
+    assert "shows no" not in c["detail"]
 
 
 def test_the_data_branch_check():
@@ -203,6 +251,12 @@ def test_the_gate_line_is_read_as_the_gate_really_prints_it(tmp_path, capsys):
     assert health.gate_scope(gate(gameday.FREQUENT_CRON)) == "(nothing)"
     assert health.gate_scope("run=true scope=football,mens-basketball: game-day update") == "football,mens-basketball"
     assert health.gate_scope("the job's log without the gate's line") is None
+    first = "\ufeff2026-11-20T10:19:40.0000000Z run=true scope=all: a daily run\n"   # a log starts with a byte-order mark
+    assert health.gate_scope(first) == "all"
+    # Only the gate's own line counts: the same words inside another line (a command being echoed, say) do not.
+    echoed = ("2026-11-20T10:19:40.0000000Z ##[group]Run echo run=true scope=all: x\n"
+              "2026-11-20T10:19:44.0000000Z run=true scope=football: game-day update\n")
+    assert health.gate_scope(echoed) == "football"
 
 
 def test_the_names_the_run_search_relies_on_are_in_the_update_workflow():
@@ -219,6 +273,7 @@ class Runs:
     record what was asked."""
     def __init__(self):
         self.runs, self.jobs, self.logs, self.asked_jobs, self.asked_logs = [], {}, {}, [], []
+        self.asked_pages, self.broken_logs = [], {}
 
     def add(self, run_id, finished, scope="all", conclusion="success", scraped=True, deployed=True):
         """scope: what the gate said ("all", "football", "" for a run the gate ended)."""
@@ -242,10 +297,20 @@ class Runs:
 
     def log_of(self, job_id):
         self.asked_logs.append(job_id)
+        if job_id in self.broken_logs:
+            raise self.broken_logs[job_id]
         return self.logs[job_id]
 
+    def page_of(self, page):
+        self.asked_pages.append(page)
+        return self.runs[(page - 1) * health.PAGE_SIZE: page * health.PAGE_SIZE]
+
     def find(self):
-        return health.find_latest(NOW, self.runs, self.jobs_of, self.log_of)
+        return health.find_latest(NOW, self.page_of, self.jobs_of, self.log_of)
+
+    def found(self):
+        f = self.find()
+        return f["scrape"], f["deploy"], f["looked"]
 
 
 def test_the_newest_full_scrape_and_the_newest_deploy_are_found_and_the_search_stops_there():
@@ -255,15 +320,16 @@ def test_the_newest_full_scrape_and_the_newest_deploy_are_found_and_the_search_s
     h.add(7, ago(hours=5), scope="football")                 # a game-day update: one sport only
     h.add(6, ago(hours=9), scope="all")                      # the daily run
     h.add(5, ago(hours=20), scope="all")
-    scrape, deploy, looked = h.find()
+    scrape, deploy, looked = h.found()
     assert deploy == ago(hours=2) and scrape == ago(hours=9, minutes=3) and looked == 4
+    assert h.asked_pages == [1]
     assert h.asked_jobs == [9, 8, 7, 6]                      # run 5 is never read
     assert h.asked_logs == [70, 60]                          # a gate log only where the Scrape step succeeded
 
 
 def test_a_game_day_update_is_not_a_full_scrape():
     h = Runs().add(3, ago(hours=1), scope="football").add(2, ago(hours=2), scope="football,mens-soccer")
-    scrape, deploy, _ = h.find()
+    scrape, deploy, _ = h.found()
     assert scrape is None and deploy == ago(hours=1)
 
 
@@ -272,25 +338,96 @@ def test_a_failed_scrape_or_a_red_run_is_not_a_successful_full_scrape_but_its_de
     h.add(4, ago(hours=1), scope="all", scraped=False, conclusion="failure")     # the scraper failed; fallback data deployed
     h.add(3, ago(hours=2), scope="all", conclusion="failure")                      # scraped, then turned red (validation, say)
     h.add(2, ago(hours=30), scope="all")
-    scrape, deploy, _ = h.find()
+    scrape, deploy, _ = h.found()
     assert deploy == ago(hours=1) and scrape == ago(hours=30, minutes=3)
     assert h.asked_logs == [20]                               # the red runs' logs are never read
 
 
 def test_a_run_whose_deploy_did_not_happen_does_not_count_as_a_deploy():
     h = Runs().add(2, ago(hours=1), scope="all", deployed=False).add(1, ago(hours=50), scope="all")
-    scrape, deploy, _ = h.find()
+    scrape, deploy, _ = h.found()
     assert scrape == ago(hours=1, minutes=3) and deploy == ago(hours=50)
 
 
 def test_the_search_goes_back_seven_days_and_no_further():
     h = Runs().add(2, ago(days=1), scope="").add(1, ago(days=8), scope="all")
-    assert h.find() == (None, None, 1) and h.asked_jobs == [2]
+    assert h.found() == (None, None, 1) and h.asked_jobs == [2]
     assert health.LOOKBACK == dt.timedelta(days=7)
+    assert health.searched_words(h.find()) == "in the last 7 days (1 run looked at)"
 
 
 def test_no_runs_at_all_finds_nothing():
-    assert health.find_latest(NOW, [], None, None) == (None, None, 0)
+    found = health.find_latest(NOW, lambda page: [], None, None)
+    assert found == {"scrape": None, "deploy": None, "looked": 0, "capped": False, "log_error": ""}
+
+
+def quiet_runs(h, count, first_id=1000):
+    """`count` runs the gate ended (nothing read, nothing deployed), a minute apart, newest first."""
+    for i in range(count):
+        h.add(first_id - i, ago(minutes=30 + i), scope="")
+    return h
+
+
+def test_the_search_reads_further_pages_until_both_are_found():
+    """A game day makes far more than one page of runs in 7 days: the full scrape behind them must still be found."""
+    h = quiet_runs(Runs(), health.PAGE_SIZE)
+    h.add(5, ago(hours=9), scope="all").add(4, ago(hours=20), scope="all")
+    scrape, deploy, looked = h.found()
+    assert scrape == ago(hours=9, minutes=3) and deploy == ago(hours=9) and looked == health.PAGE_SIZE + 1
+    assert h.asked_pages == [1, 2] and 4 not in h.asked_jobs
+    assert health.PAGE_SIZE == 100                                             # the API's largest page
+
+
+def test_a_short_page_is_the_last_one():
+    h = quiet_runs(Runs(), 3)
+    assert h.found() == (None, None, 3) and h.asked_pages == [1]               # no request for an empty page 2
+
+
+def test_a_search_stopped_by_the_page_cap_says_so_instead_of_claiming_seven_days(monkeypatch):
+    monkeypatch.setattr(health, "MAX_PAGES", 2)
+    h = quiet_runs(Runs(), 2 * health.PAGE_SIZE + 1)
+    found = h.find()
+    assert found["capped"] and found["looked"] == 200 and h.asked_pages == [1, 2]
+    words = health.searched_words(found)
+    assert words == "in the newest 200 runs (the search stops after 200 runs, before it reached 7 days back)"
+    c = by_key(run_all(FakeGitHub(h)))
+    assert c["scrape"]["status"] == c["deploy"]["status"] == "problem"
+    assert c["scrape"]["detail"] == f"No successful run that read every sport was found {words}."
+    assert c["deploy"]["detail"] == f"No successful deploy was found {words}."
+    assert "in the last 7 days" not in c["scrape"]["detail"] + c["deploy"]["detail"]
+
+
+def test_the_cap_does_not_matter_once_both_are_found(monkeypatch):
+    monkeypatch.setattr(health, "MAX_PAGES", 1)
+    h = Runs().add(2, ago(hours=9), scope="all")
+    assert not h.find()["capped"]
+    # Both found only at the very last run of the last page allowed: the search ends at the cap, but nothing is missing.
+    last = quiet_runs(Runs(), health.PAGE_SIZE - 1).add(5, ago(hours=9), scope="all")
+    found = last.find()
+    assert found["looked"] == health.PAGE_SIZE and found["scrape"] == ago(hours=9, minutes=3) and not found["capped"]
+    assert health.searched_words(found) == "in the last 7 days (100 runs looked at)"
+
+
+def test_a_gate_log_that_cannot_be_downloaded_leaves_the_deploy_its_answer():
+    h = Runs().add(3, ago(hours=1), scope="push").add(2, ago(hours=9), scope="all").add(1, ago(hours=20), scope="all")
+    h.broken_logs[20] = http_error(410)                      # the newest run that may have been the full scrape
+    found = h.find()
+    assert found["deploy"] == ago(hours=1) and found["scrape"] is None
+    assert found["log_error"] == "the gate job's log of run 2 could not be downloaded (HTTP 410)"
+    assert h.asked_logs == [20]                               # an older full scrape would not be the newest: not read
+    c = by_key(run_all(FakeGitHub(h)))
+    assert c["deploy"]["status"] == "ok" and c["scrape"]["status"] == "unknown"
+    assert c["scrape"]["detail"] == ("Could not be checked: the gate job's log of run 2 could not be downloaded "
+                                     "(HTTP 410).")
+    assert {k for k, x in c.items() if x["status"] != "ok"} == {"scrape"}
+
+
+def test_an_unreadable_log_does_not_stop_the_search_for_the_deploy():
+    h = Runs().add(3, ago(hours=1), scope="all", deployed=False).add(2, ago(hours=9), scope="all")
+    h.broken_logs[30] = urllib.error.URLError(TimeoutError("timed out"))
+    found = h.find()
+    assert found["deploy"] == ago(hours=9) and "no connection: TimeoutError" in found["log_error"]
+    assert h.asked_logs == [30]
 
 
 # ---- every check together, against a fake GitHub ------------------------------------------------ #
@@ -323,23 +460,28 @@ class FakeGitHub:
                 raise answer
             return [{"sha": answer["sha"], "commit": {"committer": {"date": answer["date"]}}}]
         if path.startswith(f"/repos/{REPO}/actions/workflows/update-and-deploy.yml/runs?"):
-            assert "branch=main" in path and "status=completed" in path
-            return {"workflow_runs": self.history.runs}
+            assert "branch=main" in path and "status=completed" in path and f"per_page={health.PAGE_SIZE}&" in path
+            return {"workflow_runs": self.history.page_of(int(re.search(r"&page=(\d+)$", path).group(1)))}
         m = re.fullmatch(rf"/repos/{REPO}/actions/runs/(\d+)/jobs\?per_page=100", path)
         assert m, path
         return {"jobs": self.history.jobs_of(int(m.group(1)))}
 
 
 def page(when):
-    return f'<p>Last checked <time datetime="{when.isoformat()}">x</time> (Eastern time).</p>'
+    return (f'<p>Data last changed <time datetime="2026-11-14T21:25:16+00:00">x</time> · Last checked '
+            f'<time datetime="{when.isoformat()}">x</time> (Eastern time).</p>')
+
+
+def never_wait(seconds):
+    pytest.fail("the check waited although the page loaded at once")
 
 
 def healthy_history():
     return Runs().add(3, ago(hours=1), scope="push").add(2, ago(hours=9), scope="all")
 
 
-def run_all(github, site=lambda: page(ago(hours=9))):
-    return health.run_checks(NOW, REPO, github.get, github.history.log_of, site, SCHEDULED)
+def run_all(github, site=lambda: page(ago(hours=9)), sleep=never_wait):
+    return health.run_checks(NOW, REPO, github.get, github.history.log_of, site, SCHEDULED, sleep=sleep)
 
 
 def test_a_healthy_repository_passes_every_check_in_the_reports_order():
@@ -366,11 +508,49 @@ def test_a_missing_data_branch_is_a_problem_and_other_errors_there_are_unknown()
     assert by_key(run_all(FakeGitHub(healthy_history(), data=http_error(500))))["data-branch"]["status"] == "unknown"
 
 
-def test_a_site_that_cannot_be_fetched_is_a_problem():
+def test_a_site_that_cannot_be_fetched_is_tried_once_more_and_then_could_not_be_checked():
+    tries, waits = [], []
+
     def down():
+        tries.append(1)
         raise urllib.error.URLError(TimeoutError("timed out"))
-    c = by_key(run_all(FakeGitHub(healthy_history()), site=down))["last-checked"]
-    assert c["status"] == "problem" and "did not load: no connection (TimeoutError)" in c["detail"]
+    checks = by_key(run_all(FakeGitHub(healthy_history()), site=down, sleep=waits.append))
+    c = checks["last-checked"]
+    assert c["status"] == "unknown"
+    assert c["detail"] == "Could not be checked: the live home page did not load (no connection: TimeoutError)."
+    assert len(tries) == 2 == health.SITE_TRIES and waits == [health.SITE_RETRY_WAIT]   # one more, never a third
+    assert all(x["status"] == "ok" for k, x in checks.items() if k != "last-checked")
+    report = health.build_report(NOW, list(checks.values()))
+    gh = FakeGh(open_issues=[(7, "old\n<!-- site-health: activity -->\n")])
+    assert health.sync_issue(report, run=gh).startswith("left #7 open") and gh.verbs() == [("issue", "list")]
+    assert health.sync_issue(report, run=FakeGh()) == "no problem found, and no open issue"
+
+
+def test_a_site_that_loads_on_the_second_try_is_checked_as_usual():
+    answers, waits = [http_error(503), page(ago(hours=9))], []
+
+    def flaky():
+        answer = answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+    c = by_key(run_all(FakeGitHub(healthy_history()), site=flaky, sleep=waits.append))["last-checked"]
+    assert c["status"] == "ok" and answers == [] and waits == [health.SITE_RETRY_WAIT]   # two requests, one wait
+
+
+def test_a_site_that_answers_with_an_error_twice_names_the_last_error():
+    answers = [urllib.error.URLError(TimeoutError("timed out")), http_error(503)]
+
+    def down():
+        raise answers.pop(0)
+    c = by_key(run_all(FakeGitHub(healthy_history()), site=down, sleep=lambda s: None))["last-checked"]
+    assert c["detail"] == "Could not be checked: the live home page did not load (HTTP 503)."
+
+
+def test_a_failure_that_is_not_githubs_is_not_blamed_on_github():
+    checks = by_key(run_all(FakeGitHub(healthy_history(), main=KeyError("commit"))))
+    assert checks["activity"]["status"] == "unknown"
+    assert checks["activity"]["detail"] == "Could not be checked: the check failed (KeyError)."
 
 
 @pytest.mark.parametrize("broken, unknown", [
@@ -390,7 +570,7 @@ def test_the_check_only_reads_the_six_kinds_of_address_it_needs():
     assert github.calls == [
         f"/repos/{REPO}/actions/workflows?per_page=100",
         f"/repos/{REPO}/commits?sha=main&per_page=1",
-        f"/repos/{REPO}/actions/workflows/update-and-deploy.yml/runs?branch=main&status=completed&per_page=100",
+        f"/repos/{REPO}/actions/workflows/update-and-deploy.yml/runs?branch=main&status=completed&per_page=100&page=1",
         f"/repos/{REPO}/actions/runs/3/jobs?per_page=100",
         f"/repos/{REPO}/actions/runs/2/jobs?per_page=100",
         f"/repos/{REPO}/commits?sha=data&per_page=1"]
@@ -422,6 +602,33 @@ def test_api_sends_a_get_with_the_token_and_the_projects_user_agent():
     method, url, headers, timeout = seen[0]
     assert (method, url, timeout) == ("GET", "https://api.github.com/repos/o/r/commits?sha=main", health.TIMEOUT)
     assert headers["Authorization"] == "Bearer TOKEN" and headers["User-agent"] == health.USER_AGENT
+
+
+def test_api_does_not_follow_a_redirect_so_the_token_never_leaves_githubs_api(monkeypatch):
+    """urllib's own opener would repeat the request, Authorization header included, at the redirect's address."""
+    seen = []
+
+    class Redirecting(urllib.request.HTTPSHandler):
+        def https_open(self, req):
+            seen.append((req.full_url, dict(req.header_items())))
+            headers = email.message.Message()
+            headers["Location"] = "https://elsewhere.example/repos/o/r"
+            resp = urllib.response.addinfourl(io.BytesIO(b"{}"), headers, req.full_url, 302)
+            resp.msg = "Found"
+            return resp
+    real = health.no_redirect_opener
+    monkeypatch.setattr(health, "no_redirect_opener", lambda: real(Redirecting()))
+    with pytest.raises(urllib.error.HTTPError) as caught:
+        health.api("/repos/o/r", "TOKEN")
+    assert caught.value.code == 302
+    assert [url for url, _ in seen] == ["https://api.github.com/repos/o/r"]   # the second address is never requested
+    assert sum("TOKEN" in json.dumps(headers) for _, headers in seen) == 1
+
+    def get(path):
+        return health.api(path, "TOKEN")
+    checks = by_key(health.run_checks(NOW, REPO, get, None, lambda: page(ago(hours=9)), SCHEDULED, sleep=never_wait))
+    assert checks["activity"]["status"] == "unknown" and "HTTP 302" in checks["activity"]["detail"]
+    assert all("elsewhere.example" not in url for url, _ in seen)
 
 
 def test_a_jobs_log_is_downloaded_from_the_redirect_without_the_token():
@@ -456,19 +663,36 @@ def test_a_log_redirect_to_plain_http_is_refused_and_other_errors_pass_through()
 
 def test_a_failed_read_is_described_without_any_address():
     assert health.why(http_error(403)) == "HTTP 403"
-    assert health.why(urllib.error.URLError(OSError("https://logs.example/signed?sig=abc"))) == "no connection (OSError)"
+    assert health.why(urllib.error.URLError(OSError("https://logs.example/signed?sig=abc"))) == "no connection: OSError"
     assert health.why(ValueError("https://logs.example/signed?sig=abc")) == "ValueError"
 
 
-def test_the_site_is_fetched_once_with_the_projects_user_agent():
+def test_the_site_is_fetched_with_one_request_and_the_projects_user_agent():
     seen = []
 
     def opener(req, timeout):
         seen.append((req.get_method(), req.full_url, dict(req.header_items())))
         return Resp(page(ago(hours=1)))
     assert health.parse_last_checked(health.fetch_site(opener=opener)) == ago(hours=1)
-    assert [(m, u) for m, u, _ in seen] == [("GET", "https://depauwvswabash.com/")]
+    assert [(m, u) for m, u, _ in seen] == [("GET", "https://depauwvswabash.com/")]   # fetch_site itself never repeats
     assert seen[0][2]["User-agent"] == health.USER_AGENT and "Authorization" not in seen[0][2]
+
+
+def test_any_answer_but_200_from_the_site_is_a_failed_load():
+    def no_content(req, timeout):
+        resp = Resp("")
+        resp.status = 204
+        return resp
+    with pytest.raises(urllib.error.HTTPError) as caught:
+        health.fetch_site(opener=no_content)
+    assert health.why(caught.value) == "HTTP 204"
+
+
+def test_a_whole_check_makes_at_most_two_requests_to_the_site_and_only_when_the_first_fails():
+    assert health.SITE_TRIES == 2
+    loads = []
+    run_all(FakeGitHub(healthy_history()), site=lambda: loads.append(1) or page(ago(hours=9)))
+    assert loads == [1]
 
 
 # ---- the report and the issue -------------------------------------------------------------------- #
@@ -517,7 +741,8 @@ def test_the_issue_body_says_what_to_do_first_and_ends_with_the_marker():
     body = health.render_issue_body(r, "https://run")
     assert body.startswith("The daily health check found 1 problem on Nov 20, 2026.")
     assert "## Recent activity on main (GitHub's 60-day rule)" in body
-    assert "**What to do:** Merge any real pull request into `main`" in body and "It must happen by Dec 5, 2026" in body
+    assert "**What to do:** Merge any real pull request into `main`" in body
+    assert "It must be merged before Dec 5, 2026, 10:00 AM EST" in body
     assert body.index("**What to do:**") < body.index("## Every check")
     assert "Run: https://run" in body and body.endswith("<!-- site-health: activity -->\n")
     assert "@" not in body                                                    # nobody is mentioned
@@ -549,6 +774,45 @@ def test_a_changed_list_of_problems_rewrites_the_issue_and_adds_one_comment():
     assert gh.verbs() == [("issue", "list"), ("issue", "edit"), ("issue", "comment")]
     assert gh.calls[2][1] == ("Health check of Nov 20, 2026: the problems changed. Now: Recent activity on main "
                               "(GitHub's 60-day rule); Last successful deploy. https://run\n")
+
+
+def test_a_check_that_cannot_be_made_today_is_not_a_change_in_the_problems():
+    """Day 1: activity and deploy are problems. Day 2: the deploy cannot be checked. Day 3: it is a problem again.
+    Neither day 2 nor day 3 may comment "the problems changed": nothing is known to have changed."""
+    gh = FakeGh(open_issues=[(7, "old\n<!-- site-health: activity, deploy -->\n")])
+    out = health.sync_issue(report(activity="problem", deploy="unknown"), "https://run", run=gh)
+    assert out == "updated #7 (the same 2 problems, no comment)"
+    assert gh.verbs() == [("issue", "list"), ("issue", "edit")]
+    body = gh.calls[1][1]
+    assert body.endswith("<!-- site-health: activity, deploy -->\n")          # deploy keeps its place in the marker
+    assert f"## Last successful deploy\n\n{health.CARRIED}\n" in body
+    assert health.CARRIED == "Could not be checked today; it was a problem at the last check that could be made."
+    assert body.startswith("The daily health check found 1 problem on Nov 20, 2026.")
+    assert "todo of deploy" not in body and "todo of activity" in body
+
+    gh = FakeGh(open_issues=[(7, body)])                                       # the next day, from the body just written
+    assert health.sync_issue(report(activity="problem", deploy="problem"), run=gh) == (
+        "updated #7 (the same 2 problems, no comment)")
+    assert gh.verbs() == [("issue", "list"), ("issue", "edit")]
+    assert health.CARRIED not in gh.calls[1][1]
+
+
+def test_a_carried_check_that_passes_again_is_a_change_and_an_unknown_check_never_joins_the_list():
+    gh = FakeGh(open_issues=[(7, "old\n<!-- site-health: activity, deploy -->\n")])
+    assert health.sync_issue(report(activity="problem"), run=gh) == "updated #7 and commented: the problems changed"
+    assert gh.calls[1][1].endswith("<!-- site-health: activity -->\n")
+    gh = FakeGh(open_issues=[(7, "old\n<!-- site-health: activity -->\n")])    # scrape was never a listed problem
+    assert health.sync_issue(report(activity="problem", scrape="unknown"), run=gh) == (
+        "updated #7 (the same 1 problem, no comment)")
+    assert gh.calls[1][1].endswith("<!-- site-health: activity -->\n") and health.CARRIED not in gh.calls[1][1]
+
+
+def test_every_open_issue_is_closed_when_every_check_passes():
+    gh = FakeGh(open_issues=[(12, "a second one, opened by hand"), (7, "old\n<!-- site-health: activity -->\n")])
+    assert health.sync_issue(report(), "https://run", run=gh) == "closed #7, #12"
+    assert gh.verbs() == [("issue", "list"), ("issue", "comment"), ("issue", "close"),
+                          ("issue", "comment"), ("issue", "close")]
+    assert [a[2] for a, _ in gh.calls[1:]] == ["7", "7", "12", "12"]
 
 
 def test_every_check_passing_comments_and_closes_the_open_issue():
@@ -611,8 +875,31 @@ def test_issue_reads_the_saved_report(tmp_path, monkeypatch, capsys):
     path.write_text(json.dumps(report(activity="problem")), encoding="utf-8")
     seen = []
     monkeypatch.setattr(health, "sync_issue", lambda r, url: seen.append((health.problem_keys(r), url)) or "opened x")
+    monkeypatch.setattr(health, "now_utc", lambda: NOW + dt.timedelta(minutes=2))
     assert health.main(["issue", "--report", str(path), "--run-url", "https://run"]) == 0
     assert seen == [(["activity"], "https://run")] and "opened x" in capsys.readouterr().out
+
+
+def test_issue_ignores_an_old_report(tmp_path, monkeypatch, capsys):
+    """Re-running the issues job of an old run would apply that day's findings to today's issue."""
+    path = tmp_path / "r.json"
+    path.write_text(json.dumps(report(activity="problem")), encoding="utf-8")
+    monkeypatch.setattr(health, "sync_issue", lambda r, url: pytest.fail("an old report must not touch the issue"))
+    monkeypatch.setattr(health, "now_utc", lambda: NOW + health.REPORT_MAX_AGE + dt.timedelta(seconds=1))
+    assert health.main(["issue", "--report", str(path)]) == 0
+    assert "more than 6 hours ago: the issue was not touched" in capsys.readouterr().out
+    seen = []
+    monkeypatch.setattr(health, "sync_issue", lambda r, url: seen.append(1) or "ok")
+    monkeypatch.setattr(health, "now_utc", lambda: NOW + health.REPORT_MAX_AGE)       # the limit itself still counts
+    assert health.main(["issue", "--report", str(path)]) == 0 and seen == [1]
+
+
+def test_the_list_of_what_stops_is_the_same_in_the_issue_and_the_readme():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert health.SCHEDULED_WORK in readme
+    for name in ("update", "watcher", "link check", "snapshot", "health check"):   # one phrase per scheduled workflow
+        assert name in health.SCHEDULED_WORK
+    assert len(SCHEDULED) == 5
 
 
 # ---- what the module and the workflow may and may not do ------------------------------------------ #

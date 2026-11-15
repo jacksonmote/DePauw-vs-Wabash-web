@@ -6,8 +6,9 @@ name: Health check
 # activity, which would silently stop the updates in the offseason. This check warns from 45 days, in time for a
 # person to merge a real pull request.
 #
-# It only reads: GitHub's API, the workflow files and one request to our own home page. It never fetches the
-# schools' sites, never commits, pushes or deploys, and never enables, disables or starts a workflow.
+# It only reads: GitHub's API, the workflow files and one request per run to our own home page (one more if it
+# fails; a page that still does not load is a check that could not be made, which turns the run red). It never
+# fetches the schools' sites, never commits, pushes or deploys, and never enables, disables or starts a workflow.
 
 on:
   schedule:
@@ -62,15 +63,17 @@ jobs:
       - name: Summarize
         run: cat "$RUNNER_TEMP/health-check/summary.md" >> "$GITHUB_STEP_SUMMARY"
 
-      # A check that could not be made (GitHub's API did not answer, say) is not a finding, so it never opens or
-      # closes the issue; it turns the run red instead. Last, so the report and the summary are always there.
+      # A check that could not be made (GitHub's API did not answer, a job's log could not be downloaded, or our
+      # home page did not load, also on the second try) is not a finding, so it never opens or closes the issue; it
+      # turns the run red instead. Last, so the report and the summary are always there.
       - name: Turn the run red when a check could not be made
         run: python3 scraper/health.py verdict --report "$RUNNER_TEMP/health-check/health-report.json"
 
   issues:
     # The only job that can write, and only issues (contents: read is for the checkout). It runs only on main, so a
     # manual run on a branch never opens or closes the real issue, and whenever the check job wrote a report, also
-    # when that job then turned red. Standard library only: nothing is installed.
+    # when that job then turned red. Standard library only: nothing is installed. The script ignores a report more
+    # than a few hours old, so re-running this job in an old run changes nothing.
     needs: check
     if: ${{ !cancelled() && needs.check.outputs.reported == 'true' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
