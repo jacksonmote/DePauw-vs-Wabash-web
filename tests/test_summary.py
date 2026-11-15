@@ -37,7 +37,7 @@ CURRENT = [("football", "Football", 59, 63, 9), ("mens-basketball", "Men's Baske
 
 def current_sports():
     s = sports(CURRENT)
-    # the real Bell era (1932 on): Wabash 44, DePauw 43, 6 ties; the 15 earlier games make the all-time record
+    # the Bell era (1932 on) through the 2025 season: Wabash 44, DePauw 43, 6 ties; the earlier games make the all-time record
     s["football"] = sport("football", "Football", games(16, 19, 3, first_year=1890) + games(43, 44, 6, first_year=1932))
     assert (s["football"]["record"]["depauw_wins"], s["football"]["record"]["wabash_wins"]) == (59, 63)
     return s

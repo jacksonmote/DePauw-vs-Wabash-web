@@ -812,7 +812,7 @@ def bell_held_text(b: dict) -> str:
 
 
 def bell_record_text(b: dict) -> str:
-    """"DePauw 43 · Wabash 44 · 6 ties", each school's count in its own color (the names are in the text)."""
+    """"DePauw 44 · Wabash 44 · 6 ties", each school's count in its own color (the names are in the text)."""
     return (f'<span class="t-d">DePauw {b["depauw"]}</span> · <span class="t-w">Wabash {b["wabash"]}</span>'
             + (f' · {esc(plural(b["ties"], "tie"))}' if b["ties"] else ""))
 
