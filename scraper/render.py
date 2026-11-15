@@ -32,7 +32,6 @@ Usage:
 
 from __future__ import annotations
 
-import accessibility
 import argparse
 import csv
 import datetime as dt
@@ -45,6 +44,7 @@ import sys
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
+import accessibility
 import bars
 import chart
 import databranch

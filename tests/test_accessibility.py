@@ -52,9 +52,10 @@ TEXT_ON = {                                  # text color -> every background it
 MARK_ON = {                                  # fills, bars, stripes and focus rings -> what they sit on, at least 3:1
     "focus": BODY_GROUNDS + ("header", "banner-bg"),
     "header-text": ("header",),              # the focus ring of the title button
-    "depauw-accent": ("page", "surface", "board"),
-    "wabash-accent": ("page", "surface"),
-    "tie-accent": ("page", "surface"),
+    # row-stripe: the result edge of a game in a striped table row; banner-bg: the edge of the Bell-week box
+    "depauw-accent": ("page", "surface", "row-stripe", "banner-bg", "board"),
+    "wabash-accent": ("page", "surface", "row-stripe"),
+    "tie-accent": ("page", "surface", "row-stripe"),
     "board-depauw": ("board",),
     "bar-wabash": ("board", "page"),
     "board-tie-fill": ("board",),
@@ -346,6 +347,21 @@ def test_the_tiger_facts_stay_usable_without_the_script(site):
     facts = soup(site, "index.html").select("li.tiger-fact")
     assert len([f for f in facts if not f.has_attr("hidden")]) == 1               # one is always readable
     assert len(facts) == len(json.loads((ROOT / "data" / "fun-facts.json").read_text(encoding="utf-8"))["facts"])
+
+
+def test_the_axe_script_checks_every_tiger_fact_and_every_wcag_level_it_says_it_does():
+    """Opening the tiger's disclosure makes the page's own script hide every fact but one, in a toggle event that
+    fires a moment later. axe/run.js waits for the toggle events, then shows every fact, then runs axe, and reports
+    any fact that was hidden when axe finished, so the facts cannot drop out of the check unnoticed."""
+    script = (ROOT / "axe" / "run.js").read_text(encoding="utf-8")
+    assert (script.index('addEventListener("toggle"') < script.index("d.open = true")
+            < script.index("await Promise.race([Promise.all(toggled),") < script.index("f.hidden = false")
+            < script.index("await window.axe.run("))
+    assert script.count("f.hidden = false") == 1
+    assert "hiddenFacts: facts.filter((f) => f.hidden).length" in script
+    assert "if (result.hiddenFacts) {\n            problems.push(" in script.replace("\r\n", "\n")
+    tags = re.search(r"const TAGS = \[([^\]]+)\]", script).group(1)
+    assert re.findall(r'"([^"]+)"', tags) == ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"]
 
 
 # --- the accessibility page ---------------------------------------------------------------------------------------

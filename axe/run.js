@@ -9,7 +9,8 @@
 // shown, so nothing is skipped for being collapsed. The pages' Content-Security-Policy forbids injected scripts,
 // so this test browser alone is told to bypass it; the published pages are not changed.
 //
-// Exits 1 when a rule is violated or a page overflows, 2 when the check could not run.
+// Exits 1 when a rule is violated, a page overflows or a tiger fact was hidden while axe ran, 2 when the check
+// could not run.
 "use strict";
 
 const fs = require("fs");
@@ -51,10 +52,17 @@ function serve() {
   return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(server)));
 }
 
-// Runs in the page: open everything, show every fact, run axe, measure sideways overflow.
+// Runs in the page: open everything, show every fact, run axe, measure sideways overflow. Opening the tiger's
+// disclosure makes the page's own script pick one fact and hide the rest, in a `toggle` event that fires a moment
+// later; the facts are shown only after every toggle event has fired (or a second has passed), so that script
+// cannot hide them again while axe looks. `hiddenFacts` counts any that were hidden when axe finished.
 async function check(tags) {
-  document.querySelectorAll("details").forEach((d) => { d.open = true; });
-  document.querySelectorAll(".tiger-fact").forEach((f) => { f.hidden = false; });
+  const closed = Array.from(document.querySelectorAll("details:not([open])"));
+  const toggled = closed.map((d) => new Promise((done) => d.addEventListener("toggle", done, { once: true })));
+  closed.forEach((d) => { d.open = true; });
+  await Promise.race([Promise.all(toggled), new Promise((done) => setTimeout(done, 1000))]);
+  const facts = Array.from(document.querySelectorAll(".tiger-fact"));
+  facts.forEach((f) => { f.hidden = false; });
   const result = await window.axe.run(document, { runOnly: { type: "tag", values: tags } });
   const root = document.documentElement;
   return {
@@ -63,6 +71,7 @@ async function check(tags) {
     })),
     incomplete: result.incomplete.reduce((n, v) => n + v.nodes.length, 0),
     overflow: root.scrollWidth > root.clientWidth ? root.scrollWidth - root.clientWidth : 0,
+    hiddenFacts: facts.filter((f) => f.hidden).length,
   };
 }
 
@@ -103,6 +112,10 @@ async function main() {
                           `first ${v.first}: ${v.help}`);
           }
           if (result.overflow) problems.push(`${url} (${theme}, ${width}px): scrolls sideways by ${result.overflow}px`);
+          if (result.hiddenFacts) {
+            problems.push(`${url} (${theme}, ${width}px): ${result.hiddenFacts} tiger fact(s) were hidden while ` +
+                          "axe ran, so they were not checked");
+          }
         }
         await context.close();
       }

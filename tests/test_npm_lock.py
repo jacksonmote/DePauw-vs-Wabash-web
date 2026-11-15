@@ -98,7 +98,12 @@ def test_only_the_pull_request_axe_job_installs_and_runs_the_axe_folder():
                     found.append((flow.name, job_id, step.get("working-directory"), step["run"].strip()))
     assert found == [("checks.yml", "axe", "axe", NPM_CI), ("checks.yml", "axe", None, "node axe/run.js site")]
     checks = yaml.safe_load((ROOT / ".github" / "workflows" / "checks.yml").read_text(encoding="utf-8"))
-    assert checks["permissions"] == {"contents": "read"} and "permissions" not in checks["jobs"]["axe"]
+    axe = checks["jobs"]["axe"]
+    assert checks["permissions"] == {"contents": "read"} and "permissions" not in axe
+    assert axe["steps"][0]["uses"].startswith("actions/checkout@")
+    assert axe["steps"][0]["with"] == {"persist-credentials": False}                      # no saved credentials
+    assert 0 < axe["timeout-minutes"] <= 20                                               # a stuck browser ends soon
+    assert "continue-on-error" not in axe and not any("continue-on-error" in step for step in axe["steps"])
     script = (ROOT / "axe" / "run.js").read_text(encoding="utf-8")
     assert "127.0.0.1" in script and "https://" not in script                             # loopback only
     assert 'require("playwright-core")' in script and 'require.resolve("axe-core/axe.min.js")' in script

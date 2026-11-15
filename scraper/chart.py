@@ -4,8 +4,8 @@ The every-game chart on a sport card: one bar per game, oldest to newest, drawn 
 Pure functions over the games in data/series.json; no JavaScript, no inline styles (the CSP forbids both), no
 images. Bars above the baseline are DePauw wins, bars below are Wabash wins, taller means a bigger margin, and a
 tie is a short gray mark on the baseline; the legend says so in words ("DePauw win (above the line)"), so nobody has
-to tell gold from scarlet to read it (WCAG 1.4.1 Use of Color). The bars are three <path> elements (one per kind of result), not one
-element per game, so a 314-game chart is three nodes. Colors come from classes in static/styles.css.
+to tell gold from scarlet to read it (WCAG 1.4.1 Use of Color). The bars are three <path> elements (one per kind of
+result), not one element per game, so a 314-game chart is three nodes. Colors come from classes in static/styles.css.
 
 Bars are placed by the game's position in the list, not by its season, so a sport that meets several times a year
 (basketball, baseball) still shows every game. Nothing here is hardcoded to a sport or a year: the span, the axis
