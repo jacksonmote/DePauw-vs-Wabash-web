@@ -148,6 +148,7 @@ flowchart LR
   SJ -.-> SN["snapshot.yml (Jul 1, Jan 2)<br/>data files go to a<br/>GitHub Release first"]
   SN -.-> WB["then, best effort:<br/>source pages go to the<br/>Wayback Machine"]
   SITE -.-> LC["link-check.yml (monthly)<br/>checks the outbound links,<br/>keeps a broken-links issue"]
+  GP -.-> HC["health-check.yml (daily)<br/>checks that the site is still updating<br/>and warns before GitHub's 60-day rule,<br/>keeps a site-health issue"]
   UJ -.-> GW["gameday-watcher.yml<br/>on a game day, starts an update<br/>every 15 minutes that reads<br/>only that sport's pages"]
   GW -.-> P
   subgraph DB["data branch: only the Actions bot writes these;<br/>every job fetches them with databranch.py"]
@@ -215,7 +216,7 @@ The same file also holds `keep_previous` rulings, which reject a school's edit t
 
 ### Workflows
 
-Five GitHub Actions workflows live in `.github/workflows/`:
+Six GitHub Actions workflows live in `.github/workflows/`:
 
 | Workflow | Runs when | Jobs and permissions |
 |---|---|---|
@@ -223,9 +224,10 @@ Five GitHub Actions workflows live in `.github/workflows/`:
 | `gameday-watcher.yml` ("Game-day watcher") | Every 10 minutes, at :03, :13, :23, :33, :43 and :53 (ended within seconds by its gate unless a game is played today), from the two daily runs on a game day, by hand (dry runs and test dispatches too), and by itself as a relay | `gate` (`contents: read`, `actions: read`; reads the `data` branch and stands aside for an older watcher run), `watch` (`contents: read`, `actions: write`; one at a time; starts `update-and-deploy.yml` every 15 minutes during the game and one final update per game, never fetches the schools' sites, commits or deploys). See "The game-day watcher" |
 | `checks.yml` ("Checks") | On every pull request to `main` | Three read-only jobs, each of which first fetches the bot-managed files from the `data` branch (a read-only fetch, no token) and re-merges `series.json` offline. `checks`: the tests, the render, script syntax, `html-validate` (the locked copy) on all ten pages and every Mermaid diagram in this README. `fake-clock` (three runs): the whole test suite again with the clock frozen at Nov 14, 2026 1:30 PM ET, Jan 1, 2027 and Oct 30, 2027, so a test that secretly depends on today’s date fails in the pull request. `axe`: axe-core on every rendered page in light and dark at 320, 375 and 1280 px, plus a check that no page scrolls sideways (`axe/run.js`, with axe-core and the browser driver from their own lockfile in `axe/` and the Chrome already on the runner; see "Accessibility"). Only `checks` is the required status check; `axe` is not required for now, so a failure there shows on the pull request without blocking the merge |
 | `link-check.yml` ("Link check") | The 2nd of every month at 19:41 UTC, and by hand | `check` (`contents: read`; fetches the data from the `data` branch, installs the locked packages, renders the site, checks every outbound link with `scraper/linkcheck.py`, uploads the `link-report` artifact and writes the run summary; never changes the site or the data, and broken links never fail it), `issues` (`contents: read` for the checkout and `issues: write`, on `main` only; opens, updates or closes the one `broken-links` issue). One concurrency group, so two runs never overlap. See "The link check" |
+| `health-check.yml` ("Health check") | Every day at 20:28 UTC, and by hand | `check` (`contents: read` and `actions: read`; reads GitHub's API, the workflow files and our own home page with `scraper/health.py`, uploads the `health-report` artifact and writes the run summary; never fetches the schools' sites, never commits or deploys, never enables or starts a workflow; a problem never fails it, a check that could not be made turns it red), `issues` (`contents: read` for the checkout and `issues: write`, on `main` only; opens, updates or closes the one `site-health` issue). One concurrency group, so two runs never overlap. See "The health check" |
 | `snapshot.yml` ("Data snapshot") | July 1 and January 2, and by hand | `prepare` (read-only; fetches the data from the `data` branch, then the change check and the release files), `release` (`contents: write`; the GitHub Release), `archive` (`contents: write`; asks the Wayback Machine to save the source pages, last, and can never fail the run) |
 
-**Runner image.** Every job runs on `ubuntu-24.04`, not `ubuntu-latest`, on purpose. GitHub moves the `ubuntu-latest` label to a new Ubuntu release over several weeks (Ubuntu 26.04 from October 19 to November 19, 2026), and a run that lands on the new image mid-rollout could fail for a reason that has nothing to do with our change, on a game day or at a deploy. Moving to a newer image is a deliberate change: change all seventeen `runs-on:` lines together (`tests/test_runner_image.py` fails if any workflow uses a different one, or `latest`), try it on a pull request first, and watch the first full run. The tests, the render and the Python packages do not depend on the OS: the lock is for Linux with Python 3.12, which `actions/setup-python` installs itself; only the gates, the watcher hand-off, the game-day watcher, the data-branch steps, the two issue jobs (`data-review` and `broken-links`) and the snapshot's change check and `archive` job use the image's own `python3` (standard library only).
+**Runner image.** Every job runs on `ubuntu-24.04`, not `ubuntu-latest`, on purpose. GitHub moves the `ubuntu-latest` label to a new Ubuntu release over several weeks (Ubuntu 26.04 from October 19 to November 19, 2026), and a run that lands on the new image mid-rollout could fail for a reason that has nothing to do with our change, on a game day or at a deploy. Moving to a newer image is a deliberate change: change all nineteen `runs-on:` lines together (`tests/test_runner_image.py` fails if any workflow uses a different one, or `latest`), try it on a pull request first, and watch the first full run. The tests, the render and the Python packages do not depend on the OS: the lock is for Linux with Python 3.12, which `actions/setup-python` installs itself; only the gates, the watcher hand-off, the game-day watcher, the data-branch steps, the three issue jobs (`data-review`, `broken-links` and `site-health`), the health check and the snapshot's change check and `archive` job use the image's own `python3` (standard library only).
 
 To run the update by hand: Actions, "Update data and deploy site", Run workflow, on `main`. The optional inputs are "Accept a sport whose game count went down" (`allow_shrink`), "Apply the changes to old games waiting for review" (`apply_reviewed_changes`, see "Review hold"), "Prove the push to the data branch works" (`test_data_commit`, see "The `data` branch") and "Game-day update" (`gameday`: the game-day watcher sets it; leave it unticked, so a hand-started run reads every sport). Scraping and rendering share one `build` job because the "Last checked" time is an uncommitted file on that runner. A push made with the workflow's own token does not start another run.
 
@@ -294,7 +296,7 @@ flowchart TD
   D -- "scraper failed, robots.txt disallowed<br/>a page, or data commit rejected" --> RP["report: run turns red<br/>names the problem, check the logs"]
 ```
 
-The schedule times are written in UTC in the workflow, so they shift by an hour with daylight saving time (the times above are for Eastern standard time; in daylight time the daily runs are 6:19 AM and 11:47 PM). GitHub can delay a scheduled run or skip it altogether: in late October 2026 the daily runs started 5 to 7 hours late, and only about one 30-minute run in ten started at all, which is why game days rely on the game-day watcher. GitHub also switches scheduled workflows off after 60 days with no repository activity; if a day's update is missing, run the workflow by hand as described above.
+The schedule times are written in UTC in the workflow, so they shift by an hour with daylight saving time (the times above are for Eastern standard time; in daylight time the daily runs are 6:19 AM and 11:47 PM). GitHub can delay a scheduled run or skip it altogether: in late October 2026 the daily runs started 5 to 7 hours late, and only about one 30-minute run in ten started at all, which is why game days rely on the game-day watcher. GitHub also switches scheduled workflows off after 60 days with no repository activity; the daily health check warns about that from 45 days (see "The health check"). If a day's update is missing, run the workflow by hand as described above.
 
 ### Why the merge works this way
 
@@ -524,6 +526,42 @@ flowchart TD
 
 The logic is in `scraper/linkcheck.py` and the tests in `tests/test_linkcheck.py` (a fixture site, a fake transport, a fake clock and a fake `gh` for the monthly check, and two full builds for the links within the site; no network).
 
+## The health check
+
+`.github/workflows/health-check.yml` checks once a day (20:28 UTC) that the site is still updating and will keep updating, and keeps one GitHub issue, labeled `site-health`, that says what is wrong and what to do. The site is quiet for months (no games from late spring to late summer), and a site that stops updating fails silently, so something has to look.
+
+- **The 60-day rule.** GitHub's documentation says: "In a public repository, scheduled workflows are automatically disabled when no repository activity has occurred in 60 days." It does not say what counts as activity. By users' reports a commit on the default branch counts; workflow runs do not, and commits on another branch (our `data` branch) may not. When it happens, each scheduled workflow is switched off entirely (no trigger starts it, a manual run included), and here that is the twice-daily update, the game-day watcher, the link check, the snapshot and this check, all at about the same time. Nothing in the repository can undo that by itself. By the same reports GitHub sends a warning email about a week before, but not always.
+- **What we do about it: warn early, and merge something real.** The check opens the issue when the last commit on `main` is 45 days old (`health.WARN_AFTER`), with the date by which something must be merged (60 days after that commit, `health.DISABLE_AFTER`). The fix is to merge any real pull request, for example a waiting Dependabot update. The repository does not try to keep its schedules alive artificially: no call that re-enables workflows on a timer and no empty commits. That would work around the rule instead of meeting it.
+- **The checks.** (1) Every workflow file with a schedule is enabled. (2) The last commit on `main` is less than 45 days old. (3) The last successful full scrape, a daily or hand-started "Update data and deploy site" run that read every sport (its gate job's log says `scope=all`), finished at most 48 hours ago. (4) The last successful deploy finished at most 48 hours ago. (5) The live home page loads and its "Last checked" time is at most 48 hours old. (6) The `data` branch exists and its last commit can be read. The 48 hours are `health.MAX_AGE`; the run search goes back 7 days.
+- **What it reads, and what it never does.** GitHub's API (GET requests only), the workflow files in its own checkout, and one request per run to https://depauwvswabash.com/, with the scraper's User-Agent. It never fetches the schools' sites, never commits, pushes or deploys, and never enables, disables or starts a workflow. The gate job's log comes from a download address on another host; the token is not sent there.
+- **The issue.** A problem opens the one `site-health` issue (and the label, if missing) or rewrites the open one; it never opens a second. The text says what was found and what to do for each problem, then lists every check. Because the check runs daily, it adds a comment only when the list of problems changes, so a problem that lasts for weeks does not send a notification every day. When every check passes, it comments and closes the issue. The issue job runs only on `main`.
+- **When the issue opens.** Read "What to do" under each heading. For the 60-day warning: merge a real pull request before the date it gives; the next daily run closes the issue. For a workflow that is off: enable it on the Actions tab ("Enable workflow") or with `gh workflow enable <file>`; a commit does not switch it back on. For an old scrape, deploy or "Last checked": look at the newest "Update data and deploy site" runs (a red run names its problem in the run summary), and start one by hand if none has started lately. For the `data` branch: see "If the branch is ever lost" above.
+- **Making sure the issue reaches the maintainer.** GitHub sends an email for a new issue only to people who watch the repository for issues. On the repository's page: Watch, then "All Activity", or "Custom" with "Issues" ticked. Email notifications for watched repositories must be on in the account's notification settings. The issue is opened by `github-actions[bot]` and mentions nobody.
+- **A red run is not an open issue.** A check that could not be made (GitHub's API did not answer, say) is not a finding: it never opens or closes the issue, and the run turns red instead, after the report and the summary are written. So an open issue means a check found a problem, and a red run means the health check itself could not finish; run it again.
+- **Every run's output.** The run summary lists every check with what was found, and what to do about each problem; the `health-report` artifact (kept 30 days) has the same as Markdown and JSON.
+- **By hand.** Actions, "Health check", Run workflow. Locally: `GH_TOKEN=$(gh auth token) python scraper/health.py check --repo <owner>/<name>` (read-only; writes `health-check/health-report.json` and `summary.md`; the folder is git-ignored). The `issue` command is the only part that writes, and only the workflow runs it.
+- **If the schedules are already off.** Then this check is off too and cannot say so. Merge a real pull request, enable each scheduled workflow by hand (every workflow file with a `cron:` line), and run "Update data and deploy site" once.
+
+What each daily run does:
+
+```mermaid
+flowchart TD
+  T1["Every day<br/>(20:28 UTC)"] --> C
+  T2["Manual run"] --> C
+  C["check job (contents: read, actions: read):<br/>health.py reads GitHub's API,<br/>the workflow files and our own home page"] --> K["six checks: scheduled workflows enabled,<br/>last commit on main under 45 days old,<br/>last full scrape, last deploy and the live<br/>Last checked time within 48 hours,<br/>data branch readable"]
+  K --> R["run summary and the health-report<br/>artifact (kept 30 days)"]
+  R -- "a check could not be made" --> RED["the run turns red;<br/>the issue is left as it is"]
+  R --> M{"run on main?"}
+  M -- "no" --> X["stop: the issue is not touched"]
+  M -- "yes" --> Q{"issues job (issues: write):<br/>any problem?"}
+  Q -- "yes" --> O{"a site-health<br/>issue open?"}
+  O -- "no" --> NEW["open it: what was found,<br/>what to do, by which date"]
+  O -- "yes" --> UPD["rewrite it; comment only<br/>if the problems changed"]
+  Q -- "no, every check passed" --> CL["comment and close<br/>the open issue, if any"]
+```
+
+The logic is in `scraper/health.py` and the tests in `tests/test_health.py` (a fake GitHub API, a fixed clock, a page the renderer wrote and a fake `gh`; no network).
+
 ## Shared pieces of every page
 
 - **One header, one footer.** `render.py` builds every page's header (a "Skip to content" link, the title, the Athletics | Alumni bar, the subtitle) and footer from the same functions: `site_header` (with `site_nav`) and `site_footer`, whose page-specific data block comes first and whose shared lines come after (see "Footer" above). The alumni page uses the same helper, so the skip link and the nav can't drift. The skip link is the first thing in the tab order and is visible only when focused; it jumps to `<main id="main">`, which every page has once. The header is the compact ledger style: a gold-and-scarlet stripe, the title and the two nav links on one line (links at least 44 px tall), the subtitle under it. The subtitle is the athletics one on the athletics pages, the alumni one ("DePauw University vs. Wabash College: notable graduates and endowments, side by side.") on the alumni pages, and a neutral one ("DePauw and Wabash, side by side: head-to-head athletics, notable graduates and endowments.") on the how-it-works landing, Bell-heist, privacy, accessibility and 404 pages. The heist history is an athletics-side page and has the athletics subtitle. Shared footer jokes are emitted once by `site_footer`.
@@ -573,6 +611,7 @@ python scraper/gameday.py gate --schedule "7,37 * * * *" --now 2026-11-14T14:00:
 python scraper/watcher.py watch --dry-run --now 2026-11-14T12:30 --no-fetch   # the game-day watcher's plan for that day, without starting anything
 python -m http.server 8000 -d site   # preview at http://localhost:8000
 python scraper/linkcheck.py check    # check the rendered site's outbound links (live, polite; report in link-check/)
+GH_TOKEN=$(gh auth token) python scraper/health.py check --repo <owner>/<name>   # the daily health check, read-only (report in health-check/)
 npm ci --ignore-scripts   # once (and after package-lock.json changes): installs the locked HTML validator into node_modules/
 npx --no-install html-validate site/index.html site/404.html site/bell-heist/index.html site/heist-details/index.html site/privacy/index.html site/accessibility/index.html site/how-it-works/index.html site/how-it-works/athletics/index.html site/how-it-works/alumni/index.html site/alumni/index.html   # validate every page (what the PR check does)
 npm ci --ignore-scripts --prefix axe   # once (and after axe/package-lock.json changes): installs the locked axe-core and browser driver into axe/node_modules/
@@ -638,13 +677,15 @@ scraper/
   snapshot.py        data snapshots and Wayback archiving
   databranch.py      fetch, push and bootstrap for the data branch (where the bot-managed data files live)
   linkcheck.py       the monthly outbound-link check and its broken-links issue (never changes the site or data)
+  health.py          the daily health check and its site-health issue (reads GitHub's API and our own home page only)
 static/              styles.css, favicon.svg, easter-eggs.js, three original easter-egg SVGs, fonts/ (Barlow Condensed TTFs for the
                      share images, the Latin woff2 subset the pages load, OFL.txt; SIL Open Font License)
 tests/               one test file per area (scraper, merge, overrides, review, snapshot, game day, render,
-                     footer, how-it-works pages, alumni, swimming, link check ...); fixtures/ holds page markup
+                     footer, how-it-works pages, alumni, swimming, link check, health check ...); fixtures/ holds page markup
                      captured from both schools' sites and the expected parse of each, the frozen copy of
                      series.json, and the small site and data files the link-check tests read (linkcheck/)
-.github/workflows/   update-and-deploy.yml, gameday-watcher.yml, checks.yml, snapshot.yml, link-check.yml
+.github/workflows/   update-and-deploy.yml, gameday-watcher.yml, checks.yml, snapshot.yml, link-check.yml,
+                     health-check.yml
 .github/ISSUE_TEMPLATE/  data-correction.yml, alumni-correction.yml, enhancement.yml, config.yml (blank issues off)
 .github/dependabot.yml   weekly updates of the pinned GitHub Actions, the locked Python packages (pip), the locked HTML validator and the locked accessibility tools in axe/ (npm)
 docs/                the plan the alumni page was built from (alumni-endowment-implementation-plan.md)

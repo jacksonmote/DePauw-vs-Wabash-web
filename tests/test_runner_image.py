@@ -25,10 +25,11 @@ def jobs():
     return out
 
 
-def test_there_are_seventeen_jobs_across_the_five_workflows():
+def test_there_are_nineteen_jobs_across_the_six_workflows():
     assert [f.name for f in WORKFLOWS] == [
-        "checks.yml", "gameday-watcher.yml", "link-check.yml", "snapshot.yml", "update-and-deploy.yml"]
-    assert len(jobs()) == 17
+        "checks.yml", "gameday-watcher.yml", "health-check.yml", "link-check.yml", "snapshot.yml",
+        "update-and-deploy.yml"]
+    assert len(jobs()) == 19
 
 
 @pytest.mark.parametrize("flow, job_id, job", jobs(), ids=lambda v: v if isinstance(v, str) else "")
