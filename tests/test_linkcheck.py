@@ -59,7 +59,8 @@ def test_only_outside_links_are_checked_and_every_skip_rule_applies():
     assert links["https://sports.wabash.edu/news/2021/3/21/a-story.aspx"] == [
         "/", "data/overrides.json: sports.swimming.session_of[0].sources[0]"]
     assert {g: len(u) for g, u in skipped.items()} == {
-        "box-scores": 3, "scraped-pages": 3, "repository": 3, "own-site": 1, "mailto": 1}
+        "box-scores": 3, "scraped-pages": 3, "repository": 3, "own-site": 1, "mailto": 1,
+        "robots": 0}                                                               # filled during the run, not here
     assert skipped["scraped-pages"] == {
         "https://depauwtigers.com/sports/football/opponent-history/wabash/215",
         "https://sports.wabash.edu/sports/football/opponent-history/depauw-university/4",
@@ -309,6 +310,129 @@ def test_requests_to_one_host_are_spaced_and_one_link_never_costs_more_than_thre
         ends[host] = start + 0.5                                                           # each fake request takes 0.5 s
 
 
+# ---- the schools' sites: robots.txt and its crawl delay (the scraper's rules, politeness.py) ---- #
+
+D, W = "https://depauwtigers.com", "https://sports.wabash.edu"
+SCHOOL_ROBOTS = "User-agent: *\nDisallow: /admin/\nDisallow: /services/\nAllow: /\nCrawl-delay: 30\n"
+
+
+class FakeRobots:
+    """Serves a robots.txt per host (SCHOOL_ROBOTS unless told otherwise; an exception is raised) and records
+    every read with its fake time. A read takes half a second, like a FakeWeb request."""
+    def __init__(self, clock, by_host=None):
+        self.clock, self.by_host, self.calls = clock, by_host or {}, []
+
+    def __call__(self, url):
+        assert url.endswith("/robots.txt"), url                                            # nothing else is read this way
+        self.calls.append((url, self.clock()))
+        self.clock.t += 0.5
+        body = self.by_host.get(urlparse(url).hostname, SCHOOL_ROBOTS)
+        if isinstance(body, Exception):
+            raise body
+        return body
+
+
+def run_with_robots(urls, script=None, by_host=None):
+    """run_checks over `urls` with the school rules on. (results, skipped, web, robots, clock)"""
+    clock = FakeClock()
+    script = script if script is not None else {("HEAD", u): [200] for u in urls}
+    web, robots = FakeWeb(script, clock), FakeRobots(clock, by_host)
+    pacer = linkcheck.Pacer(clock=clock, sleep=clock.sleep, robots_fetch=robots, log=lambda m: None)
+    skipped = {g: set() for g in linkcheck.SKIP_GROUPS}
+    results = linkcheck.run_checks({u: ["/"] for u in urls}, web, pacer, sleep=clock.sleep, log=lambda *_: None,
+                                   skipped=skipped)
+    return results, skipped, web, robots, clock
+
+
+def request_gaps(web, robots, host):
+    """Seconds from the end of each request to `host` (robots.txt included) to the start of the next one."""
+    starts = sorted([t for _, url, t in web.calls if urlparse(url).hostname == host]
+                    + [t for url, t in robots.calls if urlparse(url).hostname == host])
+    return [b - (a + 0.5) for a, b in zip(starts, starts[1:])]
+
+
+def test_links_on_the_schools_sites_wait_the_robots_txt_crawl_delay_and_every_other_host_two_seconds():
+    urls = ([f"{D}/sports/2022/6/28/story-{i}.aspx" for i in range(3)]
+            + [f"{W}/news/2021/3/2{i}/story.aspx" for i in range(3)]
+            + [f"https://other.example/{i}" for i in range(3)])
+    results, skipped, web, robots, _ = run_with_robots(urls)
+    assert [r["status"] for r in results] == ["ok"] * 9 and not skipped["robots"]
+    for host in ("depauwtigers.com", "sports.wabash.edu"):
+        gaps = request_gaps(web, robots, host)
+        assert len(gaps) == 3 and all(g >= 30 - 1e-9 for g in gaps), (host, gaps)   # robots.txt, then three links
+    other = request_gaps(web, robots, "other.example")
+    assert len(other) == 2 and all(g >= linkcheck.HOST_GAP - 1e-9 for g in other), other
+    # by themselves (no school link in between to wait for), other hosts are exactly 2 seconds apart, as before
+    alone = [f"https://other.example/{i}" for i in range(3)] + [f"https://www.wabash.edu/news/{i}" for i in range(3)]
+    results, _, web, robots, _ = run_with_robots(alone)
+    assert [r["status"] for r in results] == ["ok"] * 6 and not robots.calls
+    for host in ("other.example", "www.wabash.edu"):
+        assert request_gaps(web, robots, host) == pytest.approx([linkcheck.HOST_GAP] * 2), host
+    assert linkcheck.HOST_GAP == 2.0
+
+
+def test_robots_txt_is_read_once_per_school_host_before_any_page_there_and_for_no_other_host():
+    urls = [f"{D}/a", f"{D}/b", f"{W}/a", f"{W}/b", "https://www.depauwtigers.com/c", "https://other.example/x",
+            "https://www.wabash.edu/news/story/1"]                                        # the college, not the athletics site
+    _, _, web, robots, _ = run_with_robots(urls)
+    assert sorted(u for u, _ in robots.calls) == [
+        f"{D}/robots.txt", f"{W}/robots.txt", "https://www.depauwtigers.com/robots.txt"]
+    for robots_url, read_at in robots.calls:
+        host = urlparse(robots_url).hostname
+        assert read_at < min(t for _, url, t in web.calls if urlparse(url).hostname == host)
+    assert set(linkcheck.SOURCE_HOSTS) == {"depauwtigers.com", "www.depauwtigers.com", "sports.wabash.edu"}
+
+
+def test_a_page_robots_txt_disallows_is_never_requested_and_is_counted_as_skipped():
+    urls = [f"{D}/admin/page.aspx", f"{D}/sports/2022/6/28/monon-bell-history.aspx", f"{W}/services/feed.ashx",
+            "https://other.example/admin/page.aspx"]
+    results, skipped, web, _, _ = run_with_robots(urls)
+    assert skipped["robots"] == {f"{D}/admin/page.aspx", f"{W}/services/feed.ashx"}
+    assert sorted(r["url"] for r in results) == sorted([urls[1], urls[3]])            # the rule is the schools' only
+    assert not [url for _, url, _ in web.calls if url in skipped["robots"]]
+    report = linkcheck.build_report(results, skipped, WHEN)
+    assert report["skipped"]["robots"] == 2 and report["totals"]["checked"] == 2
+    assert "2 pages on the schools’ athletics sites that robots.txt disallows" in linkcheck.skipped_line(report)
+
+
+@pytest.mark.parametrize("robots, delay", [
+    ("User-agent: *\nAllow: /\n", 30.0),                               # no Crawl-delay: the scraper's 30-second fallback
+    ("User-agent: *\nAllow: /\nCrawl-delay: 1\n", 3.0),                # never under 3 seconds
+    ("User-agent: *\nAllow: /\nCrawl-delay: 45\n", 45.0),
+    (OSError("timed out"), 30.0),                                       # unreadable: go ahead at the fallback
+])
+def test_the_school_delay_has_the_scrapers_fallback_and_minimum(robots, delay):
+    urls = [f"{W}/news/a.aspx", f"{W}/news/b.aspx"]
+    results, skipped, web, fake, _ = run_with_robots(urls, by_host={"sports.wabash.edu": robots})
+    assert [r["status"] for r in results] == ["ok", "ok"] and not skipped["robots"]
+    assert all(g >= delay - 1e-9 for g in request_gaps(web, fake, "sports.wabash.edu"))
+    assert request_gaps(web, fake, "sports.wabash.edu")[-1] < delay + 1
+    assert delay >= linkcheck.politeness.MIN_GAP_SECONDS and linkcheck.politeness.DEFAULT_CRAWL_DELAY == 30.0
+
+
+def test_a_retry_and_a_get_on_a_school_site_keep_the_crawl_delay_too():
+    url = f"{D}/sports/2022/6/28/rivalry-facts.aspx"
+    script = {("HEAD", url): ["timeout"], ("GET", url): ["timeout", 200]}
+    results, _, web, robots, _ = run_with_robots([url], script)
+    assert results[0]["status"] == "ok" and [m for m, _, _ in web.calls] == ["HEAD", "GET", "GET"]
+    gaps = request_gaps(web, robots, "depauwtigers.com")
+    assert len(gaps) == 3 and all(g >= 30 - 1e-9 for g in gaps), gaps
+
+
+def test_a_redirect_onto_a_disallowed_school_page_is_not_followed_and_is_couldnt_check():
+    old, target = "https://www.wabash.edu/athletics/old-page", f"{W}/admin/moved.aspx"
+    script = {("HEAD", old): [(301, target)], ("GET", old): [(301, target)]}
+    results, skipped, web, _, _ = run_with_robots([old], script)
+    assert (results[0]["status"], results[0]["detail"]) == ("blocked", linkcheck.ROBOTS_DETAIL)
+    assert results[0]["final_url"] == target and not skipped["robots"]
+    assert target not in [url for _, url, _ in web.calls]
+
+
+def test_the_live_check_reads_robots_txt_the_way_the_scraper_does():
+    assert linkcheck.robots_reader() is scrape.fetch
+    assert linkcheck.USER_AGENT == linkcheck.politeness.USER_AGENT == scrape.USER_AGENT
+
+
 def test_the_order_alternates_between_hosts():
     order = linkcheck.polite_order(["https://a.example/1", "https://a.example/2", "https://b.example/1"])
     assert order == ["https://a.example/1", "https://b.example/1", "https://a.example/2"]
@@ -462,7 +586,13 @@ def test_couldnt_check_alone_opens_no_issue():
 def test_the_check_command_writes_the_report_and_exits_zero_even_with_broken_links(tmp_path, monkeypatch):
     def web(method, url, timeout):
         return linkcheck.Response(404 if "wikipedia" in url else 200)
+    robots_read = []
+
+    def robots(url):                                              # the fixture's one checked school link is a news story
+        robots_read.append(url)
+        return "User-agent: *\nDisallow: /news/\nCrawl-delay: 30\n"
     monkeypatch.setattr(linkcheck, "requests_transport", lambda: web)
+    monkeypatch.setattr(linkcheck, "robots_reader", lambda: robots)
     monkeypatch.setattr(linkcheck.time, "sleep", lambda s: None)
     monkeypatch.setattr(linkcheck.time, "monotonic", lambda: 0.0)
     monkeypatch.setattr(linkcheck, "now_utc", lambda: WHEN)
@@ -470,6 +600,10 @@ def test_the_check_command_writes_the_report_and_exits_zero_even_with_broken_lin
     code = linkcheck.main(["check", "--site", str(FIX / "rendered"), "--data", str(FIX / "data"), "--out", str(out)])
     assert code == 0
     report = json.loads((out / "link-report.json").read_text(encoding="utf-8"))
+    assert robots_read == ["https://sports.wabash.edu/robots.txt"]
+    assert report["skipped"]["robots"] == 1 and report["totals"]["checked"] == 6          # 7 collected, 1 disallowed
+    assert "sports.wabash.edu" not in json.dumps(report["links"])
+    assert "1 page on the schools’ athletics sites that robots.txt disallows" in (out / "summary.md").read_text(encoding="utf-8")
     assert report["totals"]["broken"] == 1 and report["links"][0]["url"] == "https://en.wikipedia.org/wiki/Monon_Bell"
     assert report["checked_at"] == "2026-11-02T19:41:00+00:00"
     assert (out / "link-report.md").read_text(encoding="utf-8").startswith("# Link check, Nov 2, 2026")
