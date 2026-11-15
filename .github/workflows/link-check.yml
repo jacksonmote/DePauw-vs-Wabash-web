@@ -46,8 +46,9 @@ jobs:
       - name: Render the site
         run: python scraper/render.py
 
-      # The one live step: one request at a time, at least 2 seconds between requests to a host. Exits 0 whether or
-      # not links are broken; it fails only if the checker itself fails.
+      # The one live step: one request at a time, at least 2 seconds between requests to a host; on the schools'
+      # athletics sites, robots.txt first and its crawl delay (30 seconds) instead. Exits 0 whether or not links
+      # are broken; it fails only if the checker itself fails.
       - name: Check the outbound links
         run: python scraper/linkcheck.py check --site site --out "$RUNNER_TEMP/link-check"
 

@@ -1,8 +1,9 @@
 """Rules the committed data/series.json must always satisfy, whatever the latest results are.
 
-The bot rewrites that file with every new game, so these tests never pin a count (918 games, 43-44-6 and so
-on: those are checked against frozen copies in the other test files). They check what has to be true after any
-scrape, so a Bell game on a Saturday cannot make a test fail unless the data itself is broken."""
+The bot rewrites that file with every new game, so these tests never pin a count (the number of games, the
+Bell-era record and so on: those are checked against frozen copies in the other test files). They check what
+has to be true after any scrape, so a Bell game on a Saturday cannot make a test fail unless the data itself is
+broken."""
 import json
 import sys
 from pathlib import Path

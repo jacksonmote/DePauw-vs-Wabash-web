@@ -15,11 +15,16 @@ that uses it. Left out on purpose, and counted in the report (distinct URLs per 
     advisories, source files);
   * every box score on the schools' athletics sites: there are hundreds, they come from the schools' own pages,
     and checking them would send far more traffic to those sites than the scraper's normal page fetches;
-  * the opponent-history and schedule pages the scraper already fetches (from sources.json).
+  * the opponent-history and schedule pages the scraper already fetches (from sources.json);
+  * any other page on the schools' athletics sites that the site's robots.txt disallows for our user agent.
 
 How a link is checked, politely: one request at a time, at least HOST_GAP seconds between requests to the same
 host (counted from the end of the last one), a TIMEOUT-second timeout, the scraper's own User-Agent (naming the
-site, the repository and the privacy contact; politeness.USER_AGENT). HEAD first; a GET only if HEAD did not answer 2xx (405/501, an error status or no answer: many servers
+site, the repository and the privacy contact; politeness.USER_AGENT). On the schools' athletics sites
+(SOURCE_HOSTS) the scraper's rules apply instead of HOST_GAP (politeness.py): each host's robots.txt is read once
+per run, before any page on it; requests to that host are at least its Crawl-delay apart (30 seconds on both
+sites; 30 when robots.txt sets none or cannot be read; never under 3); and a page it disallows is never
+requested (it is counted as skipped; a link that redirects to one is couldn't check). HEAD first; a GET only if HEAD did not answer 2xx (405/501, an error status or no answer: many servers
 mishandle HEAD); one retry of that GET after RETRY_WAIT seconds for a timeout, a connection error or a 5xx.
 Redirects are followed by hand, at most MAX_REDIRECTS, each hop paced like any request. A GET never reads the
 body, so no link costs more than one page.
@@ -56,7 +61,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import parse_qsl, urldefrag, urljoin, urlparse
 
-from politeness import USER_AGENT  # the scraper's user agent (the watcher sends it too; snapshot.py has its own); standard library only
+import politeness                  # robots.txt and the crawl delay on the schools' sites; standard library only
+from politeness import USER_AGENT  # the scraper's user agent (the watcher sends it too; snapshot.py has its own)
 from timeutil import to_eastern   # standard library only, like this module
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -73,7 +79,7 @@ SOURCE_HOSTS = ("depauwtigers.com", "www.depauwtigers.com", "sports.wabash.edu")
 # The hand-curated files on main. The bot-managed files hold only the schools' own pages and box scores.
 DATA_FILES = ("alumni.json", "endowment.json", "bell-heists.json", "fun-facts.json", "overrides.json")
 
-HOST_GAP = 2.0          # seconds between requests to the same host, at least
+HOST_GAP = 2.0          # seconds between requests to the same host, at least (the schools' sites: their Crawl-delay)
 TIMEOUT = 20            # seconds, per request
 MAX_REDIRECTS = 5
 RETRY_WAIT = 10         # seconds before the one retry
@@ -85,6 +91,7 @@ TRANSIENT_ERRORS = {"timeout", "connection", "dns", "tls"}
 GENERAL_SEGMENT_MAX = 20   # characters: a lone path segment this short (/company, /about, /news) is a section page
 GENERAL_DETAIL = "probably broken (redirects to a general page)"
 BOT_CHECK_DETAIL = "redirects to a bot check or sign-in page (the site blocks automated checks)"
+ROBOTS_DETAIL = "redirects to a page robots.txt disallows (not requested)"
 # Query keys a bot check or sign-in page uses to send the visitor on to the page they asked for (lowercase).
 RETURN_KEYS = {"next", "return", "return_to", "returnto", "returnurl", "return_url", "redirect", "redirect_to",
                "redirect_uri", "continue", "destination"}
@@ -105,6 +112,8 @@ SKIP_GROUPS = {
                    "links to this repository (issue forms, security advisories, source files)"),
     "own-site": ("link to this site", "links to this site"),
     "mailto": ("email address (mailto:)", "email addresses (mailto:)"),
+    "robots": ("page on the schools’ athletics sites that robots.txt disallows",
+               "pages on the schools’ athletics sites that robots.txt disallows"),
 }
 # Status keys, in report order, with their headings.
 STATUSES = {"broken": "Broken", "moved": "Moved permanently", "other": "Other",
@@ -182,7 +191,8 @@ def scraped_pages(sources: dict) -> set:
 
 
 def skip_group(url: str, scraped: set) -> str | None:
-    """Which skip group a link belongs to, or None when it is checked."""
+    """Which skip group a link belongs to, or None when it is checked. (The "robots" group is filled during the
+    run, by run_checks: only reading a site's robots.txt can say what it disallows.)"""
     if url.lower().startswith("mailto:"):
         return "mailto"
     parts = urlparse(url)
@@ -282,13 +292,38 @@ class Response:
 
 
 class Pacer:
-    """At least `gap` seconds between the end of one request to a host and the start of the next."""
-    def __init__(self, gap: float = HOST_GAP, clock=None, sleep=None):
+    """At least `gap` seconds between the end of one request to a host and the start of the next.
+
+    The schools' athletics sites (SOURCE_HOSTS) get the scraper's rules instead, from the same politeness.Pacer the
+    scraper uses: `robots_fetch(url) -> str` reads a host's robots.txt, once per run and before any page on that
+    host; the gap there is its Crawl-delay (politeness.DEFAULT_CRAWL_DELAY when it sets none or cannot be read,
+    never under politeness.MIN_GAP_SECONDS); and `allowed` says no to a page it disallows for our user agent.
+    Without a `robots_fetch` (a test of how one link is classified) every host simply gets `gap`."""
+    def __init__(self, gap: float = HOST_GAP, clock=None, sleep=None, robots_fetch=None, log=None):
         self.gap, self.clock, self.sleep, self.last = gap, clock or time.monotonic, sleep or time.sleep, {}
+        self.schools = None
+        if robots_fetch is not None:
+            self.schools = politeness.Pacer(fetch=robots_fetch, sleep=self.sleep, clock=self.clock, log=log)
+
+    def _school(self, host: str) -> bool:
+        return self.schools is not None and host in SOURCE_HOSTS
+
+    def allowed(self, url: str) -> bool:
+        """May this page be requested? Always yes off the schools' sites; on them, what robots.txt says (reading
+        it first if this is the run's first look at that host)."""
+        return not self._school(politeness.host_of(url)) or self.schools.allowed(url)
+
+    def gap_for(self, host: str) -> float:
+        if self._school(host):
+            return self.schools.delays.get(host, politeness.DEFAULT_CRAWL_DELAY)
+        return self.gap
 
     def before(self, host: str) -> None:
-        if host in self.last:
-            wait = self.last[host] + self.gap - self.clock()
+        ends = [self.last[host]] if host in self.last else []
+        if self._school(host) and host in self.schools.last:
+            ends.append(self.schools.last[host])            # the robots.txt request counts as a request too
+        if ends:
+            wait = max(ends) + self.gap_for(host) - self.clock()
             if wait > 0:
                 self.sleep(wait)
 
@@ -301,6 +336,9 @@ def follow(method: str, url: str, transport, pacer: Pacer) -> dict:
     hops, current = [], url
     for _ in range(MAX_REDIRECTS + 1):
         host = (urlparse(current).hostname or "").lower()
+        if not pacer.allowed(current):                       # the schools' sites only; never requested
+            return {"status": None, "error": "robots", "detail": f"robots.txt on {host} disallows {current}",
+                    "final_url": current, "hops": hops}
         pacer.before(host)
         try:
             resp = transport(method, current, TIMEOUT)
@@ -411,6 +449,8 @@ def classify(url: str, result: dict, retried: bool) -> dict:
                 "detail": ERROR_WORDS[result["error"]] + again + "; the site puts its pages behind a bot check"}
     if result["error"] in TRANSIENT_ERRORS:
         return {**out, "status": "broken", "detail": ERROR_WORDS[result["error"]] + again}
+    if result["error"] == "robots":
+        return {**out, "status": "blocked", "detail": ROBOTS_DETAIL}
     if result["error"]:
         return {**out, "status": "other", "detail": result["detail"]}
     if 200 <= code < 300:
@@ -456,10 +496,18 @@ def polite_order(urls: list) -> list:
     return out
 
 
-def run_checks(links: dict, transport, pacer: Pacer | None = None, sleep=None, log=print) -> list:
+def run_checks(links: dict, transport, pacer: Pacer | None = None, sleep=None, log=print,
+               skipped: dict | None = None) -> list:
+    """Check every link, one request at a time. A link robots.txt disallows (the schools' sites only, see Pacer) is
+    not requested and gets no result: it is added to skipped["robots"], so the report counts it as skipped."""
     pacer = pacer or Pacer(sleep=sleep)
     results, order = [], polite_order(list(links))
     for i, url in enumerate(order, 1):
+        if not pacer.allowed(url):
+            if skipped is not None:
+                skipped.setdefault("robots", set()).add(url)
+            log(f"[{i}/{len(order)}] skipped  robots.txt disallows it, so it was not requested  {url}")
+            continue
         result = check_link(url, transport, pacer, sleep)
         result["used_on"] = links[url]
         log(f"[{i}/{len(order)}] {result['status']:8} {result['detail']}  {url}")
@@ -504,6 +552,14 @@ def requests_transport():
             resp.close()
 
     return send
+
+
+def robots_reader():
+    """How the live check reads a robots.txt: the scraper's own fetch (https only, the same site, size-capped, the
+    same User-Agent), so both read it the same way. Imported here because only the live check needs it."""
+    import scrape
+
+    return scrape.fetch
 
 
 # ---- the report -------------------------------------------------------------------------------- #
@@ -672,7 +728,8 @@ def main(argv=None) -> int:
         sys.stdout.reconfigure(encoding="utf-8")   # the curly apostrophe on a Windows console
     if args.command == "check":
         links, skipped = collect(args.site, args.data)
-        results = run_checks(links, requests_transport())
+        pacer = Pacer(robots_fetch=robots_reader(), log=print)   # logs each school host's robots.txt and delay
+        results = run_checks(links, requests_transport(), pacer, skipped=skipped)
         report = build_report(results, skipped, now_utc())
         write_report(report, args.out)
         print(totals_line(report))
