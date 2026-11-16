@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "verified_at": "2026-11-02",
+  "verified_at": "2026-11-16",
   "facts": [
     {
       "id": "depauw-founding",
@@ -20,7 +20,7 @@
     {
       "id": "depauw-women-1867",
       "school": "depauw",
-      "text": "DePauw admitted a small group of women in 1867.",
+      "text": "In 1867, when it was still Indiana Asbury, DePauw admitted a small group of women.",
       "sources": [
         {
           "label": "DePauw: History & Traditions",
@@ -91,22 +91,30 @@
     {
       "id": "depauw-wgre",
       "school": "depauw",
-      "text": "DePauw’s radio station, WGRE, was the first collegiate FM station in the country, on the air in 1949.",
+      "text": "WGRE, DePauw’s radio station, went on the air in 1949 as the country’s first 10-watt college FM station.",
       "sources": [
         {
           "label": "DePauw: History & Traditions",
           "url": "https://www.depauw.edu/about/history-traditions/"
+        },
+        {
+          "label": "DePauw catalog: The University",
+          "url": "https://www.depauw.edu/academics/catalog/university/"
         }
       ]
     },
     {
       "id": "depauw-boulder",
       "school": "depauw",
-      "text": "A massive granite boulder, given to DePauw in 1892, sits in front of East College.",
+      "text": "The Columbian Boulder, in front of East College since 1892, marks the 400th anniversary of Columbus’s first voyage to the New World.",
       "sources": [
         {
           "label": "DePauw: History & Traditions",
           "url": "https://www.depauw.edu/about/history-traditions/"
+        },
+        {
+          "label": "DePauw archives: Symbols of old DePauw",
+          "url": "https://library.depauw.edu/library/archives/ehistory/chapter2/symbols.html"
         }
       ]
     },
@@ -124,11 +132,15 @@
     {
       "id": "depauw-spj",
       "school": "depauw",
-      "text": "The Society of Professional Journalists was founded on DePauw’s campus in 1909.",
+      "text": "DePauw students founded Sigma Delta Chi in 1909. It later became the Society of Professional Journalists.",
       "sources": [
         {
           "label": "DePauw: History & Traditions",
           "url": "https://www.depauw.edu/about/history-traditions/"
+        },
+        {
+          "label": "DePauw catalog: The University",
+          "url": "https://www.depauw.edu/academics/catalog/university/"
         }
       ]
     },
@@ -150,7 +162,7 @@
     {
       "id": "depauw-nrhp",
       "school": "depauw",
-      "text": "East College and McKim Observatory, built in 1884, are both listed on the National Register of Historic Places.",
+      "text": "East College and McKim Observatory are both on the National Register of Historic Places. The observatory was built in 1884.",
       "sources": [
         {
           "label": "DePauw catalog: The University",
@@ -161,14 +173,14 @@
     {
       "id": "depauw-prindle",
       "school": "depauw",
-      "text": "The Janet Prindle Institute for Ethics, funded by a gift from Janet Prindle ’58, sits in the DePauw Nature Park. Its building opened in 2007.",
+      "text": "A gift from Janet Prindle ’58 paid for the building that houses DePauw’s Prindle Institute for Ethics. It opened in 2007 in the DePauw Nature Park.",
       "sources": [
         {
           "label": "DePauw catalog: The University",
           "url": "https://www.depauw.edu/academics/catalog/university/"
         },
         {
-          "label": "DePauw: remembering Janet Prindle Seidler ’58",
+          "label": "DePauw: DePauw Mourns Janet Prindle Seidler ’58",
           "url": "https://www.depauw.edu/stories/details/depauw-mourns-janet-prindle-seidler-58-founder-of-the-prindle-institute-for-ethics/"
         }
       ]
@@ -191,11 +203,15 @@
     {
       "id": "depauw-d3tv",
       "school": "depauw",
-      "text": "D3TV, DePauw’s internet-distributed campus television station, was established in 1995.",
+      "text": "D3TV, DePauw’s campus television station, dates to 1995 and is distributed online.",
       "sources": [
         {
-          "label": "DePauw: Journalism at DePauw",
-          "url": "https://www.depauw.edu/academics/centers/pccm/journalism-at-depauw/"
+          "label": "DePauw: Journalism at DePauw (archived copy)",
+          "url": "https://web.archive.org/web/20260720222915/https://www.depauw.edu/academics/centers/pccm/journalism-at-depauw/"
+        },
+        {
+          "label": "DePauw: History & Traditions",
+          "url": "https://www.depauw.edu/about/history-traditions/"
         }
       ]
     },
@@ -209,7 +225,7 @@
           "url": "https://library.depauw.edu/library/archives/ehistory/chapter2/2index13.html"
         },
         {
-          "label": "DePauw Athletics: Quick facts",
+          "label": "DePauw Athletics: Athletics Communications (Quick Facts)",
           "url": "https://depauwtigers.com/sports/2022/5/26/information-athcomm-index.aspx"
         }
       ]
@@ -464,7 +480,7 @@
     {
       "id": "wabash-nonsectarian",
       "school": "wabash",
-      "text": "Wabash has always been independent and non-sectarian.",
+      "text": "Wabash’s founders and its first teacher, Caleb Mills, were Presbyterian ministers, but the college has always been independent and non-sectarian.",
       "sources": [
         {
           "label": "Wabash: A Brief History",
@@ -475,7 +491,7 @@
     {
       "id": "wabash-caleb-mills",
       "school": "wabash",
-      "text": "Wabash’s history says Caleb Mills, an early figure at the college, later became the father of the Indiana public school system.",
+      "text": "Caleb Mills, Wabash’s first faculty member, is remembered as the father of Indiana’s public school system.",
       "sources": [
         {
           "label": "Wabash: A Brief History",
@@ -567,14 +583,14 @@
     {
       "id": "wabash-mxibs",
       "school": "wabash",
-      "text": "Wabash’s Malcolm X Institute of Black Studies was founded in 1970, according to the institute’s own page.",
+      "text": "The Malcolm X Institute of Black Studies was founded at Wabash in 1970 by students, faculty, staff, and administrators.",
       "sources": [
         {
           "label": "Wabash: Malcolm X Institute of Black Studies",
           "url": "https://www.wabash.edu/mxibs/"
         },
         {
-          "label": "Wabash: MXIBS celebrates 40 years",
+          "label": "Wabash College News, Sept 16, 2011: MXIBS Celebrates 40 Years",
           "url": "https://www.wabash.edu/news/story/9160"
         }
       ]
@@ -596,29 +612,29 @@
       "text": "At Chapel Sing, a Wabash tradition, freshmen show they know the words to “Old Wabash” and the alma mater.",
       "sources": [
         {
-          "label": "Wabash: Chapel Sing tradition",
+          "label": "Wabash College News, Sept 15, 2005: Chapel Sing",
           "url": "https://www.wabash.edu/news/story/2768"
         }
       ]
     },
     {
-      "id": "wabash-democracy",
+      "id": "wabash-ezra-pound",
       "school": "wabash",
-      "text": "The Wabash Democracy and Public Discourse initiative works to advance deliberation, discussion, debate, and advocacy.",
+      "text": "The poet Ezra Pound came to Wabash in Sept 1907 to teach Spanish and French. He was dismissed in Jan 1908, reinstated, and then resigned to go to Italy and write poetry.",
       "sources": [
         {
-          "label": "Wabash: Democracy and Public Discourse",
-          "url": "https://www.wabash.edu/wabashx/democracy/"
+          "label": "Wabash: Archives book collections",
+          "url": "https://library.wabash.edu/archives/bookcollections"
         }
       ]
     },
     {
       "id": "wabash-scarlet-yarns",
       "school": "wabash",
-      "text": "Scarlet Yarns is a Wabash project in which alumni record their stories at the Big Bash reunion, modeled on StoryCorps.",
+      "text": "Scarlet Yarns, a Wabash project modeled on StoryCorps, has recorded alumni telling their stories on video at the Big Bash reunion. The tapes go to the college archives.",
       "sources": [
         {
-          "label": "Wabash: Dear Old Wabash blog",
+          "label": "Wabash: Dear Old Wabash blog, May 28, 2010",
           "url": "https://blog.wabash.edu/dearoldwabash/2010/05/28/scarlet-yarns-now-a-big-bash-tradition/"
         }
       ]
@@ -629,7 +645,7 @@
       "text": "The Sphinx Club, a Wabash student group dating to 1921, was founded purely for social purposes.",
       "sources": [
         {
-          "label": "Wabash: Dear Old Wabash blog",
+          "label": "Wabash: Dear Old Wabash blog, Dec 13, 2021",
           "url": "https://blog.wabash.edu/dearoldwabash/2021/12/13/founding-of-the-sphinx-club/"
         }
       ]
@@ -659,10 +675,10 @@
     {
       "id": "wabash-forest-hall",
       "school": "wabash",
-      "text": "On Dec 3, 1833, Caleb Mills met Wabash’s first class of twelve students in Forest Hall. For the next five years, that building was the college.",
+      "text": "On Dec 3, 1833, Caleb Mills met Wabash’s first class, twelve students, in Forest Hall. For five years that one building was the whole college.",
       "sources": [
         {
-          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "label": "Wabash: Buildings and Important Landmarks (campus tour, 2017, PDF)",
           "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
         }
       ]
@@ -673,7 +689,7 @@
       "text": "Forest Hall, built in 1833, was bought by Caleb Mills in 1850 and later moved to the present campus. It was moved again in 1951 and reached its current spot in 1965.",
       "sources": [
         {
-          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "label": "Wabash: Buildings and Important Landmarks (campus tour, 2017, PDF)",
           "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
         }
       ]
@@ -684,7 +700,7 @@
       "text": "South Hall, Wabash’s first brick building, burned in 1838, soon after it opened. Crawfordsville’s citizens gave $5,000 to rebuild it in time for the fall 1839 term.",
       "sources": [
         {
-          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "label": "Wabash: Buildings and Important Landmarks (campus tour, 2017, PDF)",
           "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
         }
       ]
@@ -695,7 +711,7 @@
       "text": "Center Hall, begun in 1856 and built in three stages, is Wabash’s oldest surviving brick building.",
       "sources": [
         {
-          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "label": "Wabash: Buildings and Important Landmarks (campus tour, 2017, PDF)",
           "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
         }
       ]
@@ -703,10 +719,10 @@
     {
       "id": "wabash-college-bell",
       "school": "wabash",
-      "text": "The 811-pound college bell in Center Hall was hung on Nov 8, 1876, at 29 cents a pound. Tugging its rope gives a sense of its heft.",
+      "text": "The 811-pound college bell in Center Hall was hung on Nov 8, 1876, to replace one that had broken. It cost 29 cents a pound, plus a fee for hanging.",
       "sources": [
         {
-          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "label": "Wabash: Buildings and Important Landmarks (campus tour, 2017, PDF)",
           "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
         }
       ]
@@ -717,7 +733,7 @@
       "text": "Wabash’s Senior Bench is formally the Thomson Memorial Seat. Student groups paint it so often that its inscriptions are hard to read.",
       "sources": [
         {
-          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "label": "Wabash: Buildings and Important Landmarks (campus tour, 2017, PDF)",
           "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
         }
       ]
@@ -728,7 +744,7 @@
       "text": "Gen. Lew Wallace and poet James Whitcomb Riley took part in dedicating the Civil War tablet on Wabash’s Center Hall on June 17, 1902.",
       "sources": [
         {
-          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "label": "Wabash: Buildings and Important Landmarks (campus tour, 2017, PDF)",
           "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
         }
       ]
@@ -736,10 +752,10 @@
     {
       "id": "wabash-chickamauga",
       "school": "wabash",
-      "text": "More Wabash students fought and died at the Battle of Chickamauga than in any other Civil War battle.",
+      "text": "Of all the battles of the Civil War, Chickamauga is where the most Wabash students fought and died.",
       "sources": [
         {
-          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "label": "Wabash: Buildings and Important Landmarks (campus tour, 2017, PDF)",
           "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
         }
       ]
@@ -750,7 +766,7 @@
       "text": "Hovey Rock, dedicated by the Class of 1876, honors founder Edmund Otis Hovey, generally considered the most important person in Wabash’s history.",
       "sources": [
         {
-          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "label": "Wabash: Buildings and Important Landmarks (campus tour, 2017, PDF)",
           "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
         }
       ]
@@ -758,10 +774,10 @@
     {
       "id": "wabash-pioneer-chapel",
       "school": "wabash",
-      "text": "Pioneer Chapel was dedicated to the memory of Indiana pioneers on Jan 10, 1929. Before it, Wabash’s main buildings faced east, toward today’s Arboretum.",
+      "text": "Pioneer Chapel was dedicated to the memory of Indiana pioneers on Jan 10, 1929. Before it, Wabash’s main buildings faced east, toward the Arboretum.",
       "sources": [
         {
-          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "label": "Wabash: Buildings and Important Landmarks (campus tour, 2017, PDF)",
           "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
         }
       ]
@@ -772,7 +788,7 @@
       "text": "Wabash’s Fuller Arboretum holds examples of most tree species native to Indiana.",
       "sources": [
         {
-          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "label": "Wabash: Buildings and Important Landmarks (campus tour, 2017, PDF)",
           "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
         }
       ]
@@ -794,7 +810,7 @@
       "text": "The 1956 U.S. Olympic decathlon trials were held at Wabash, where Rafer Johnson, Milt Campbell, and Bob Richards competed before a capacity crowd at Ingalls Field.",
       "sources": [
         {
-          "label": "Wabash: When Wabash took center stage",
+          "label": "Wabash College News, July 27, 2006: When Wabash Took Center Stage",
           "url": "https://www.wabash.edu/news/story/3694"
         },
         {
@@ -828,7 +844,7 @@
     {
       "id": "wabash-little-giant-club",
       "school": "wabash",
-      "text": "The Wabash Little Giant Club was formed at Homecoming 1920 to honor every letterman since 1866, plus managers, cheerleaders, and champion orators.",
+      "text": "The Wabash Little Giant Club was formed at Homecoming 1920, honoring every letterman since 1866 along with managers, cheerleaders, and champion orators.",
       "sources": [
         {
           "label": "Wabash Athletics History",
@@ -842,7 +858,7 @@
       "text": "Caleb Mills built his house in 1836. His descendants gave it to Wabash in 1926, and it became the home of Presidents Hopkins, Sparks, and Trippet.",
       "sources": [
         {
-          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "label": "Wabash: Buildings and Important Landmarks (campus tour, 2017, PDF)",
           "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
         }
       ]
@@ -850,10 +866,10 @@
     {
       "id": "wabash-elston-homestead",
       "school": "wabash",
-      "text": "Since 1966, the Elston Homestead has been the official residence of Wabash’s presidents.",
+      "text": "The Elston Homestead, built in 1835 and the oldest surviving home in Crawfordsville, became the official residence of Wabash’s presidents in 1966.",
       "sources": [
         {
-          "label": "Wabash: Buildings and important landmarks (campus tour)",
+          "label": "Wabash: Buildings and Important Landmarks (campus tour, 2017, PDF)",
           "url": "https://www.wabash.edu/aboutwabash/docs/Campus_Tour_20171.pdf"
         }
       ]
@@ -868,7 +884,7 @@
           "url": "https://depauwtigers.com/sports/2022/6/28/monon-bell-history.aspx"
         },
         {
-          "label": "Wabash Athletics: Monon Bell",
+          "label": "Wabash Athletics: The Monon Bell Rivalry",
           "url": "https://sports.wabash.edu/sports/2011/7/25/FB_0725114739.aspx"
         }
       ]
@@ -894,7 +910,7 @@
       "text": "The Monon Railroad line between Crawfordsville and Greencastle often carried the teams to the game.",
       "sources": [
         {
-          "label": "Wabash Athletics: Monon Bell",
+          "label": "Wabash Athletics: The Monon Bell Rivalry",
           "url": "https://sports.wabash.edu/sports/2011/7/25/FB_0725114739.aspx"
         }
       ]
@@ -902,7 +918,7 @@
     {
       "id": "both-tie-rule",
       "school": "both",
-      "text": "If the Monon Bell game ends in a tie, the team that held the Bell going in keeps it.",
+      "text": "Before overtime came to college football in 1996, a tied Monon Bell game left the Bell with the team that came in holding it.",
       "sources": [
         {
           "label": "DePauw Athletics: Rivalry facts",
@@ -938,7 +954,7 @@
       "text": "DePauw and Wabash both compete in the North Coast Athletic Conference, which DePauw joined effective July 1, 2011.",
       "sources": [
         {
-          "label": "Wabash: DePauw joins the NCAC",
+          "label": "Wabash College News, June 9, 2010: DePauw joins the NCAC",
           "url": "https://www.wabash.edu/news/story/8126"
         },
         {
@@ -946,8 +962,8 @@
           "url": "https://www.depauw.edu/faq/"
         },
         {
-          "label": "Wikipedia: North Coast Athletic Conference",
-          "url": "https://en.wikipedia.org/wiki/North_Coast_Athletic_Conference"
+          "label": "Wabash Athletics History",
+          "url": "https://sports.wabash.edu/sports/2011/8/1/GEN_0801115020.aspx"
         }
       ]
     }

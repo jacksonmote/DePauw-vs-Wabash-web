@@ -148,6 +148,37 @@ def test_the_built_site_has_the_committed_facts_and_no_new_files(tmp_path):
         assert "No further questions" not in built.read_text(encoding="utf-8"), built
 
 
+def test_the_bell_block_and_the_tiger_facts_agree_on_the_bells_weight_and_the_tie_rule():
+    """The home page says two things about the Bell twice: in the Monon Bell block (render.BELL_HISTORY) and in the
+    tiger facts both-bell-weight and both-tie-rule. They change together or this fails: the same weight in pounds,
+    and the tie rule told as history with the same year and the same opening words."""
+    committed = funfacts.validate(funfacts.load_json(ROOT / "data" / "fun-facts.json"))
+    by_id = {fact_["id"]: fact_["text"] for fact_ in committed["facts"]}
+    assert {"both-bell-weight", "both-tie-rule"} <= set(by_id), (
+        "these two facts pair with the Monon Bell block; renaming or removing one means updating this test")
+    soup = BeautifulSoup(home(at("2026-11-14"), committed), "html.parser")
+    block = soup.select_one("p.bell-history").get_text(" ", strip=True)
+    assert render.BELL_HISTORY in block
+    shown = [li.get_text(" ", strip=True) for li in soup.select("li.tiger-fact")]
+    weight, tie = by_id["both-bell-weight"], by_id["both-tie-rule"]
+    for text in (weight, tie):                                       # both facts are on the same page as the block
+        assert sum(text in item for item in shown) == 1
+
+    pounds = r"(\d[\d,]*)[- ]pounds?\b"
+    assert render.BELL_WEIGHT_POUNDS == 300
+    assert re.findall(pounds, block) == [str(render.BELL_WEIGHT_POUNDS)]
+    assert re.findall(pounds, weight) == [str(render.BELL_WEIGHT_POUNDS)]
+
+    year = r"\b(?:18|19|20)\d\d\b"
+    opening = f"Before overtime came to college football in {render.OVERTIME_START}, a tied"
+    assert render.OVERTIME_START == 1996
+    assert opening in block and opening in tie
+    assert re.findall(year, tie) == [str(render.OVERTIME_START)]
+    assert str(render.OVERTIME_START) in re.findall(year, block)
+    for text in (block, tie):                                        # neither says a tie can still happen
+        assert "ends in a tie" not in text and "keeps it" not in text
+
+
 def test_a_bad_facts_file_fails_the_build_before_any_output(tmp_path):
     bad = tmp_path / "bad.json"
     value = fixture_facts()

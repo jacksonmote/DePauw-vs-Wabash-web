@@ -63,6 +63,32 @@ def test_validation_refuses_each_kind_of_bad_data(mutate, message):
         funfacts.validate(bad)
 
 
+@pytest.mark.parametrize("text,found", [
+    ("The station is currently on the air.", "currently"),
+    ("Today the bell still rings.", "Today"),
+    ("The buildings faced east, toward today’s Arboretum.", "today"),
+    ("It is now a museum.", "now"),
+    ("NOW it is a museum.", "NOW"),
+    ("The team is unbeaten this year.", "this year"),
+    ("The team is unbeaten This  Season.", "This  Season"),
+])
+def test_validation_refuses_wording_that_goes_stale_and_names_the_fact(text, found):
+    bad = copy.deepcopy(GOOD)
+    bad["facts"][1].update(text=text)
+    with pytest.raises(funfacts.FunFactsError) as error:
+        funfacts.validate(bad)
+    message = str(error.value)
+    assert "fact b.text" in message and f'"{found}"' in message and "stale" in message
+
+
+def test_the_stale_wording_check_matches_whole_words_only():
+    assert funfacts.STALE_WORDS == ("currently", "today", "now", "this year", "this season")
+    for text in ("Its founders knelt in the snow.", "He is known as the father of the schools.",
+                 "Nowadays is another word.", "The field was snowy.", "That year and that season were its best.",
+                 "The year 1890 was this one’s first."):
+        funfacts.validate(data(fact("a", text=text), fact("b", "wabash")))
+
+
 def test_the_schools_may_differ_by_one_but_not_two_and_both_facts_do_not_count():
     funfacts.validate(data(fact("a"), fact("b"), fact("c", "wabash")))
     with pytest.raises(funfacts.FunFactsError, match="unbalanced"):

@@ -115,10 +115,15 @@ def test_bell_games_appear_only_in_the_football_cards_own_stats(tmp_path):
 
 def test_the_hand_written_history_has_no_changing_numbers_and_stays_short():
     numbers = set(re.findall(r"\d+", render.BELL_HISTORY))
-    assert numbers == {"300", str(facts.BELL_START)}      # the bell's weight and the year it became a trophy
+    # the bell's weight, the year it became a trophy and the year overtime ended ties
+    assert numbers == {str(render.BELL_WEIGHT_POUNDS), str(facts.BELL_START), str(render.OVERTIME_START)}
     sentences = [s for s in re.split(r"(?<=\.) ", render.BELL_HISTORY) if s]
     assert 3 <= len(sentences) <= 5
     assert "tie" in render.BELL_HISTORY and "stolen" in render.BELL_HISTORY
+    # the tie rule is told as history: no Bell game has been able to end in a tie since overtime came in
+    assert render.OVERTIME_START == 1996
+    assert f"Before overtime came to college football in {render.OVERTIME_START}, a tied game left" in render.BELL_HISTORY
+    assert "ends in a tie" not in render.BELL_HISTORY and "keeps it" not in render.BELL_HISTORY
 
 
 # ---- fun facts ------------------------------------------------------------- #
