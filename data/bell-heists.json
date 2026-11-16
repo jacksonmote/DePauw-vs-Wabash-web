@@ -52,6 +52,7 @@
         "This is The DePauw’s account, from the paper’s 2011 summary of its report of Oct 16, 1959. DePauw’s football media guide has him posing as a prospective student who scouted Bowman Gymnasium, and Sports Illustrated has him posing as a high-school senior. Wabash’s 1966 yearbook calls it a brief borrowing. None of them says how the Bell was returned."
       ],
       "consequences": "DePauw kept the Bell hidden from then on, by Wabash’s account.",
+      "tactics": ["impersonation"],
       "counted_in_theft_total": true,
       "sources": [
         {"label": "The DePauw, Nov 10, 2011", "url": "https://thedepauw.com/18703/news/bell-thefts-covered-by-the-depauw/"},
@@ -69,6 +70,7 @@
         "That night the Bell left for Crawfordsville in the back of a car. The DePauw reported that Shanks and three other Wabash men were held on campus that evening; in The Bachelor’s later telling they were sent on their way while another group took the Bell.",
         "The Bell turned up at a night rally outside the Wabash Chapel, yet almost a week passed before Wabash’s administration “discovered” it. A dean drove it back to DePauw the day before the game. Wabash won, and many of its fans ran onto the field in sombreros and ponchos. Sports Illustrated told the story in 1973 and 1993, and in 2005 put it on a list of memorable rivalry pranks."
       ],
+      "tactics": ["impersonation"], "lesson": "it worked until a dean drove the Bell back the day before the game",
       "counted_in_theft_total": true,
       "sources": [
         {"label": "Wabash Magazine, Fall 1998: The Great Bell Heist of 1965", "url": "https://www.wabash.edu/magazine/1998/fall/features/mononbell.htm"},
@@ -102,6 +104,7 @@
         "The plan nearly backfired: by the day of the 1967 game the ground had frozen. The accounts differ on the rescue. DePauw’s media guide says the Bell was unearthed during the third quarter, in a rainstorm; DePauw’s history page says the students barely got it out before the game ended in near darkness.",
         "Wabash won on a muddy field and took the Bell home that day. The earliest telling found is a Wabash professor’s, in Sports Illustrated in 1973, and no report from 1966 or 1967 that mentions the burial has been found."
       ],
+      "tactics": ["inside-job"], "lesson": "the Bell spent 11 months underground and the ground froze over it",
       "counted_in_theft_total": false,
       "sources": [
         {"label": "DePauw football media guide, 2009: Monon Bell Thefts (PDF)", "url": "https://c510383.ssl.cf2.rackcdn.com/ath/football/2009/guide/pages25-27.pdf"},
@@ -117,6 +120,7 @@
         "A Sports Illustrated writer who was in Crawfordsville for the game got a phone call at five in the morning and was later shown the Bell in the apartment. The students told him the dean knew they had it and that it would be back for the game. It was: it came into the stadium on the back of the Wabash president’s 1938 Packard.",
         "Wabash alumni have since told it a little differently: taken from a fraternity house while the guards slept, or from the gym balcony."
       ],
+      "tactics": ["inside-job"], "lesson": "Wabash blamed DePauw",
       "counted_in_theft_total": false,
       "sources": [
         {"label": "Sports Illustrated, Sept 10, 1973 (archived copy)", "url": "https://web.archive.org/web/20210801035313/https://vault.si.com/vault/1973/09/10/bell-of-the-ball-game"},
@@ -132,6 +136,7 @@
         "By The DePauw’s report, as the paper summarized it in 2011, the Wabash crowd broke into the barricaded SAE house and did about $1,000 of damage. The Bell went back that same night, at a quiet handover at the Putnam County Fairgrounds."
       ],
       "consequences": "Wabash College agreed to pay for the damage to the house.",
+      "tactics": ["fraternity-raid"], "lesson": "the Bell went back that night, after about 200 Wabash men came for it",
       "counted_in_theft_total": true,
       "sources": [
         {"label": "The DePauw, Nov 10, 2011", "url": "https://thedepauw.com/18703/news/bell-thefts-covered-by-the-depauw/"},
@@ -146,6 +151,7 @@
         "The pledges handed the Bell back the next afternoon at Monument Circle in Indianapolis, chosen as neutral ground. The account is The DePauw’s, from its 2011 summary of its October 1978 report."
       ],
       "consequences": "Eleven students were arrested: ten from Wabash and one from DePauw.",
+      "tactics": ["fraternity-raid"], "lesson": "it went back the next afternoon, and eleven students were arrested",
       "counted_in_theft_total": true,
       "sources": [
         {"label": "The DePauw, Nov 10, 2011", "url": "https://thedepauw.com/18703/news/bell-thefts-covered-by-the-depauw/"},
@@ -174,6 +180,7 @@
         "Sports Illustrated later told what appears to be the same story, without a year: the students were angry that the Bell had been rung all through a basketball game Wabash was losing, and they dropped it from its perch above a concession stand onto a portable high-jump pit. DePauw’s guide puts the theft less than a week after the game; Sports Illustrated says several weeks."
       ],
       "consequences": "DePauw made the Bell harder to reach: by 1993 its platform was 25 feet up the field-house wall.",
+      "tactics": ["hide-inside"],
       "counted_in_theft_total": true,
       "sources": [
         {"label": "DePauw football media guide, 2009: Monon Bell Thefts (PDF)", "url": "https://c510383.ssl.cf2.rackcdn.com/ath/football/2009/guide/pages25-27.pdf"},
@@ -190,6 +197,7 @@
         "The story has grown since. A long-repeated version, which is lore, has the students caught with the Bell in the car and sentenced to 1,000 hours of community service by judges who were all Wabash alumni. Sports Illustrated’s report from that fall has a first-offender program and a prosecutor who was a Wabash graduate."
       ],
       "consequences": "A first-offender program reduced the one felony charge to a misdemeanor, and the student was told to stay out of Crawfordsville for six weeks.",
+      "tactics": ["getaway-car"], "lesson": "the driver couldn’t remember how to start it, and one student was told to stay out of Crawfordsville for six weeks",
       "counted_in_theft_total": false,
       "sources": [
         {"label": "Sports Illustrated, Nov 22, 1993 (archived copy)", "url": "https://web.archive.org/web/20230910004352/https://vault.si.com/vault/1993/11/22/and-down-the-road-in-the-real-game-of-the-century-the-bell-tolled-for-the-100th-meeting-of-depauw-and-wabash"}
@@ -204,6 +212,7 @@
         "After DePauw’s win at Crawfordsville, DePauw students rushed the field and pulled down a goal post, fights broke out, and Crawfordsville police used pepper spray on students from both schools. The police chief said nobody was arrested."
       ],
       "consequences": "Wabash’s dean of students warned that the rivalry itself was in jeopardy (see “How the Bell is guarded now”).",
+      "tactics": ["hide-inside"],
       "counted_in_theft_total": true,
       "sources": [
         {"label": "The Bachelor, Nov 12, 1998 (archived copy)", "url": "https://web.archive.org/web/20010528160344/bachelor.wabash.edu/issues/105/10/Bell/heists.asp"},
@@ -235,6 +244,7 @@
         "The morning after the attempt, “WABASH” was found spray-painted on buildings at DePauw. Wabash’s president and its student body president called DePauw’s president to apologize."
       ],
       "consequences": "A new handle for the Bell.",
+      "tactics": ["rush-the-guards"], "lesson": "the Bell was dropped, its handle broke, and it stayed at Wabash",
       "counted_in_theft_total": false,
       "sources": [
         {"label": "Wabash Grunge Report blog, Nov 9, 2012", "url": "https://blog.wabash.edu/thegrunge/2012/11/09/the-heist-of-2012/"},
@@ -249,6 +259,7 @@
         "According to the county prosecutor, the three had hidden behind the bleachers for about six hours after the building closed, and police believed the group had scouted it a week earlier. A sensor under the Bell alerted campus police. The reports differ on the stop itself: WRTV credits the sensor, while The DePauw says a Greencastle officer had already noticed the truck."
       ],
       "consequences": "Each was charged with misdemeanor trespassing, set aside under a diversion agreement: six months without trouble, a fee, community service, and cleaning Blackstock Stadium after that November’s game.",
+      "tactics": ["hide-inside"], "lesson": "it ended with police outside and a misdemeanor trespassing charge for each of them",
       "counted_in_theft_total": false,
       "sources": [
         {"label": "WRTV, Oct 25, 2017", "url": "https://www.wrtv.com/news/local-news/wabash-students-accused-of-trying-to-steal-the-monon-bell-from-depauw/"},
