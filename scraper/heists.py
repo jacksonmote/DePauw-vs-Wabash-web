@@ -23,6 +23,7 @@ validates it on every build (a bad file fails the render instead of publishing h
   odds                       the joke page's odds box: the last theft, how long ago, the attempts since
   lessons_html, odds_html    those two sections as HTML. They say what happened to past attempts, never how the
                              Bell is kept or guarded now; nothing in them may read as advice
+  reality_html               both sections in one card under the "Back to reality" label, apart from the joke
 """
 
 from __future__ import annotations
@@ -64,6 +65,7 @@ TACTIC_RESULTS = {"stolen": "worked", "foiled": "failed", "hidden": "kept the Be
 LESSON_MAX = 120                       # characters in a story's `lesson`: each lesson stays one dry line
 ATTEMPTS = ("stolen", "foiled")        # an attempt on the other side's Bell (hiding your own is not one)
 RECORD_LABEL, HIDDEN_LABEL = "Record", "Hidden"   # a step's pill: "Record: 2–1" (stolen–foiled), or "Hidden: 2"
+REALITY_LABEL = "Back to reality"      # the small label over the card that holds the two real sections
 LESSONS_TITLE = "Lessons from the archive"
 LESSONS_INTRO = "Every plan on the list has been tried on the real Bell. Here is how each one went."
 ODDS_TITLE = "The odds"
@@ -479,12 +481,12 @@ def lessons_html(data: dict, history_href: str) -> str:
                      f'<div><span class="heist-tag nowrap">{_esc(lesson["record"])}</span></div>'
                      f'<div>{clauses[0].upper() + clauses[1:]}.</div></li>')
     return ('<section class="heist-lessons" id="lessons" aria-labelledby="lessons-h">'
-            f'<h3 id="lessons-h">{_esc(LESSONS_TITLE)}</h3>\n<p>{_esc(LESSONS_INTRO)}</p>\n'
+            f'<h2 id="lessons-h">{_esc(LESSONS_TITLE)}</h2>\n<p>{_esc(LESSONS_INTRO)}</p>\n'
             '<ol class="heist-plan">\n' + "\n".join(items) + '\n</ol></section>')
 
 
 def odds_html(data: dict, today: dt.date, history_href: str) -> str:
-    """The odds box, or nothing when no story is a theft. Every figure comes from `odds`."""
+    """The odds section, or nothing when no story is a theft. Every figure comes from `odds`."""
     found = odds(data, today)
     if not found:
         return ""
@@ -496,7 +498,19 @@ def odds_html(data: dict, today: dt.date, history_href: str) -> str:
     record = f'{stolen_text(found["stolen"])} since {found["first_year"]}, {ODDS_CAME_BACK}.'
     rows = [("Last successful heist", last), (f'Attempts since {found["since_year"]}', since),
             ("On the record", _esc(record))]
-    return ('<section class="heist heist-odds" id="odds" aria-labelledby="odds-h">'
-            f'<h3 id="odds-h">{_esc(ODDS_TITLE)}</h3>\n<dl class="facts bell-facts">\n'
+    return ('<section class="heist-odds" id="odds" aria-labelledby="odds-h">'
+            f'<h2 id="odds-h">{_esc(ODDS_TITLE)}</h2>\n<dl class="facts bell-facts">\n'
             + "\n".join(f'<div><dt>{_esc(k)}</dt><dd>{v}</dd></div>' for k, v in rows)
             + f'\n</dl>\n<p class="heist-plea">{_esc(ODDS_PLEA)}</p></section>')
+
+
+def reality_html(data: dict, today: dt.date, history_href: str) -> str:
+    """The real part of the joke page, kept apart from the fiction above it: both sections in one card (the history
+    page's card), under a small label that names the region for screen readers and is not a heading. Nothing when
+    neither section has anything to show."""
+    sections = [s for s in (lessons_html(data, history_href), odds_html(data, today, history_href)) if s]
+    if not sections:
+        return ""
+    return ('<section id="reality" aria-labelledby="reality-label">'
+            f'<p class="eyebrow" id="reality-label">{_esc(REALITY_LABEL)}</p>\n<div class="heist">\n'
+            + "\n".join(sections) + '\n</div></section>')

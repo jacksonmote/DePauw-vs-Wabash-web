@@ -1476,13 +1476,13 @@ def render_accessibility(data: dict, now: dt.datetime | None = None, upcoming: d
 
 
 def render_bell_heist(now: dt.datetime | None = None, heists_data: dict | None = None) -> str:
-    """/bell-heist/: the fictional mission, then two sections worked out from the real heist stories (`heists_data`):
-    the classic tactics with how each real attempt ended, and the odds as of the Eastern date of the build. Both say
-    only what happened to past attempts, never how the Bell is kept or guarded now. No script, base CSP."""
+    """/bell-heist/: the fictional mission, then, in one card under a "Back to reality" label, two sections worked
+    out from the real heist stories (`heists_data`): the classic tactics with how each real attempt ended, and the
+    odds as of the Eastern date of the build. Both say only what happened to past attempts, never how the Bell is
+    kept or guarded now. No script, base CSP."""
     now = now or dt.datetime.now(dt.timezone.utc)
     history = f"../{HEIST_PATH}"
-    sections = [heists_page.lessons_html(heists_data, history),
-                heists_page.odds_html(heists_data, to_eastern(now)[0].date(), history)] if heists_data else []
+    sections = [heists_page.reality_html(heists_data, to_eastern(now)[0].date(), history)] if heists_data else []
     return "\n".join([
         head("Mission accomplished | DePauw vs. Wabash", "An entirely fictional Monon Bell mission.",
              prefix="../", canonical=None, noindex=True),

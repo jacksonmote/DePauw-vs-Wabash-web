@@ -175,8 +175,8 @@ def steps(markup):
 def test_each_lesson_is_a_numbered_step_with_its_record_and_one_line_that_links_every_year_to_its_card():
     markup = heists.lessons_html(SAMPLE, HISTORY)
     section = BeautifulSoup(markup, "html.parser")
-    assert section.find("h3").get_text() == heists.LESSONS_TITLE
-    assert section.section["aria-labelledby"] == section.find("h3")["id"]
+    assert section.find("h2").get_text() == heists.LESSONS_TITLE and section.find("h3") is None
+    assert section.section["aria-labelledby"] == section.find("h2")["id"]
     plan, rows = steps(markup)
     assert plan.name == "ol" and section.find("dl") is None and section.find("ul") is None    # a numbered list
     assert rows == [
@@ -265,7 +265,9 @@ def test_the_odds_come_from_the_dated_stories():
     assert [i["id"] for i in found["attempts"]] == ["alarmed", "handle", "masks"]   # not the hiding, not the undated one
     assert found["successful"] == 0 and found["stolen"] == 5 and found["first_year"] == 1941
     box = BeautifulSoup(heists.odds_html(SAMPLE, TODAY, HISTORY), "html.parser")
-    assert box.find("h3").get_text() == heists.ODDS_TITLE
+    assert box.find("h2").get_text() == heists.ODDS_TITLE and box.find("h3") is None
+    assert box.section["aria-labelledby"] == box.find("h2")["id"]
+    assert "heist" not in box.section["class"]                           # the card is drawn once, around both sections
     assert [(row.dt.get_text(), row.dd.get_text()) for row in box.select("dl > div")] == [
         ("Last successful heist", "1998 (28 years ago)"),
         ("Attempts since 1999", "0 for 3 (2000, 2012, and 2017)"),
@@ -381,8 +383,69 @@ def test_the_joke_keeps_its_text_and_links_and_the_new_sections_sit_inside_it(wh
                                         "Read the real heist history", '<p class="back">')]
     assert order == sorted(order)
     page = BeautifulSoup(source, "html.parser")
-    assert [h.name for h in page.main.find_all(re.compile(r"^h\d$"))] == ["h2"] + ["h3"] * len(sections)
+    assert [h.name for h in page.main.find_all(re.compile(r"^h\d$"))] == ["h2"] * (1 + len(sections))
+    assert len(page.find_all("h1")) == 1                                       # the site title; sections are h2
     assert heists.ODDS_PLEA in page.select_one("#odds").get_text()            # every build with a theft asks
+
+
+@pytest.mark.parametrize("which", ["site", "fixture_site"])
+def test_the_real_part_is_one_labelled_card_apart_from_the_joke(which, request):
+    source = joke(request.getfixturevalue(which))
+    page = BeautifulSoup(source, "html.parser")
+    (reality,) = page.select("main > section")
+    assert reality["id"] == "reality"
+    label, card = reality.find_all(recursive=False)                            # the label above the card, nothing else
+    # The label names the region for screen readers and is a plain paragraph in the eyebrow style, not a heading.
+    assert reality["aria-labelledby"] == label["id"] and len(page.select(f'#{label["id"]}')) == 1
+    assert label.name == "p" and label["class"] == ["eyebrow"]
+    assert label.get_text() == heists.REALITY_LABEL == "Back to reality"       # capitals come from the stylesheet
+    assert not reality.has_attr("role") and not reality.has_attr("aria-label")
+    # One card, the history page's, holding both sections and nothing else.
+    assert card.name == "div" and card["class"] == ["heist"] and len(page.select(".bell-heist .heist")) == 1
+    assert [child.get("id") for child in card.find_all(recursive=False)] == ["lessons", "odds"]
+    assert [child.name for child in card.find_all(recursive=False)] == ["section", "section"]
+    # Same heading element as the joke's own, so the sections differ by the card and not by the font.
+    assert [(h.name, h.get_text()) for h in page.main.find_all(re.compile(r"^h\d$"))] == [
+        ("h2", "Mission accomplished"), ("h2", heists.LESSONS_TITLE), ("h2", heists.ODDS_TITLE)]
+    assert all(not h.has_attr("class") for h in page.main.find_all("h2"))
+    # The joke stays outside the card and above it; the links and the way back stay outside and below.
+    outside = [child for child in page.main.find_all(recursive=False) if child is not reality]
+    assert [child.name for child in outside] == ["h2", "p", "p", "p", "p", "p"]
+    assert "Mission accomplished" not in reality.get_text() and "fictional" not in reality.get_text()
+    order = [source.index(x) for x in ("An entirely fictional mission.", 'id="reality"', 'class="eyebrow"',
+                                        '<div class="heist">', 'id="lessons"', 'id="odds"', "</div></section>",
+                                        "Check the real Bell holder")]
+    assert order == sorted(order)
+    assert heists.ODDS_PLEA in card.get_text() and len(card.select("ol.heist-plan > li")) >= 1
+    assert all(pill.parent.name == "div" for pill in card.select(".heist-tag"))
+
+
+def test_the_card_holds_whichever_sections_there_are_and_is_left_out_with_none():
+    both = BeautifulSoup(heists.reality_html(SAMPLE, TODAY, HISTORY), "html.parser")
+    assert [x["id"] for x in both.select(".heist > section")] == ["lessons", "odds"]
+    untagged = copy.deepcopy(SAMPLE)
+    for story in untagged["incidents"]:
+        story.pop("tactics", None)
+        story.pop("lesson", None)
+    only_odds = BeautifulSoup(heists.reality_html(heists.validate(untagged), TODAY, HISTORY), "html.parser")
+    assert [x["id"] for x in only_odds.select(".heist > section")] == ["odds"]
+    assert only_odds.select_one("p.eyebrow").get_text() == heists.REALITY_LABEL
+    nothing = heists.validate(small([incident("a", 1950, "foiled")]))             # no tag, and no theft for the odds
+    assert heists.lessons_html(nothing, HISTORY) == "" == heists.odds_html(nothing, TODAY, HISTORY)
+    assert heists.reality_html(nothing, TODAY, HISTORY) == ""                     # no empty card, no stray label
+    page = render.render_bell_heist(NOW, nothing)
+    assert "eyebrow" not in page and 'class="heist"' not in page and "<h2>Mission accomplished</h2>" in page
+
+
+def test_the_card_and_its_label_reuse_existing_styles_and_spacing_tokens():
+    css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+    assert len(re.findall(r"^\.heist \{", css, re.M)) == 1 and len(re.findall(r"^\.eyebrow\b", css, re.M)) == 1
+    eyebrow = re.search(r"^\.eyebrow[^{]*\{([^}]*)\}", css, re.M).group(1)
+    assert "text-transform: uppercase" in eyebrow and "letter-spacing" in eyebrow    # the caps are style, not text
+    (space,) = re.findall(r"^\.bell-heist \.eyebrow \{ ([^}]*) \}", css, re.M)
+    assert space == "margin-top: var(--space-6);"                                   # clear of the joke above
+    joke_rules = "\n".join(line for line in css.splitlines() if line.startswith((".bell-heist", ".heist-odds")))
+    assert "h3" not in joke_rules and "font" not in joke_rules and "color" not in joke_rules
 
 
 def test_the_real_page_has_a_lesson_for_every_tactic_in_use_and_only_those(site):
