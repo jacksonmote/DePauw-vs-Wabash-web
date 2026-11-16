@@ -1,0 +1,105 @@
+name: Health check
+
+# Once a day, checks that the site is still updating and will keep updating, and keeps one GitHub issue (label
+# site-health) that says what is wrong and what to do (scraper/health.py explains every check). The reason it
+# exists: in a public repository GitHub switches every scheduled workflow off after 60 days without repository
+# activity, which would silently stop the updates in the offseason. This check warns from 45 days, in time for a
+# person to merge a real pull request.
+#
+# It only reads: GitHub's API, the workflow files and one request per run to our own home page (one more if it
+# fails; a page that still does not load is a check that could not be made, which turns the run red). It never
+# fetches the schools' sites, never commits, pushes or deploys, and never enables, disables or starts a workflow.
+
+on:
+  schedule:
+    # Every day at 20:28 UTC (3:28 PM EST, 4:28 PM EDT; 12:28 PM PST, 1:28 PM PDT): away from the top of the hour
+    # and from 6 to 9 AM Pacific, when GitHub delays or drops the most scheduled runs. Daily, although a week
+    # would do, because GitHub starts only some of this repository's scheduled runs.
+    - cron: "28 20 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Two runs never overlap; a second one waits instead of cancelling the first.
+concurrency:
+  group: health-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    # Read-only: contents for the checkout, actions to list the workflows, the update runs, their jobs and the
+    # gate job's log. Standard library only: nothing is installed. A manual run on a branch uses that branch's
+    # code against the same live state (and opens no issue).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      reported: ${{ steps.health.outputs.reported }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scraper
+            .github/workflows
+
+      # Exits 0 whether or not it finds a problem: problems are reported through the issue, never by failing here.
+      - name: Make every check
+        id: health
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scraper/health.py check --repo "$GITHUB_REPOSITORY" --out "$RUNNER_TEMP/health-check"
+
+      - name: Upload the report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: health-report
+          path: ${{ runner.temp }}/health-check
+          retention-days: 30
+
+      - name: Summarize
+        run: cat "$RUNNER_TEMP/health-check/summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      # A check that could not be made (GitHub's API did not answer, a job's log could not be downloaded, or our
+      # home page did not load, also on the second try) is not a finding, so it never opens or closes the issue; it
+      # turns the run red instead. Last, so the report and the summary are always there.
+      - name: Turn the run red when a check could not be made
+        run: python3 scraper/health.py verdict --report "$RUNNER_TEMP/health-check/health-report.json"
+
+  issues:
+    # The only job that can write, and only issues (contents: read is for the checkout). It runs only on main, so a
+    # manual run on a branch never opens or closes the real issue, and whenever the check job wrote a report, also
+    # when that job then turned red. Standard library only: nothing is installed. The script ignores a report more
+    # than a few hours old, so re-running this job in an old run changes nothing. A new issue is assigned to the
+    # repository's owner, whom the script reads from the runner's own environment (no account name is written
+    # here or in the code), and mentions nobody; while it is open it gets at most one comment per run (the
+    # problems changed, or a reminder 7 and 2 days before GitHub's 60-day limit).
+    needs: check
+    if: ${{ !cancelled() && needs.check.outputs.reported == 'true' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scraper
+
+      - name: Get the report from the check job
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: health-report
+          path: ${{ runner.temp }}/health-check
+
+      - name: Open, update or close the site-health issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python3 scraper/health.py issue --report "$RUNNER_TEMP/health-check/health-report.json" --run-url "$RUN_URL"
