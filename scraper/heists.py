@@ -38,6 +38,9 @@ RATINGS = {"documented": ("Documented", "a source from the time says so"),
            "lore": ("Lore", "repeated without a source"),
            "disputed": ("Disputed", "the sources disagree")}
 RATINGS_QUESTION = "How sure is each story?"
+# Between the items of a card's tag line: a no-break space holds each "·" to the item before it, so a line may end
+# with the dot but can never start with one, however the line wraps.
+SEPARATOR = " · "
 FIRST_YEAR, LAST_YEAR = 1832, 2100     # DePauw’s oldest year; nothing about the Bell predates the schools’ rivalry
 MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
           "November", "December"]
@@ -247,7 +250,7 @@ def _when(incident: dict) -> str:
     parts.append(fmt_date(incident["date"]) if "date" in incident else str(year))
     if "date_note" in incident:
         parts.append(incident["date_note"])
-    return " · ".join(parts)
+    return SEPARATOR.join(parts)
 
 
 def _game_html(incident: dict, football_games: list, game_href: str) -> str:
@@ -277,8 +280,8 @@ def _card(incident: dict, football_games: list, game_href: str) -> str:
     iid = anchor(incident["id"])
     who = SCHOOLS[incident["school"]]
     body = [f'<p class="heist-meta">{_tag(incident["outcome"])} {_rating(incident["rating"])} '
-            f'<span class="heist-when">{_esc(_when(incident))}</span>'
-            f' · <span class="heist-who">{_esc(who)}</span></p>',
+            f'<span class="heist-when">{_esc(_when(incident) + SEPARATOR.rstrip())}</span> '
+            f'<span class="heist-who">{_esc(who)}</span></p>',
             _heading(iid, incident["title"]),
             f'<p>{_esc(incident["summary"])}</p>',
             _game_html(incident, football_games, game_href)]

@@ -179,6 +179,18 @@ def test_every_story_has_its_own_card_with_an_anchor_a_rating_and_sources():
     assert 'href="../#football"' in html
 
 
+def test_no_tag_line_can_wrap_with_a_separator_at_the_start_of_a_line():
+    assert heists.SEPARATOR == " · "                 # held to the item before it by a no-break space
+    for data in (SAMPLE, real()):
+        metas = re.findall(r'<p class="heist-meta">(.*?)</p>', page(GAMES, data))
+        assert len(metas) == len(data["incidents"])
+        for meta in metas:
+            assert meta.count("·") >= 1 and meta.count(" ·") == meta.count("·"), meta
+            assert re.search(' ·</span> <span class="heist-who">[^<]+</span>$', meta), meta   # who comes last
+    noted = page(GAMES, small([incident("noted", 1998, date="1998-10-31", date_note="Halloween")]))
+    assert '<span class="heist-when">Oct 31, 1998 · Halloween ·</span>' in noted
+
+
 def test_page_order_is_tally_ratings_timeline_then_date_unknown_and_guarding():
     html = page(GAMES)
     order = [html.index(x) for x in ('id="tally"', 'id="ratings"', 'id="timeline-h"', 'id="heist-early"',
