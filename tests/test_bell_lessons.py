@@ -1,0 +1,370 @@
+"""The fictional /bell-heist/ page's two sections from the real heist stories: the tactic tags and their validation,
+the checklist built from the tags and each story's outcome, the odds box and its year arithmetic, and the rule that
+the page says only how past attempts ended."""
+import copy
+import datetime as dt
+import html
+import json
+import re
+import sys
+from pathlib import Path
+
+import pytest
+from bs4 import BeautifulSoup
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scraper"))
+import heists  # noqa: E402
+import render  # noqa: E402
+
+NOW = dt.datetime(2026, 12, 1, 15, 0, tzinfo=dt.timezone.utc)
+TODAY = dt.date(2026, 12, 1)
+HISTORY = "../heist-details/"
+SRC = [{"label": "A source", "url": "https://example.com/story"}]
+BASE_CSP = ("default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; manifest-src 'self'; "
+            "base-uri 'none'; form-action 'none'; object-src 'none'")
+FIRST, SECOND, THIRD = list(heists.TACTICS)[:3]
+
+
+def incident(iid, year, outcome="stolen", **kw):
+    base = {"id": iid, "year": year, "school": "not-recorded", "outcome": outcome, "rating": "reported",
+            "title": f"Title {iid}", "summary": "A summary.", "counted_in_theft_total": outcome == "stolen",
+            "sources": copy.deepcopy(SRC)}
+    base.update(kw)
+    return base
+
+
+def small(incidents):
+    return {"schema_version": 1, "verified_at": "2026-10-30", "intro": "Intro.", "method": ["Method."],
+            "guarding": {"paragraphs": ["Guarded."], "sources": copy.deepcopy(SRC)}, "incidents": incidents}
+
+
+# Out of order on purpose, like the real file may be. The last theft is 1998; three attempts and one hiding follow.
+SAMPLE = small([
+    incident("masks", 2017, "foiled", tactics=[SECOND], lesson="it ended with police outside"),
+    incident("first", 1941),
+    incident("posed", 1965, tactics=[FIRST]),
+    incident("posed-again", 1959, tactics=[FIRST]),
+    incident("stayed-late", 1988, tactics=[SECOND]),
+    incident("halloween", 1998, tactics=[SECOND]),
+    incident("alarmed", 2000, "foiled"),
+    incident("handle", 2012, "foiled", tactics=[THIRD, FIRST]),
+    incident("own-goal", 2005, "hidden"),
+    incident("undated", None, "foiled"),
+])
+
+
+def real():
+    return heists.load_json(ROOT / "data" / "bell-heists.json")
+
+
+def broken(index, **changes):
+    data = copy.deepcopy(SAMPLE)
+    data["incidents"][index].update(changes)
+    return data
+
+
+# ---- the tags and their validation ----
+
+def test_the_tactic_keys_are_a_small_fixed_set_with_a_name_each():
+    assert 3 <= len(heists.TACTICS) <= 8
+    for key, step in heists.TACTICS.items():
+        assert re.fullmatch(r"[a-z]+(-[a-z]+)*", key) and step.strip() and step[0].isupper() and step[-1].isalnum()
+    assert set(heists.TACTIC_RESULTS) == set(heists.OUTCOMES)             # a word for every outcome a story can have
+    assert set(heists.ATTEMPTS) < set(heists.OUTCOMES)
+
+
+def test_the_sample_and_the_committed_file_are_valid_and_every_tag_is_a_known_key():
+    assert heists.validate(copy.deepcopy(SAMPLE))
+    data = heists.validate(real())
+    for story in data["incidents"]:
+        assert set(story.get("tactics", [])) <= set(heists.TACTICS), story["id"]
+        assert "lesson" not in story or story.get("tactics"), story["id"]
+
+
+@pytest.mark.parametrize("value", ["tunnel", "Impersonation", "", None, 3, ["impersonation"]])
+def test_an_unknown_tactic_key_is_refused_and_named(value):
+    with pytest.raises(heists.HeistError, match="unknown tactic"):
+        heists.validate(broken(2, tactics=[FIRST, value]))
+
+
+@pytest.mark.parametrize(("value", "match"), [("impersonation", "non-empty list"), ([], "non-empty list"),
+                                               (None, "non-empty list"), ({"impersonation": True}, "non-empty list")])
+def test_tactics_must_be_a_list_with_something_in_it(value, match):
+    with pytest.raises(heists.HeistError, match=match):
+        heists.validate(broken(2, tactics=value))
+
+
+def test_a_tactic_listed_twice_is_refused():
+    with pytest.raises(heists.HeistError, match="twice"):
+        heists.validate(broken(2, tactics=[FIRST, FIRST]))
+
+
+def test_a_tag_on_a_story_with_no_year_is_refused_because_a_lesson_names_the_year():
+    with pytest.raises(heists.HeistError, match="needs a year"):
+        heists.validate(broken(9, tactics=[FIRST]))                       # index 9 is the undated story
+
+
+def test_lesson_words_need_a_tag_a_sane_length_and_no_closing_punctuation():
+    with pytest.raises(heists.HeistError, match="only used with tactics"):
+        heists.validate(broken(1, lesson="it worked"))                    # index 1 has no tactics
+    for words in ("it ended badly.", "it ended badly;", " it ended badly", "x" * (heists.LESSON_MAX + 1)):
+        with pytest.raises(heists.HeistError, match="lesson"):
+            heists.validate(broken(0, lesson=words))
+    for words in ("", "   ", 7):
+        with pytest.raises(heists.HeistError, match="lesson"):
+            heists.validate(broken(0, lesson=words))
+    assert heists.validate(broken(0, lesson="x" * heists.LESSON_MAX))
+
+
+# ---- the checklist ----
+
+def test_the_checklist_is_built_from_the_tags_in_tactic_order_with_each_storys_outcome():
+    found = heists.lessons(SAMPLE)
+    assert [lesson["key"] for lesson in found] == [FIRST, SECOND, THIRD]
+    assert [[i["id"] for i in lesson["incidents"]] for lesson in found] == [
+        ["posed-again", "posed", "handle"], ["stayed-late", "halloween", "masks"], ["handle"]]
+    assert [heists.lesson_text(lesson) for lesson in found] == [
+        f"{heists.TACTICS[FIRST]}: worked in 1959 and 1965; failed in 2012.",
+        f"{heists.TACTICS[SECOND]}: worked in 1988 and 1998; in 2017 it ended with police outside.",
+        f"{heists.TACTICS[THIRD]}: failed in 2012."]
+
+
+def test_a_changed_outcome_or_tag_changes_the_lesson_and_nothing_is_typed_in():
+    changed = copy.deepcopy(SAMPLE)
+    changed["incidents"][4].update(outcome="foiled", counted_in_theft_total=False)       # 1988 now failed
+    assert heists.lesson_text(heists.lessons(heists.validate(changed))[1]) == (
+        f"{heists.TACTICS[SECOND]}: failed in 1988; worked in 1998; in 2017 it ended with police outside.")
+    hidden = copy.deepcopy(SAMPLE)
+    hidden["incidents"][8]["tactics"] = [THIRD]                                          # the 2005 hiding
+    assert heists.lesson_text(heists.lessons(heists.validate(hidden))[2]) == (
+        f"{heists.TACTICS[THIRD]}: {heists.TACTIC_RESULTS['hidden']} in 2005; failed in 2012.")
+    three = small([incident("a", 1950, tactics=[FIRST]), incident("b", 1960, tactics=[FIRST]),
+                   incident("c", 1970, tactics=[FIRST])])
+    assert heists.lesson_text(heists.lessons(three)[0]).endswith(": worked in 1950, 1960, and 1970.")   # serial comma
+    untagged = copy.deepcopy(SAMPLE)
+    for story in untagged["incidents"]:
+        story.pop("tactics", None), story.pop("lesson", None)
+    assert heists.lessons(untagged) == [] and heists.lessons_html(untagged, HISTORY) == ""
+
+
+def test_a_story_that_is_not_in_the_file_is_not_in_the_checklist():
+    """The tags live on the stories themselves, so a tag cannot point at a story that does not exist: take a story
+    out and it leaves the checklist, and a tactic with no story left goes with it."""
+    without = copy.deepcopy(SAMPLE)
+    without["incidents"] = [i for i in without["incidents"] if i["id"] != "handle"]
+    found = heists.lessons(without)
+    assert [lesson["key"] for lesson in found] == [FIRST, SECOND]
+    assert "2012" not in heists.lessons_html(without, HISTORY)
+    assert "handle" not in heists.lessons_html(without, HISTORY)
+
+
+def test_each_lesson_is_a_step_and_one_line_that_links_every_year_to_its_card():
+    section = BeautifulSoup(heists.lessons_html(SAMPLE, HISTORY), "html.parser")
+    assert section.find("h3").get_text() == heists.LESSONS_TITLE
+    assert section.section["aria-labelledby"] == section.find("h3")["id"]
+    rows = section.select("dl.heist-plan > div")
+    assert [row.dt.get_text() for row in rows] == [heists.TACTICS[k] for k in (FIRST, SECOND, THIRD)]
+    assert [row.dd.get_text() for row in rows] == [
+        "Worked in 1959 and 1965; failed in 2012.",
+        "Worked in 1988 and 1998; in 2017 it ended with police outside.",
+        "Failed in 2012."]
+    links = [(a.get_text(), a["href"]) for a in rows[1].dd.find_all("a")]
+    assert links == [("1988", HISTORY + "#heist-stayed-late"), ("1998", HISTORY + "#heist-halloween"),
+                     ("2017", HISTORY + "#heist-masks")]
+    assert all(not a.has_attr("aria-label") for a in section.find_all("a"))   # the year is the whole name
+
+
+def test_every_link_in_both_sections_reaches_a_card_on_the_history_page_built_from_the_same_stories():
+    for data in (SAMPLE, real()):
+        history = "\n".join(heists.render_main(data, [], back_html="", game_href="../#football"))
+        both = heists.lessons_html(data, HISTORY) + heists.odds_html(data, TODAY, HISTORY)
+        targets = re.findall(r'href="([^"]+)"', both)
+        assert targets and all(t.startswith(HISTORY + "#heist-") for t in targets)
+        for target in targets:
+            assert f'<section class="heist heist-school-' in history
+            assert re.search(rf'<section [^>]*id="{re.escape(target.split("#", 1)[1])}"', history), target
+
+
+def test_the_lesson_words_are_escaped():
+    data = small([incident("a", 1950, tactics=[FIRST], lesson="it ended <b>badly</b> & late")])
+    assert "<dd>In <a href=\"../heist-details/#heist-a\">1950</a> it ended &lt;b&gt;badly&lt;/b&gt; &amp; late.</dd>" in (
+        heists.lessons_html(heists.validate(data), HISTORY))
+
+
+# ---- the odds box ----
+
+def test_the_odds_come_from_the_dated_stories():
+    found = heists.odds(SAMPLE, TODAY)
+    assert found["last"]["id"] == "halloween" and found["years_ago"] == 28 and found["since_year"] == 1999
+    assert [i["id"] for i in found["attempts"]] == ["alarmed", "handle", "masks"]   # not the hiding, not the undated one
+    assert found["successful"] == 0 and found["stolen"] == 5 and found["first_year"] == 1941
+    box = BeautifulSoup(heists.odds_html(SAMPLE, TODAY, HISTORY), "html.parser")
+    assert box.find("h3").get_text() == heists.ODDS_TITLE
+    assert [(row.dt.get_text(), row.dd.get_text()) for row in box.select("dl > div")] == [
+        ("Last successful heist", "1998 (28 years ago)"),
+        ("Attempts since 1999", "0 for 3 (2000, 2012, and 2017)"),
+        ("On the record", f"Stolen at least 5 times since 1941, {heists.ODDS_CAME_BACK}.")]
+    assert [a["href"] for a in box.find_all("a")] == [HISTORY + f"#heist-{i}" for i in
+                                                     ("halloween", "alarmed", "handle", "masks")]
+    assert box.select_one("p.heist-plea").get_text() == heists.ODDS_PLEA and "don’t" in heists.ODDS_PLEA
+
+
+def test_a_new_theft_moves_every_line_of_the_box():
+    newer = copy.deepcopy(SAMPLE)
+    newer["incidents"].append(incident("again", 2012))
+    found = heists.odds(heists.validate(newer), TODAY)
+    assert (found["last"]["id"], found["years_ago"], found["since_year"]) == ("again", 14, 2013)
+    assert [i["id"] for i in found["attempts"]] == ["masks"] and found["stolen"] == 6
+    rows = BeautifulSoup(heists.odds_html(newer, TODAY, HISTORY), "html.parser").select("dl > div")
+    assert [(row.dt.get_text(), row.dd.get_text()) for row in rows] == [
+        ("Last successful heist", "2012 (14 years ago)"), ("Attempts since 2013", "0 for 1 (2017)"),
+        ("On the record", f"Stolen at least 6 times since 1941, {heists.ODDS_CAME_BACK}.")]
+
+
+def test_the_box_without_later_attempts_or_without_any_theft():
+    quiet = small([incident("only", 1998), incident("own-goal", 2005, "hidden")])
+    rows = BeautifulSoup(heists.odds_html(quiet, TODAY, HISTORY), "html.parser").select("dl > div")
+    assert rows[1].get_text(" ") == "Attempts since 1999 None on record"
+    assert rows[2].dd.get_text().startswith("Stolen at least 1 time since 1998,")
+    none = small([incident("tried", 2012, "foiled"), incident("undated", None)])       # the one theft has no year
+    assert heists.odds(none, TODAY) is None and heists.odds_html(none, TODAY, HISTORY) == ""
+
+
+@pytest.mark.parametrize(("today", "years", "words"), [
+    (dt.date(2026, 12, 31), 28, "28 years ago"), (dt.date(2027, 1, 1), 29, "29 years ago"),
+    (dt.date(1999, 6, 1), 1, "1 year ago"), (dt.date(1998, 12, 31), 0, "this year"), (dt.date(1997, 1, 1), -1, "")])
+def test_years_ago_counts_calendar_years_from_the_date_it_is_given(today, years, words):
+    found = heists.odds(SAMPLE, today)
+    assert found["years_ago"] == years and heists.years_ago_text(years) == words
+    cell = BeautifulSoup(heists.odds_html(SAMPLE, today, HISTORY), "html.parser").select_one("dl > div dd").get_text()
+    assert cell == (f"1998 ({words})" if words else "1998")
+
+
+@pytest.mark.parametrize(("now", "words"), [
+    (dt.datetime(2027, 1, 1, 4, 59, tzinfo=dt.timezone.utc), "28 years ago"),    # 11:59 PM Eastern on Dec 31, 2026
+    (dt.datetime(2027, 1, 1, 5, 0, tzinfo=dt.timezone.utc), "29 years ago"),     # midnight Eastern: the new year
+    (dt.datetime(2026, 7, 4, 3, 59, tzinfo=dt.timezone.utc), "28 years ago"),    # summer time, still the same year
+])
+def test_the_page_counts_the_years_on_the_eastern_date_of_the_build_not_the_utc_one(now, words):
+    page = BeautifulSoup(render.render_bell_heist(now, SAMPLE), "html.parser")
+    assert page.select_one("#odds dl > div dd").get_text() == f"1998 ({words})"
+
+
+# ---- the page ----
+
+@pytest.fixture(scope="module")
+def site(tmp_path_factory):
+    out = tmp_path_factory.mktemp("bell-lessons") / "site"
+    render.build(ROOT / "data" / "series.json", out, now=NOW, upcoming_path=out / "none.json")
+    return out
+
+
+@pytest.fixture(scope="module")
+def fixture_site(tmp_path_factory):
+    """The whole site built from the sample stories at the fixed time, so the page's numbers are known."""
+    folder = tmp_path_factory.mktemp("bell-lessons-fixture")
+    stories = folder / "stories.json"
+    stories.write_text(json.dumps(SAMPLE, ensure_ascii=False), encoding="utf-8")
+    render.build(ROOT / "data" / "series.json", folder / "site", now=NOW, upcoming_path=folder / "none.json",
+                 heists_path=stories)
+    return folder / "site"
+
+
+def joke(site):
+    return (site / "bell-heist" / "index.html").read_text(encoding="utf-8")
+
+
+def test_the_built_page_shows_the_fixture_numbers_at_the_fixed_date(fixture_site):
+    page = BeautifulSoup(joke(fixture_site), "html.parser")
+    assert [row.get_text(" ", strip=True) for row in page.select("#odds dl > div")] == [
+        "Last successful heist 1998 (28 years ago)", "Attempts since 1999 0 for 3 ( 2000 , 2012 , and 2017 )",
+        f"On the record Stolen at least 5 times since 1941, {heists.ODDS_CAME_BACK}."]
+    assert len(page.select("#lessons dl > div")) == 3
+    history = (fixture_site / "heist-details" / "index.html").read_text(encoding="utf-8")
+    for a in page.select("#lessons a, #odds a"):
+        assert a["href"].startswith(HISTORY + "#heist-") and f'id="{a["href"].split("#")[1]}"' in history
+
+
+@pytest.mark.parametrize("which", ["site", "fixture_site"])
+def test_the_page_has_no_script_no_inline_style_and_the_base_csp(which, request):
+    source = joke(request.getfixturevalue(which))
+    page = BeautifulSoup(source, "html.parser")
+    policy = html.unescape(re.search(r'http-equiv="Content-Security-Policy" content="([^"]+)"', source).group(1))
+    assert policy == BASE_CSP == render.CSP and "script-src" not in policy
+    assert page.find_all("script") == [] and page.find_all("style") == [] and page.find_all("img") == []
+    assert all(not attr.lower().startswith("on") and attr.lower() != "style"
+               for element in page.find_all(True) for attr in element.attrs)
+    assert 'name="robots" content="noindex"' in source
+
+
+@pytest.mark.parametrize("which", ["site", "fixture_site"])
+def test_the_joke_keeps_its_text_and_links_and_the_new_sections_sit_inside_it(which, request):
+    source = joke(request.getfixturevalue(which))
+    for kept in ("<h2>Mission accomplished</h2>",
+                 "<p>You’ve successfully relocated the Monon Bell to Greencastle. Your alumni association has no "
+                 "knowledge of this operation.</p>",
+                 "<p>An entirely fictional mission.</p>",
+                 '<p><a href="../#monon-bell">Check the real Bell holder</a></p>',
+                 '<p><a href="../heist-details/">Read the real heist history</a></p>'):
+        assert source.count(kept) == 1, kept
+    # The committed file may one day carry no tags (then there is no checklist); the sample always has both sections.
+    sections = [x for x in ('id="lessons"', 'id="odds"') if which == "fixture_site" or x in source]
+    order = [source.index(x) for x in ("<h2>Mission accomplished</h2>", "An entirely fictional mission.",
+                                        *sections, "Check the real Bell holder",
+                                        "Read the real heist history", '<p class="back">')]
+    assert order == sorted(order)
+    page = BeautifulSoup(source, "html.parser")
+    assert [h.name for h in page.main.find_all(re.compile(r"^h\d$"))] == ["h2"] + ["h3"] * len(sections)
+    assert heists.ODDS_PLEA in page.select_one("#odds").get_text()            # every build with a theft asks
+
+
+def test_the_real_page_has_a_lesson_for_every_tactic_in_use_and_only_those(site):
+    data = heists.validate(real())
+    used = [key for key in heists.TACTICS if any(key in i.get("tactics", []) for i in data["incidents"])]
+    page = BeautifulSoup(joke(site), "html.parser")
+    assert [dt_.get_text() for dt_ in page.select("#lessons dt")] == [heists.TACTICS[k] for k in used]
+    tagged = {i["id"] for i in data["incidents"] if i.get("tactics")}
+    linked = {a["href"].split("#heist-", 1)[1] for a in page.select("#lessons a")}
+    assert linked == tagged                                            # every tagged story is linked, and no other
+    found = heists.odds(data, TODAY)
+    assert found["successful"] == 0 and all(i["outcome"] == "foiled" for i in found["attempts"])
+    assert found["last"]["year"] == max(i["year"] for i in data["incidents"] if i["outcome"] == "stolen")
+
+
+# What the page must never say: how the Bell is kept or guarded now, or anything that reads as advice. The history
+# page has a sourced section on that; the joke page says only how past attempts ended.
+NOT_ON_THE_JOKE_PAGE = re.compile(
+    r"\b(sensors?|alarms?|cameras?|locks?|locked|bolt(s|ed)?|unbolt(ed)?|pedestal|alcove|platform|scaffold(ing)?|"
+    r"doll(y|ies)|ceiling|bleachers|schedules?|shifts?|patrols?|lilly|chadwick|field ?house|lobby|"
+    r"next time|would have worked|should have|the trick is|tips?|how to (get|take|steal|reach))\b", re.I)
+
+
+def test_the_page_describes_outcomes_only_never_how_the_bell_is_kept_or_guarded():
+    data = heists.validate(real())
+    for story in data["incidents"]:
+        assert not NOT_ON_THE_JOKE_PAGE.search(story.get("lesson", "")), story["id"]
+    for step in heists.TACTICS.values():
+        assert not NOT_ON_THE_JOKE_PAGE.search(step), step
+    page = BeautifulSoup(render.render_bell_heist(NOW, data), "html.parser")
+    seen = page.main.get_text(" ", strip=True)
+    assert not NOT_ON_THE_JOKE_PAGE.search(seen), NOT_ON_THE_JOKE_PAGE.search(seen)
+    for paragraph in data["guarding"]["paragraphs"]:                   # the "guarded now" text stays on the history page
+        assert paragraph not in seen and paragraph[:60] not in seen
+    assert "don’t" in seen and "fictional" in seen
+    assert NOT_ON_THE_JOKE_PAGE.search("it rests on a pressure sensor")   # the pattern really catches that kind of line
+
+
+def test_the_lessons_name_nobody():
+    """The naming rule of the history page holds here too: a lesson says what happened, not who did it."""
+    for story in real()["incidents"]:
+        words = story.get("lesson", "")
+        assert not re.search(r"\b(Mr|Mrs|Ms|Dr)\.|\b[A-Z][a-z]+ [A-Z][a-z]+\b", words.replace("Wabash", "wabash")
+                             .replace("DePauw", "depauw").replace("Bell", "bell")), story["id"]
+
+
+def test_the_checklist_styles_use_no_new_color_and_the_tick_is_hidden_from_screen_readers():
+    css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+    rules = "\n".join(re.findall(r"^[^\n{]*(?:heist-plan|heist-plea|\.bell-heist \.heist)[^\n]*$", css, re.M))
+    assert rules and "#" not in rules and "color" not in rules
+    assert re.search(r'\.heist-plan dt::before \{ content: "[^"]+" / ""; \}', css)   # empty alternative text

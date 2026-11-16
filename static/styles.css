@@ -319,6 +319,15 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .bell-heist h2 { margin-bottom: 0.75rem; }
 .bell-heist p { margin: 0 0 0.75rem; }
 .bell-heist .back { margin-top: 1rem; }
+/* Its two sections from the real heist stories: the checklist, and the odds in the history page's card */
+.bell-heist h3 { margin-top: 1.5rem; }
+.heist-plan, .heist-plan dd { margin: 0; }
+.heist-plan div { margin-bottom: 0.75rem; }
+.heist-plan dt { font-weight: 650; }
+.heist-plan dt::before { content: "☑ " / ""; }
+.bell-heist .heist { margin: 1.5rem 0 1rem; }
+.bell-heist .heist h3 { margin-top: 0.25rem; }
+.bell-heist .heist-plea { margin: 0.75rem 0 0.25rem; }
 @media (prefers-reduced-motion: reduce) { .entrance-unlocked { animation: none; } }
 @media (forced-colors: active) {
   .entrance-button:focus-visible, .bell-heist-link:focus-visible, .tiger-note summary:focus-visible { outline: 2px solid ButtonText; }
