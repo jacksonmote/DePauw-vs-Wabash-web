@@ -73,7 +73,10 @@ jobs:
     # The only job that can write, and only issues (contents: read is for the checkout). It runs only on main, so a
     # manual run on a branch never opens or closes the real issue, and whenever the check job wrote a report, also
     # when that job then turned red. Standard library only: nothing is installed. The script ignores a report more
-    # than a few hours old, so re-running this job in an old run changes nothing.
+    # than a few hours old, so re-running this job in an old run changes nothing. A new issue is assigned to the
+    # repository's owner, whom the script reads from the runner's own environment (no account name is written
+    # here or in the code), and mentions nobody; while it is open it gets at most one comment per run (the
+    # problems changed, or a reminder 7 and 2 days before GitHub's 60-day limit).
     needs: check
     if: ${{ !cancelled() && needs.check.outputs.reported == 'true' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04

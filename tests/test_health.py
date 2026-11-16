@@ -9,6 +9,7 @@ import email.message
 import io
 import json
 import re
+import subprocess
 import urllib.error
 import urllib.request
 import urllib.response
@@ -119,6 +120,14 @@ def test_a_recent_commit_on_main_is_ok_and_says_when_the_warning_would_start():
     c = health.check_activity(NOW, commit(ago(days=5, hours=3)))
     assert c["status"] == "ok" and "`60b4f2d` from Nov 15, 2026, 5 days ago" in c["detail"]
     assert "after 60 days without repository activity; this check warns from 45 days (Dec 30, 2026)" in c["detail"]
+
+
+def test_the_activity_check_carries_the_limit_as_a_utc_time_whatever_its_result():
+    last = dt.datetime(2026, 10, 1, 20, 28, tzinfo=dt.timezone.utc)
+    for now in (last + dt.timedelta(days=3), last + dt.timedelta(days=50), last + dt.timedelta(days=70)):
+        assert health.check_activity(now, commit(last))["deadline"] == "2026-11-30T20:28:00+00:00"
+    eastern = {"sha": "60b4f2d1c0ffee", "date": "2026-10-01T16:28:00-04:00"}          # the same moment, with an offset
+    assert health.check_activity(NOW, eastern)["deadline"] == "2026-11-30T20:28:00+00:00"
 
 
 def test_the_warning_starts_at_exactly_45_days():
@@ -631,6 +640,32 @@ def test_api_does_not_follow_a_redirect_so_the_token_never_leaves_githubs_api(mo
     assert all("elsewhere.example" not in url for url, _ in seen)
 
 
+def test_job_log_asks_github_through_the_no_redirect_opener_so_the_token_stays_there(monkeypatch):
+    """GitHub answers a log request with a redirect to another host. An opener that followed it would send the
+    Authorization header there; the module's own opener hands the redirect back, and `plain` fetches it."""
+    seen, fetched = [], []
+
+    class Redirecting(urllib.request.HTTPSHandler):
+        def https_open(self, req):
+            seen.append((req.full_url, dict(req.header_items())))
+            headers = email.message.Message()
+            headers["Location"] = "https://logs.example/signed?sig=abc"
+            resp = urllib.response.addinfourl(io.BytesIO(b""), headers, req.full_url, 302)
+            resp.msg = "Found"
+            return resp
+    real = health.no_redirect_opener
+    monkeypatch.setattr(health, "no_redirect_opener", lambda: real(Redirecting()))
+
+    def plain(req, timeout):
+        fetched.append((req.full_url, dict(req.header_items())))
+        return Resp("2026-11-20T10:19:44.0000000Z run=true scope=all: a daily run\n")
+    assert health.gate_scope(health.job_log(REPO, "TOKEN", 70, plain=plain)) == "all"
+    assert [url for url, _ in seen] == [f"https://api.github.com/repos/{REPO}/actions/jobs/70/logs"]
+    assert seen[0][1]["Authorization"] == "Bearer TOKEN"
+    assert [url for url, _ in fetched] == ["https://logs.example/signed?sig=abc"]   # once, and only by `plain`
+    assert "Authorization" not in fetched[0][1] and "TOKEN" not in json.dumps(fetched[0][1])
+
+
 def test_a_jobs_log_is_downloaded_from_the_redirect_without_the_token():
     first, second = [], []
 
@@ -689,7 +724,8 @@ def test_any_answer_but_200_from_the_site_is_a_failed_load():
 
 
 def test_a_whole_check_makes_at_most_two_requests_to_the_site_and_only_when_the_first_fails():
-    assert health.SITE_TRIES == 2
+    assert health.SITE_TRIES == 2 and health.SITE_RETRY_WAIT == 10            # the README says "after 10 seconds"
+    assert "one more after 10 seconds if it fails" in (ROOT / "README.md").read_text(encoding="utf-8")
     loads = []
     run_all(FakeGitHub(healthy_history()), site=lambda: loads.append(1) or page(ago(hours=9)))
     assert loads == [1]
@@ -708,11 +744,13 @@ def report(**status):
 
 
 class FakeGh:
-    def __init__(self, open_issues=(), labels=()):
-        self.open, self.labels, self.calls = list(open_issues), list(labels), []
+    def __init__(self, open_issues=(), labels=(), cannot_assign=False):
+        self.open, self.labels, self.calls, self.cannot_assign = list(open_issues), list(labels), [], cannot_assign
 
     def __call__(self, *args, stdin=None):
         self.calls.append((args, stdin))
+        if self.cannot_assign and args[:2] == ("issue", "create") and "--assignee" in args:
+            raise subprocess.CalledProcessError(1, ["gh", *args], stderr="could not assign user: not found")
         if args[:2] == ("issue", "list"):
             return json.dumps([{"number": n, "body": body} for n, body in self.open])
         if args[:2] == ("label", "list"):
@@ -797,6 +835,15 @@ def test_a_check_that_cannot_be_made_today_is_not_a_change_in_the_problems():
     assert health.CARRIED not in gh.calls[1][1]
 
 
+def test_a_carried_check_is_marked_in_the_comment_so_it_does_not_read_as_found_today():
+    gh = FakeGh(open_issues=[(7, "old\n<!-- site-health: activity, deploy -->\n")])
+    out = health.sync_issue(report(activity="problem", deploy="unknown", scrape="problem"), "https://run", run=gh)
+    assert out == "updated #7 and commented: the problems changed"
+    assert gh.calls[2][1] == (
+        "Health check of Nov 20, 2026: the problems changed. Now: Recent activity on main (GitHub's 60-day rule); "
+        "Last successful deploy (could not be checked today); Last successful full scrape. https://run\n")
+
+
 def test_a_carried_check_that_passes_again_is_a_change_and_an_unknown_check_never_joins_the_list():
     gh = FakeGh(open_issues=[(7, "old\n<!-- site-health: activity, deploy -->\n")])
     assert health.sync_issue(report(activity="problem"), run=gh) == "updated #7 and commented: the problems changed"
@@ -838,6 +885,237 @@ def test_a_check_that_could_not_be_made_never_opens_or_closes_the_issue():
     assert gh.verbs() == [("issue", "list")]
 
 
+# ---- reminder comments before the 60-day limit ---------------------------------------------------- #
+
+LAST = dt.datetime(2026, 10, 1, 20, 28, tzinfo=dt.timezone.utc)          # the last commit: Oct 1, 2026, 4:28 PM EDT
+LIMIT = LAST + health.DISABLE_AFTER                                       # Nov 30, 2026, 3:28 PM EST
+LIMIT_ISO = "2026-11-30T20:28:00+00:00"
+LIMIT_WORDS = "Nov 30, 2026, 3:28 PM EST"
+DEPLOY_TITLE = "Last successful deploy"
+
+
+def activity_report(left=None, day=None, last=LAST, deploy="ok", activity=None):
+    """A report made `left` before the limit (or on day `day` after the commit), with the real activity check.
+    `activity`: a status that replaces the real check ("unknown": it could not be made today)."""
+    now = last + dt.timedelta(days=day) if day is not None else last + health.DISABLE_AFTER - left
+    real = health.check_activity(now, commit(last))
+    if activity:
+        real = health.check("activity", real["title"], activity, "Could not be checked: GitHub's API did not answer.")
+    checks = [real, health.check("deploy", DEPLOY_TITLE, deploy, "detail of deploy", "todo of deploy"),
+              health.check_data_branch(commit(now - dt.timedelta(days=6)))]
+    return json.loads(json.dumps(health.build_report(now, checks)))       # as the issues job reads it: from JSON
+
+
+class Issue:
+    """The one site-health issue over several runs: each run's fake gh is given the text the last run wrote."""
+    def __init__(self, body=None, number=7):
+        self.body, self.number, self.comments, self.calls = body, number, [], []
+
+    def run(self, report, **kwargs):
+        """One run of the issue command: (what it printed, the comments it added)."""
+        gh = FakeGh(open_issues=[(self.number, self.body)] if self.body is not None else [], labels=["site-health"])
+        out = health.sync_issue(report, "https://run", run=gh, **kwargs)
+        added = [stdin for args, stdin in gh.calls if args[:2] == ("issue", "comment")]
+        for args, stdin in gh.calls:
+            if args[:2] in (("issue", "edit"), ("issue", "create")):
+                self.body = stdin
+        self.comments += added
+        self.calls += gh.calls
+        assert len(added) <= 1                                             # never two comments in one run
+        return out, added
+
+    def reminded(self):
+        return health.REMINDED.findall(self.body)
+
+
+def reminder(when, left):
+    return (f"Health check of {when}: {left} left before GitHub's 60-day limit. Merge a real pull request into `main` "
+            f"before {LIMIT_WORDS}, or the scheduled workflows are switched off. https://run\n")
+
+
+def test_the_reminders_are_due_at_seven_and_at_two_days():
+    assert health.REMIND_AT == (7, 2)
+    days = lambda **span: health.due_threshold(dt.timedelta(**span))        # noqa: E731
+    assert days(days=7, seconds=1) is None and days(days=15) is None
+    assert days(days=7) == 7 and days(days=2, seconds=1) == 7
+    assert days(days=2) == 2 and days(seconds=1) == 2
+    assert days(seconds=0) is None and days(days=-1) is None                # the limit has passed
+
+
+def test_a_daily_run_reminds_once_at_seven_days_and_once_at_two():
+    issue = Issue()
+    out, added = issue.run(activity_report(day=45))
+    assert out.startswith("opened ") and added == [] and issue.reminded() == []
+    said = {}
+    for day in range(46, 60):
+        out, added = issue.run(activity_report(day=day))
+        said[day] = added
+        assert issue.body.endswith("<!-- site-health: activity -->\n")
+    assert [day for day, added in said.items() if added] == [53, 58]
+    assert said[53] == [reminder("Nov 23, 2026", "7 days")] and said[58] == [reminder("Nov 28, 2026", "2 days")]
+    assert issue.reminded() == [(LIMIT_ISO, "2")]
+    assert f"<!-- site-health-reminded: {LIMIT_ISO} 2 -->\n<!-- site-health: activity -->\n" in issue.body
+    assert all("@" not in text for text in issue.comments) and "@" not in issue.body      # nobody is mentioned
+
+
+def test_the_run_that_reminds_says_so_and_the_next_day_is_quiet():
+    issue = Issue()
+    issue.run(activity_report(day=45))
+    assert issue.run(activity_report(day=52))[0] == "updated #7 (the same 1 problem, no comment)"
+    assert issue.run(activity_report(day=53))[0] == "updated #7 and commented: a reminder (7 days left)"
+    assert issue.reminded() == [(LIMIT_ISO, "7")]
+    assert issue.run(activity_report(day=54)) == ("updated #7 (the same 1 problem, no comment)", [])
+    assert issue.reminded() == [(LIMIT_ISO, "7")]                           # the line survives the rewrite
+
+
+def test_a_late_first_run_sends_the_seven_day_reminder_once_with_the_real_time_left():
+    issue = Issue()
+    issue.run(activity_report(day=45))
+    out, added = issue.run(activity_report(left=dt.timedelta(days=5, hours=3)))   # GitHub dropped the runs between
+    assert added == [reminder("Nov 25, 2026", "5 days")] and issue.reminded() == [(LIMIT_ISO, "7")]
+    assert issue.run(activity_report(left=dt.timedelta(days=4, hours=3)))[1] == []
+    assert issue.run(activity_report(left=dt.timedelta(days=1, hours=20)))[1] == [reminder("Nov 28, 2026", "1 day 20 hours")]
+
+
+def test_a_jump_from_eight_days_left_to_one_sends_one_comment_not_two():
+    issue = Issue()
+    issue.run(activity_report(day=45))
+    assert issue.run(activity_report(left=dt.timedelta(days=8)))[1] == []
+    out, added = issue.run(activity_report(left=dt.timedelta(days=1)))
+    assert added == [reminder("Nov 29, 2026", "1 day")] and issue.reminded() == [(LIMIT_ISO, "2")]
+    assert issue.run(activity_report(left=dt.timedelta(hours=12)))[1] == []
+    assert len(issue.comments) == 1
+
+
+def test_opening_the_issue_is_the_notification_so_a_threshold_due_then_is_recorded_without_a_comment():
+    issue = Issue()                                                         # no issue yet, 3 and a half days left
+    out, added = issue.run(activity_report(left=dt.timedelta(days=3, hours=12)))
+    assert out.startswith("opened ") and added == [] and issue.reminded() == [(LIMIT_ISO, "7")]
+    assert issue.run(activity_report(left=dt.timedelta(days=2, hours=12)))[1] == []          # the next day: nothing
+    assert issue.run(activity_report(left=dt.timedelta(days=1, hours=12)))[1] == [           # the smaller one still comes
+        reminder("Nov 29, 2026", "1 day 12 hours")]
+    opened_late = Issue()
+    opened_late.run(activity_report(left=dt.timedelta(hours=30)))
+    assert opened_late.reminded() == [(LIMIT_ISO, "2")] and opened_late.comments == []
+    assert opened_late.run(activity_report(left=dt.timedelta(hours=6)))[1] == []
+
+
+def test_a_new_limit_starts_the_reminders_again():
+    issue = Issue()
+    issue.run(activity_report(day=45))
+    issue.run(activity_report(day=58))
+    assert issue.reminded() == [(LIMIT_ISO, "2")]
+    later = LAST + dt.timedelta(days=58, hours=1)                           # a commit moved the limit; other problems last
+    out, added = issue.run(activity_report(day=1, last=later, deploy="problem"))            # activity passes again
+    assert issue.reminded() == [] and "the problems changed" in added[0] and "left before" not in added[0]
+    out, added = issue.run(activity_report(day=53, last=later, deploy="problem"))
+    assert "the problems changed" in added[0] and "Reminder: 7 days left before GitHub's 60-day limit." in added[0]
+    assert issue.reminded() == [("2027-01-27T21:28:00+00:00", "7")]
+    stale = Issue(f"old\n<!-- site-health-reminded: {LIMIT_ISO} 2 -->\n<!-- site-health: activity -->\n")
+    out, added = stale.run(activity_report(day=53, last=later))             # the old limit's line covers nothing here
+    assert len(added) == 1 and stale.reminded() == [("2027-01-27T21:28:00+00:00", "7")]
+
+
+def test_nothing_is_sent_once_the_limit_has_passed():
+    issue = Issue()
+    issue.run(activity_report(day=45))
+    assert issue.run(activity_report(day=60))[1] == []                      # the limit itself: no time is left
+    assert issue.run(activity_report(day=61))[1] == [] and issue.run(activity_report(day=75))[1] == []
+    fresh = Issue()
+    fresh.run(activity_report(day=63))                                      # opened after the limit: nothing to record
+    assert fresh.reminded() == [] and fresh.comments == []
+
+
+def test_activity_unknown_today_sends_nothing_and_keeps_the_line():
+    issue = Issue()
+    issue.run(activity_report(day=45, deploy="problem"))
+    issue.run(activity_report(day=53, deploy="problem"))
+    assert issue.reminded() == [(LIMIT_ISO, "7")] and len(issue.comments) == 1
+    out, added = issue.run(activity_report(day=58, deploy="problem", activity="unknown"))   # a reminder would be due
+    assert added == [] and out == "updated #7 (the same 2 problems, no comment)"
+    assert issue.reminded() == [(LIMIT_ISO, "7")] and health.CARRIED in issue.body
+    assert issue.body.endswith("<!-- site-health: activity, deploy -->\n")
+    out, added = issue.run(activity_report(left=dt.timedelta(days=1), deploy="problem"))     # checked again: now it is sent
+    assert added == [reminder("Nov 29, 2026", "1 day")] and issue.reminded() == [(LIMIT_ISO, "2")]
+
+
+def test_a_reminder_and_a_change_in_the_problems_share_one_comment():
+    issue = Issue()
+    issue.run(activity_report(day=45))
+    out, added = issue.run(activity_report(day=53, deploy="problem"))
+    assert out == "updated #7 and commented: the problems changed and a reminder (7 days left)"
+    assert added == [
+        "Health check of Nov 23, 2026: the problems changed. Now: Recent activity on main (GitHub's 60-day rule); "
+        "Last successful deploy. Reminder: 7 days left before GitHub's 60-day limit. Merge a real pull request into "
+        f"`main` before {LIMIT_WORDS}, or the scheduled workflows are switched off. https://run\n"]
+    assert [a[:2] for a, _ in issue.calls].count(("issue", "comment")) == 1
+
+
+def test_no_reminder_without_a_limit_in_the_report_or_while_the_check_passes():
+    old_format = report(activity="problem")                                 # a report from before the field existed
+    assert health.plan_reminder(old_format, "x") == ("", None, None)
+    line = f"<!-- site-health-reminded: {LIMIT_ISO} 7 -->"
+    passing = activity_report(day=10, deploy="problem")
+    assert health.plan_reminder(passing, line) == ("", None, None)          # and the line is dropped
+    edited = f"<!-- site-health-reminded: not-a-time 7 -->"                 # a line someone changed by hand
+    assert health.plan_reminder(activity_report(day=53), edited)[1] == 7
+
+
+# ---- the issue is assigned to the repository's owner when it is opened ---------------------------- #
+
+def test_a_new_issue_is_assigned_to_the_owner_given():
+    gh = FakeGh(labels=["site-health"])
+    out = health.sync_issue(report(activity="problem"), "https://run", run=gh, assignee="octo-owner")
+    assert out == "opened https://github.com/x/y/issues/9, assigned to the repository's owner"
+    create = gh.calls[-1][0]
+    assert create[:2] == ("issue", "create") and create[create.index("--assignee") + 1] == "octo-owner"
+    assert gh.verbs().count(("issue", "create")) == 1
+    assert "@" not in gh.calls[-1][1] and "octo-owner" not in gh.calls[-1][1]      # assigned, not mentioned
+
+
+def test_no_owner_given_means_no_assignee():
+    gh = FakeGh(labels=["site-health"])
+    assert health.sync_issue(report(activity="problem"), run=gh) == "opened https://github.com/x/y/issues/9"
+    assert all("--assignee" not in args for args, _ in gh.calls)
+
+
+def test_an_owner_who_cannot_be_assigned_never_costs_the_issue():
+    gh = FakeGh(labels=["site-health"], cannot_assign=True)                 # an organization, say
+    out = health.sync_issue(report(activity="problem"), "https://run", run=gh, assignee="octo-org")
+    assert out == ("opened https://github.com/x/y/issues/9 (it could not be assigned to the repository's owner, so "
+                   "it was opened unassigned)")
+    assert gh.verbs() == [("issue", "list"), ("label", "list"), ("issue", "create"), ("issue", "create")]
+    first, second = gh.calls[2], gh.calls[3]
+    assert "--assignee" in first[0] and "--assignee" not in second[0]
+    assert first[1] == second[1] and "todo of activity" in second[1]         # the same text both times
+
+
+def test_rewriting_commenting_on_or_closing_an_open_issue_never_assigns():
+    body = "old\n<!-- site-health: activity -->\n"
+    for todays in (report(activity="problem"), report(activity="problem", deploy="problem"), report()):
+        gh = FakeGh(open_issues=[(7, body)])
+        health.sync_issue(todays, "https://run", run=gh, assignee="octo-owner")
+        assert len(gh.calls) > 1
+        for args, stdin in gh.calls:
+            assert not any("assignee" in a for a in args) and "octo-owner" not in (stdin or "")
+    assert "add-assignee" not in SOURCE and SOURCE.count('"--assignee", assignee') == 1
+
+
+def test_the_owner_comes_from_the_runners_environment_not_from_the_code(tmp_path, monkeypatch, capsys):
+    path = tmp_path / "r.json"
+    path.write_text(json.dumps(report(activity="problem")), encoding="utf-8")
+    seen = []
+    monkeypatch.setattr(health, "sync_issue", lambda r, url, assignee="": seen.append(assignee) or "opened x")
+    monkeypatch.setattr(health, "now_utc", lambda: NOW)
+    assert health.main(["issue", "--report", str(path)]) == 0               # the test guard removes GITHUB_* variables
+    monkeypatch.setenv("GITHUB_REPOSITORY_OWNER", "octo-owner")
+    assert health.main(["issue", "--report", str(path)]) == 0
+    assert health.main(["issue", "--report", str(path), "--assignee", ""]) == 0
+    assert seen == ["", "octo-owner", ""]
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert "--assignee" not in text and "GITHUB_REPOSITORY_OWNER" not in text    # Actions sets it; nothing to pass
+
+
 # ---- the command line ----------------------------------------------------------------------------- #
 
 def test_check_writes_the_report_and_the_outputs_and_exits_0_even_with_a_problem(tmp_path, monkeypatch, capsys):
@@ -874,7 +1152,8 @@ def test_issue_reads_the_saved_report(tmp_path, monkeypatch, capsys):
     path = tmp_path / "r.json"
     path.write_text(json.dumps(report(activity="problem")), encoding="utf-8")
     seen = []
-    monkeypatch.setattr(health, "sync_issue", lambda r, url: seen.append((health.problem_keys(r), url)) or "opened x")
+    monkeypatch.setattr(health, "sync_issue",
+                        lambda r, url, assignee="": seen.append((health.problem_keys(r), url)) or "opened x")
     monkeypatch.setattr(health, "now_utc", lambda: NOW + dt.timedelta(minutes=2))
     assert health.main(["issue", "--report", str(path), "--run-url", "https://run"]) == 0
     assert seen == [(["activity"], "https://run")] and "opened x" in capsys.readouterr().out
@@ -884,12 +1163,13 @@ def test_issue_ignores_an_old_report(tmp_path, monkeypatch, capsys):
     """Re-running the issues job of an old run would apply that day's findings to today's issue."""
     path = tmp_path / "r.json"
     path.write_text(json.dumps(report(activity="problem")), encoding="utf-8")
-    monkeypatch.setattr(health, "sync_issue", lambda r, url: pytest.fail("an old report must not touch the issue"))
+    monkeypatch.setattr(health, "sync_issue",
+                        lambda r, url, assignee="": pytest.fail("an old report must not touch the issue"))
     monkeypatch.setattr(health, "now_utc", lambda: NOW + health.REPORT_MAX_AGE + dt.timedelta(seconds=1))
     assert health.main(["issue", "--report", str(path)]) == 0
     assert "more than 6 hours ago: the issue was not touched" in capsys.readouterr().out
     seen = []
-    monkeypatch.setattr(health, "sync_issue", lambda r, url: seen.append(1) or "ok")
+    monkeypatch.setattr(health, "sync_issue", lambda r, url, assignee="": seen.append(1) or "ok")
     monkeypatch.setattr(health, "now_utc", lambda: NOW + health.REPORT_MAX_AGE)       # the limit itself still counts
     assert health.main(["issue", "--report", str(path)]) == 0 and seen == [1]
 

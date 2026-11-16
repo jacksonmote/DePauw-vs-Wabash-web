@@ -6,7 +6,8 @@ stops updating fails silently. Worse, in a public repository GitHub switches eve
 days without repository activity, which would stop the twice-daily update, the game-day watcher, the monthly link
 check, the twice-a-year data snapshot and this health check (SCHEDULED_WORK). Nothing in the repository can undo
 that by itself, so this check warns early instead: when the last commit on main is WARN_AFTER old, it opens an
-issue that says what to do (merge any real pull request) and before which moment.
+issue that says what to do (merge any real pull request) and before which moment, and it adds a reminder comment
+when 7 and when 2 days are left (REMIND_AT).
 
 What it checks, once a day (.github/workflows/health-check.yml), from GitHub's API, the workflow files and one
 request per run to our own home page (one more if it fails):
@@ -26,14 +27,16 @@ is a real commit on main, made by a person.
 
 Each check is "ok", a "problem" or "unknown" (it could not be made: GitHub's API did not answer, a job's log
 could not be downloaded, or the live page did not load, also on the second try). A problem opens or updates the
-one open issue labeled `site-health`; when every check is ok the issue is closed with a comment. An unknown check
+one open issue labeled `site-health` (assigned to the repository's owner when it is opened, mentioning nobody);
+when every check is ok the issue is closed with a comment. An unknown check
 never opens or closes the issue, and never counts as a change in the problems; it turns the run red instead, so a
 red run means the check itself could not finish, and an open issue means it found something.
 
 Commands (standard library only, like the gate and the watcher):
 
   python scraper/health.py check [--repo OWNER/NAME] [--out DIR]   make every check, write the report (read-only)
-  python scraper/health.py issue --report FILE [--run-url URL]     open, update or close the issue (needs gh)
+  python scraper/health.py issue --report FILE [--run-url URL] [--assignee LOGIN]
+                                                                   open, update or close the issue (needs gh)
   python scraper/health.py verdict --report FILE                   exit 1 when a check could not be made
 
 `check` needs a token in GH_TOKEN or GITHUB_TOKEN that may read the repository and its Actions runs.
@@ -75,6 +78,7 @@ TIMEOUT = 30                            # seconds, every request
 SITE_TRIES = 2                          # the home page: one request, one more if it fails
 SITE_RETRY_WAIT = 10                    # seconds before that second request
 REPORT_MAX_AGE = dt.timedelta(hours=6)  # the issue command ignores a report older than this (a re-run old job)
+REMIND_AT = (7, 2)                      # days left before GitHub's limit: a reminder comment at each
 
 # What stops when GitHub switches the scheduled workflows off (the README uses the same words; a test checks).
 SCHEDULED_WORK = ("the twice-daily update, the game-day watcher, the monthly link check, the twice-a-year data "
@@ -99,6 +103,8 @@ LABEL_COLOR = "d93f0b"
 LABEL_DESC = "The daily health check found a problem"
 ISSUE_TITLE = "Site health: a check needs attention"
 MARKER = re.compile(r"<!-- site-health: ([a-z, -]*) -->")
+# The reminders already sent, kept in the issue's text: the limit they belong to and the smallest threshold covered.
+REMINDED = re.compile(r"<!-- site-health-reminded: (\S+) (\d+) -->")
 CARRIED = "Could not be checked today; it was a problem at the last check that could be made."
 MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
@@ -143,8 +149,9 @@ def hours(span: dt.timedelta) -> int:
     return int(span.total_seconds() // 3600)
 
 
-def check(key: str, title: str, status: str, detail: str, todo: str = "") -> dict:
-    return {"key": key, "title": title, "status": status, "detail": detail, "todo": todo}
+def check(key: str, title: str, status: str, detail: str, todo: str = "", **extra) -> dict:
+    """One check's entry in the report. `extra`: further fields (the activity check's "deadline")."""
+    return {"key": key, "title": title, "status": status, "detail": detail, "todo": todo, **extra}
 
 
 # ---- the checks (no network, no clock: everything is passed in) -------------------------------- #
@@ -190,17 +197,22 @@ def check_workflows(scheduled: list, listed: list) -> dict:
 
 
 def check_activity(now: dt.datetime, commit: dict) -> dict:
-    """`commit`: {"sha", "date"} of the last commit on main (its committer date, which for a merge is the merge)."""
+    """`commit`: {"sha", "date"} of the last commit on main (its committer date, which for a merge is the merge).
+
+    The entry also carries "deadline": GitHub's limit (the commit plus DISABLE_AFTER) as an ISO time in UTC, which
+    the issue command needs for the reminder comments."""
     title = "Recent activity on main (GitHub's 60-day rule)"
     when = parse_time(commit["date"])
     age, deadline = now - when, when + DISABLE_AFTER
+    limit = deadline.astimezone(dt.timezone.utc).isoformat(timespec="seconds")
     last = (f"The last commit on `{MAIN_BRANCH}` is `{commit['sha'][:7]}` from {fmt_date(when)}, "
             f"{plural(max(0, age.days), 'day')} ago.")
     rule = (f"GitHub switches every scheduled workflow in a public repository off after {DISABLE_AFTER.days} days "
             f"without repository activity")
     if age < WARN_AFTER:
         return check("activity", title, OK,
-                     f"{last} {rule}; this check warns from {WARN_AFTER.days} days ({fmt_date(when + WARN_AFTER)}).")
+                     f"{last} {rule}; this check warns from {WARN_AFTER.days} days ({fmt_date(when + WARN_AFTER)}).",
+                     deadline=limit)
     what = ("Merge any real pull request into `main` (for example a waiting Dependabot pull request: `gh pr list`). "
             "If none is waiting, open one with any small real improvement (a documentation fix, for example). "
             "A commit on `main` is the one kind of activity known to count; workflow runs do not, and commits on "
@@ -209,12 +221,12 @@ def check_activity(now: dt.datetime, commit: dict) -> dict:
         return check("activity", title, PROBLEM,
                      f"{last} {rule}: that is {fmt_time(deadline)}, {plural((deadline - now).days, 'day')} from now.",
                      f"{what} It must be merged before {fmt_time(deadline)}; sooner is safer, because GitHub does "
-                     f"not say exactly when it counts. After that {SCHEDULED_WORK} all stop.")
+                     f"not say exactly when it counts. After that {SCHEDULED_WORK} all stop.", deadline=limit)
     return check("activity", title, PROBLEM,
                  f"{last} {rule}: that limit passed on {fmt_time(deadline)}, so the scheduled workflows may "
                  f"already be off (see the workflows check).",
                  f"{what} Then enable every workflow that is off (Actions tab, the workflow, \"Enable workflow\"); "
-                 f"a commit does not switch them back on.")
+                 f"a commit does not switch them back on.", deadline=limit)
 
 
 def check_age(key: str, title: str, now: dt.datetime, when: dt.datetime | None, found: str, missing: str,
@@ -526,9 +538,10 @@ def render_summary(report: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_issue_body(report: dict, run_url: str = "", carried: tuple = ()) -> str:
+def render_issue_body(report: dict, run_url: str = "", carried: tuple = (), reminded: str = "") -> str:
     """The issue's text. `carried`: keys of checks that could not be made today but were problems at the last check
-    that could be made; each keeps a short section, and its place in the marker, until it can be checked again."""
+    that could be made; each keeps a short section, and its place in the marker, until it can be checked again.
+    `reminded`: the hidden line that records the reminders already sent (plan_reminder), or ""."""
     problems = [c for c in report["checks"] if c["status"] == PROBLEM]
     lines = [f"The daily health check found {plural(len(problems), 'problem')} on "
              f"{fmt_date(parse_time(report['checked_at']))}. Each run rewrites this issue, and it is closed with a "
@@ -541,6 +554,8 @@ def render_issue_body(report: dict, run_url: str = "", carried: tuple = ()) -> s
     lines += ["## Every check", "", *table(report), ""]
     if run_url:
         lines += [f"Run: {run_url}", ""]
+    if reminded:
+        lines.append(reminded)
     lines.append(f"<!-- site-health: {', '.join(sorted({*problem_keys(report), *carried}))} -->")
     return "\n".join(lines) + "\n"
 
@@ -551,14 +566,71 @@ def gh(*args: str, stdin: str | None = None) -> str:
     return subprocess.run(["gh", *args], input=stdin, capture_output=True, text=True, check=True).stdout
 
 
-def sync_issue(report: dict, run_url: str = "", run=gh) -> str:
+def due_threshold(left: dt.timedelta) -> int | None:
+    """The reminder that is due with `left` to go before GitHub's limit: the smallest N in REMIND_AT with at most
+    N days left. None with more time than the largest N, and None once the limit has passed."""
+    if left <= dt.timedelta(0):
+        return None
+    due = [n for n in REMIND_AT if left <= dt.timedelta(days=n)]
+    return min(due) if due else None
+
+
+def plan_reminder(report: dict, body: str = "") -> tuple:
+    """(the reminded line for the issue's new text, the threshold to remind for now or None, the time left).
+
+    `body`: the open issue's text ("" when the issue is being opened). The line records the limit and the smallest
+    threshold already covered; a line for another limit (a newer commit moved it), or no line, means nothing is
+    covered. A threshold is returned when one is due and not covered yet, so each is sent at most once per limit,
+    and a run that comes late (from more than 7 days left straight to 2 or less) gets one reminder, not two. When
+    the activity check could not be made today, the old line is kept as it is and nothing is due; when the check
+    passes, or the report carries no limit, there is no line."""
+    activity = next((c for c in report["checks"] if c["key"] == "activity"), None)
+    old = REMINDED.search(body or "")
+    old_line = old.group(0) if old else ""
+    if activity is None or activity["status"] == UNKNOWN:
+        return old_line, None, None
+    if activity["status"] != PROBLEM or not activity.get("deadline"):
+        return "", None, None
+    deadline = parse_time(activity["deadline"])
+    left = deadline - parse_time(report["checked_at"])
+    covered = None
+    try:
+        if old and parse_time(old.group(1)) == deadline:
+            covered = int(old.group(2))
+    except ValueError:
+        pass                                # a line someone edited by hand: nothing is covered
+    due = due_threshold(left)
+    if due is None or (covered is not None and covered <= due):
+        return (old_line if covered is not None else ""), None, left
+    return f"<!-- site-health-reminded: {activity['deadline']} {due} -->", due, left
+
+
+def reminder_words(report: dict, left: dt.timedelta) -> str:
+    """The reminder's sentence: the real time left (a late run may come at 6 days, not 7), what to do, and the
+    limit with its time, as the issue gives it. It mentions nobody."""
+    deadline = next(c for c in report["checks"] if c["key"] == "activity")["deadline"]
+    return (f"{fmt_age(left)} left before GitHub's {DISABLE_AFTER.days}-day limit. Merge a real pull request into "
+            f"`{MAIN_BRANCH}` before {fmt_time(parse_time(deadline))}, or the scheduled workflows are switched off.")
+
+
+def sync_issue(report: dict, run_url: str = "", run=gh, assignee: str = "") -> str:
     """Open, update or close the one site-health issue. `run` is the gh runner (replaced in tests).
 
     A problem opens the issue or rewrites the open one; a comment is added only when the list of problems changed,
     so a problem that lasts for weeks does not send a notification every day. A check that could not be made today
     is not a change: if the issue listed it as a problem, it stays listed until it can be checked again. No problem
     and nothing unknown: comment on and close every open issue. No problem but a check that could not be made: the
-    issue is left exactly as it is."""
+    issue is left exactly as it is.
+
+    Reminders: while the activity check is a problem, the open issue gets one comment when REMIND_AT[0] days or
+    less are left before GitHub's limit and one more at each smaller threshold (plan_reminder). Opening the issue
+    is itself the notification, so a threshold that is due in that run is recorded without a comment. At most one
+    comment per run: a reminder and a changed list of problems share it.
+
+    `assignee`: the login the issue is assigned to when it is opened (the repository's owner in the workflow), or
+    "" for nobody. Only then: a later run never assigns again, so an owner who removes themselves stays removed. If
+    the issue cannot be opened with the assignee (an organization cannot be assigned, say), it is opened without
+    one: the issue is never lost for that. The text and every comment mention nobody."""
     open_issues = sorted(json.loads(run("issue", "list", "--label", LABEL, "--state", "open",
                                         "--json", "number,body", "--limit", "100")), key=lambda i: i["number"])
     when = fmt_date(parse_time(report["checked_at"]))
@@ -586,19 +658,39 @@ def sync_issue(report: dict, run_url: str = "", run=gh) -> str:
         was = sorted(k for k in (before.group(1).split(", ") if before else []) if k)
         carried = tuple(k for k in was if status.get(k) == UNKNOWN)
         listed = sorted({*keys, *carried})
-        run("issue", "edit", n, "--body-file", "-", stdin=render_issue_body(report, run_url, carried))
-        if was == listed:
+        reminded, due, left = plan_reminder(report, open_issues[0].get("body") or "")
+        run("issue", "edit", n, "--body-file", "-", stdin=render_issue_body(report, run_url, carried, reminded))
+        changed = was != listed
+        if not changed and due is None:
             return f"updated #{n} (the same {plural(len(listed), 'problem')}, no comment)"
-        now_failing = "; ".join(titles[k] for k in listed)
-        run("issue", "comment", n, "--body-file", "-",
-            stdin=f"Health check of {when}: the problems changed. Now: {now_failing}. {run_url}".strip() + "\n")
-        return f"updated #{n} and commented: the problems changed"
+        said = []
+        if changed:
+            now_failing = "; ".join(titles[k] + (" (could not be checked today)" if k in carried else "")
+                                    for k in listed)
+            said.append(f"the problems changed. Now: {now_failing}.")
+        if due is not None:
+            said.append(("Reminder: " if changed else "") + reminder_words(report, left))
+        run("issue", "comment", n, "--body-file", "-",          # one comment per run, whatever it has to say
+            stdin=f"Health check of {when}: {' '.join(said)} {run_url}".strip() + "\n")
+        about = " and ".join(what for what, yes in (("the problems changed", changed),
+                                                    (f"a reminder ({fmt_age(left)} left)" if due else "", due)) if yes)
+        return f"updated #{n} and commented: {about}"
     labels = {l["name"] for l in json.loads(run("label", "list", "--json", "name", "--limit", "200"))}
     if LABEL not in labels:
         run("label", "create", LABEL, "--color", LABEL_COLOR, "--description", LABEL_DESC)
-    url = run("issue", "create", "--title", ISSUE_TITLE, "--label", LABEL, "--body-file", "-",
-              stdin=render_issue_body(report, run_url)).strip()
-    return f"opened {url}"
+    reminded, _, _ = plan_reminder(report)     # opening is the notification: a threshold due now counts as covered
+    body = render_issue_body(report, run_url, reminded=reminded)
+    if assignee:
+        try:
+            url = run("issue", "create", "--title", ISSUE_TITLE, "--label", LABEL, "--body-file", "-",
+                      "--assignee", assignee, stdin=body).strip()
+            return f"opened {url}, assigned to the repository's owner"
+        except subprocess.CalledProcessError:
+            unassigned = " (it could not be assigned to the repository's owner, so it was opened unassigned)"
+    else:
+        unassigned = ""
+    url = run("issue", "create", "--title", ISSUE_TITLE, "--label", LABEL, "--body-file", "-", stdin=body).strip()
+    return f"opened {url}{unassigned}"
 
 
 # ---- command line -------------------------------------------------------------------------------- #
@@ -631,6 +723,9 @@ def main(argv=None) -> int:
     i = sub.add_parser("issue", help="open, update or close the site-health issue from a report (needs gh)")
     i.add_argument("--report", type=Path, required=True)
     i.add_argument("--run-url", default="")
+    i.add_argument("--assignee", default=os.environ.get("GITHUB_REPOSITORY_OWNER", ""),
+                   help="who a newly opened issue is assigned to (default: the repository's owner, as Actions "
+                        "gives it in GITHUB_REPOSITORY_OWNER; empty for nobody)")
     v = sub.add_parser("verdict", help="exit 1 when the report has a check that could not be made")
     v.add_argument("--report", type=Path, required=True)
     args = ap.parse_args(argv)
@@ -657,7 +752,7 @@ def main(argv=None) -> int:
             print(f"The report is from {fmt_time(made)}, more than {hours(REPORT_MAX_AGE)} hours ago: the issue was "
                   f"not touched. Run the workflow again instead of re-running an old run's job.")
             return 0
-        print(sync_issue(report, args.run_url))
+        print(sync_issue(report, args.run_url, assignee=args.assignee))
         return 0
     unknown = [c["title"] for c in report["checks"] if c["status"] == UNKNOWN]
     if unknown:
