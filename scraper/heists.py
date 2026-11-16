@@ -19,6 +19,7 @@ validates it on every build (a bad file fails the render instead of publishing h
   correction_url             the prefilled link to .github/ISSUE_TEMPLATE/data-correction.yml
   TACTICS                    the classic tactics a story may be tagged with (`tactics`), in checklist order
   lessons, lesson_text       the joke page's checklist: each tactic and how the real attempts that used it ended
+  record_text                a tactic's record, counted from its stories' outcomes: "Record: 2–1", or "Hidden: 2"
   odds                       the joke page's odds box: the last theft, how long ago, the attempts since
   lessons_html, odds_html    those two sections as HTML. They say what happened to past attempts, never how the
                              Bell is kept or guarded now; nothing in them may read as advice
@@ -62,6 +63,7 @@ TACTICS = {"impersonation": "Pose as someone you’re not",
 TACTIC_RESULTS = {"stolen": "worked", "foiled": "failed", "hidden": "kept the Bell hidden"}
 LESSON_MAX = 120                       # characters in a story's `lesson`: each lesson stays one dry line
 ATTEMPTS = ("stolen", "foiled")        # an attempt on the other side's Bell (hiding your own is not one)
+RECORD_LABEL, HIDDEN_LABEL = "Record", "Hidden"   # a step's pill: "Record: 2–1" (stolen–foiled), or "Hidden: 2"
 LESSONS_TITLE = "Lessons from the archive"
 LESSONS_INTRO = "Every plan on the list has been tried on the real Bell. Here is how each one went."
 ODDS_TITLE = "The odds"
@@ -390,7 +392,18 @@ def lessons(data: dict) -> list:
     tagged = [i for i in ordered(data) if i.get("tactics")]
     found = [{"key": key, "step": step, "incidents": [i for i in tagged if key in i["tactics"]]}
              for key, step in TACTICS.items()]
-    return [lesson for lesson in found if lesson["incidents"]]
+    return [{**lesson, "record": record_text(lesson["incidents"])} for lesson in found if lesson["incidents"]]
+
+
+def record_text(incidents: list) -> str:
+    """A tactic's record, counted from its stories' outcomes: "Record: 2–1" is two stolen Bells and one foiled
+    attempt, with an en dash. A tactic whose stories all hid the Bell reads "Hidden: 2" instead; a hidden Bell
+    beside stolen or foiled ones is left out of the record (the line under the step still tells it)."""
+    won = sum(1 for i in incidents if i["outcome"] == "stolen")
+    lost = sum(1 for i in incidents if i["outcome"] == "foiled")
+    if not won and not lost:
+        return f"{HIDDEN_LABEL}: {len(incidents)}"
+    return f"{RECORD_LABEL}: {won}–{lost}"
 
 
 def lesson_clauses(incidents: list, year=lambda i: str(i["year"]), words=str) -> list:
@@ -450,17 +463,20 @@ def _year_link(incident: dict, history_href: str) -> str:
 
 
 def lessons_html(data: dict, history_href: str) -> str:
-    """The "Lessons from the archive" section, or nothing when no story is tagged."""
+    """The "Lessons from the archive" section, or nothing when no story is tagged: a numbered list, each step the
+    tactic's name with its record in a pill (the history page's outcome-tag style), then the line on how it went."""
     found = lessons(data)
     if not found:
         return ""
     items = []
     for lesson in found:
         clauses = "; ".join(lesson_clauses(lesson["incidents"], lambda i: _year_link(i, history_href), _esc))
-        items.append(f'<div><dt>{_esc(lesson["step"])}</dt><dd>{clauses[0].upper() + clauses[1:]}.</dd></div>')
+        items.append(f'<li><strong>{_esc(lesson["step"])}</strong> '
+                     f'<span class="heist-tag nowrap">{_esc(lesson["record"])}</span>'
+                     f'<div>{clauses[0].upper() + clauses[1:]}.</div></li>')
     return ('<section class="heist-lessons" id="lessons" aria-labelledby="lessons-h">'
             f'<h3 id="lessons-h">{_esc(LESSONS_TITLE)}</h3>\n<p>{_esc(LESSONS_INTRO)}</p>\n'
-            '<dl class="heist-plan">\n' + "\n".join(items) + '\n</dl></section>')
+            '<ol class="heist-plan">\n' + "\n".join(items) + '\n</ol></section>')
 
 
 def odds_html(data: dict, today: dt.date, history_href: str) -> str:
