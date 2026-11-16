@@ -5,10 +5,12 @@ data/fun-facts.json and the helpers render.py needs.
 Nothing here is scraped. The file is edited by hand and reviewed through pull requests; render.build validates it
 on every build (a bad file fails the render). Every fact is one or two sentences in our own words with at least
 one source link, about DePauw, Wabash or both. Keep the two schools balanced: the DePauw and Wabash counts may
-differ by at most one ("both" facts count toward neither). No statistic the athletics data already shows.
+differ by at most one ("both" facts count toward neither). No statistic the athletics data already shows. No
+wording that goes stale: a fact says when (a date or a year), never "currently", "today" or "now".
 
   validate            refuse missing or inconsistent data (a source with an https URL for every fact, unique ids,
-                      non-empty text under MAX_TEXT characters, balanced school counts)
+                      non-empty text under MAX_TEXT characters with none of the STALE_WORDS, balanced school
+                      counts)
   school_counts       how many facts each school has
   fallback_index      which fact is shown without JavaScript, from the Eastern calendar date (never random)
   SCHOOL_LABELS       the label printed before each fact (ends with a colon)
@@ -18,6 +20,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -26,6 +29,11 @@ MAX_IMBALANCE = 1
 SCHOOLS = ("depauw", "wabash", "both")
 SCHOOL_LABELS = {"depauw": "DePauw:", "wabash": "Wabash:", "both": "Both Schools:"}
 _BAD_URL_CHARS = " \t\r\n\"'<>\\"
+# Words that are only true on the day they are written. A fact's text may not hold any of them as a whole word
+# (in any letter case; "snow", "known" and "nowadays" are other words): give the date or the year instead.
+STALE_WORDS = ("currently", "today", "now", "this year", "this season")
+_STALE = re.compile(r"\b(?:" + "|".join(r"\s+".join(map(re.escape, words.split())) for words in STALE_WORDS) + r")\b",
+                    re.IGNORECASE)
 
 
 class FunFactsError(ValueError):
@@ -91,6 +99,10 @@ def validate(data: dict) -> dict:
         _text(fact.get("text"), f"fact {fid}.text")
         if len(fact["text"]) > MAX_TEXT:
             _fail(f"fact {fid}.text is {len(fact['text'])} characters; the limit is {MAX_TEXT}")
+        stale = _STALE.search(fact["text"])
+        if stale:
+            _fail(f"fact {fid}.text says \"{stale.group(0)}\", wording that goes stale: "
+                  "give a date or a year instead")
         sources = fact.get("sources")
         if not isinstance(sources, list) or not sources:
             _fail(f"fact {fid}.sources must be a non-empty list of sources")

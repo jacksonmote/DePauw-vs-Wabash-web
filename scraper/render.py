@@ -111,12 +111,19 @@ COPYRIGHT_START = 2026
 AREA_ATHLETICS, AREA_ALUMNI, AREA_SITE = "Athletics", "Alumni and endowment", "Whole site"
 
 BELL_URL = "https://en.wikipedia.org/wiki/Monon_Bell"
+# The year overtime came to college football, so a Bell game can no longer end in a tie (DePauw Athletics'
+# "Rivalry Facts" page; the tiger fact both-tie-rule in data/fun-facts.json says the same).
+OVERTIME_START = 1996
+# The Bell's weight as both schools' athletics pages give it (the tiger fact both-bell-weight says the same).
+BELL_WEIGHT_POUNDS = 300
 # Written in our own words. It holds no record, streak or other figure that changes: those come from the data.
+# tests/test_tiger_facts.py keeps the weight and the tie rule here in step with the tiger facts.
 BELL_HISTORY = (
-    "The Monon Bell is a 300-pound locomotive bell that once rode on a Monon Railroad engine. "
+    f"The Monon Bell is a {BELL_WEIGHT_POUNDS}-pound locomotive bell that once rode on a Monon Railroad engine. "
     f"Starting with the {facts.BELL_START} season it became the traveling trophy for the DePauw–Wabash "
     "football game, an idea credited to a DePauw alumnus. The winner takes the Bell home until the next "
-    "meeting, and if the game ends in a tie, the team that already has it keeps it. Students from both "
+    f"meeting. Before overtime came to college football in {OVERTIME_START}, a tied game left the Bell with "
+    "the team that already had it. Students from both "
     "schools have also stolen and hidden the Bell many times over the years, which is now part of the lore."
 )
 
