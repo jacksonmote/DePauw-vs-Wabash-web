@@ -9,6 +9,8 @@ validates it on every build (a bad file fails the render instead of publishing h
                              outcome, school and rating, unique ids, sane years)
   tally, tally_text          stolen / foiled / hidden counts, worked out from the incidents (never stored)
   RATINGS                    the four ratings (how well a story is sourced) and what each means
+  SEPARATOR                  the "·" between the items of a card's tag line, held to the item before it by a
+                             no-break space so a wrapped line never starts with the dot
   ordered                    the timeline order (oldest first, "Date unknown" last)
   bell_game, game_line       that year's Monon Bell football result, read from series.json (skipped when no game);
                              a story may name another year's game to show instead (`game_year`)
