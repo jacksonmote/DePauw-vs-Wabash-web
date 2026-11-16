@@ -319,6 +319,13 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .bell-heist h2 { margin-bottom: 0.75rem; }
 .bell-heist p { margin: 0 0 0.75rem; }
 .bell-heist .back { margin-top: 1rem; }
+/* Its real part, apart from the joke: a label, then the history page's card holding the checklist and the odds */
+.bell-heist .eyebrow { margin-top: var(--space-6); }
+.heist-plan { margin: 0; padding: 0; list-style-position: inside; }
+.bell-heist .heist-plan li { margin-block: 0.35rem; line-height: 1.5; }
+.bell-heist .heist { margin: 0 0 var(--space-5); padding-block: var(--space-4); }
+.heist-odds { margin-top: var(--space-5); }
+.bell-heist .heist-plea { margin: 0.75rem 0 0.25rem; }
 @media (prefers-reduced-motion: reduce) { .entrance-unlocked { animation: none; } }
 @media (forced-colors: active) {
   .entrance-button:focus-visible, .bell-heist-link:focus-visible, .tiger-note summary:focus-visible { outline: 2px solid ButtonText; }
@@ -371,6 +378,8 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .heist-intro { margin: 0 0 0.75rem; }
 .heist-tally { margin: 0 0 0.25rem; font-size: 1.125rem; }
 .heist-ratings { margin: 0 0 0.75rem; color: var(--color-text-muted); font-size: 0.9375rem; }
+.heist-ratings p, .heist-ratings dd { margin: 0; }
+.heist-ratings dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 0.5rem; align-items: baseline; margin: 0.25rem 0 0; }
 .heist-method { color: var(--color-text-muted); font-size: 0.9375rem; }
 .heist-method p { margin: 0 0 0.5rem; }
 .heist-era { font-size: 1.25rem; }

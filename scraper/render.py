@@ -8,7 +8,7 @@ data/overrides.json, for the counts on the how-it-works page), and writes a fini
   index.html                      the athletics home page (one of two pages with a deferred script)
   alumni/index.html               the alumni and endowment page (alumni.py; the other page with the deferred script)
   how-it-works/index.html         landing page; how-it-works/athletics/ and how-it-works/alumni/ (howitworks.py)
-  bell-heist/index.html           public, unindexed fictional story
+  bell-heist/index.html           public, unindexed fictional story, with two sections from the real heist stories (heists.py)
   heist-details/index.html        the sourced Monon Bell heist history (heists.py)
   privacy/index.html              the privacy policy (privacy.py; no script, base CSP)
   accessibility/index.html        the accessibility page (accessibility.py; no script, base CSP)
@@ -1475,7 +1475,14 @@ def render_accessibility(data: dict, now: dt.datetime | None = None, upcoming: d
         footer=site_footer(now, prefix="../", accessibility_self=True), subtitle=NEUTRAL_SUBTITLE)
 
 
-def render_bell_heist(now: dt.datetime | None = None) -> str:
+def render_bell_heist(now: dt.datetime | None = None, heists_data: dict | None = None) -> str:
+    """/bell-heist/: the fictional mission, then, in one card under a "Back to reality" label, two sections worked
+    out from the real heist stories (`heists_data`): the classic tactics with how each real attempt ended, and the
+    odds as of the Eastern date of the build. Both say only what happened to past attempts, never how the Bell is
+    kept or guarded now. No script, base CSP."""
+    now = now or dt.datetime.now(dt.timezone.utc)
+    history = f"../{HEIST_PATH}"
+    sections = [heists_page.reality_html(heists_data, to_eastern(now)[0].date(), history)] if heists_data else []
     return "\n".join([
         head("Mission accomplished | DePauw vs. Wabash", "An entirely fictional Monon Bell mission.",
              prefix="../", canonical=None, noindex=True),
@@ -1484,10 +1491,11 @@ def render_bell_heist(now: dt.datetime | None = None) -> str:
         '<main class="wrap prose bell-heist" id="main"><h2>Mission accomplished</h2>',
         '<p>You’ve successfully relocated the Monon Bell to Greencastle. Your alumni association has no knowledge of this operation.</p>',
         '<p>An entirely fictional mission.</p>',
+        *[section for section in sections if section],
         '<p><a href="../#monon-bell">Check the real Bell holder</a></p>',
-        f'<p><a href="../{HEIST_PATH}">Read the real heist history</a></p>',
+        f'<p><a href="{history}">Read the real heist history</a></p>',
         f'<p class="back"><a href="../">{esc(BACK_ATHLETICS)}</a> · <a href="../alumni/">{esc(BACK_ALUMNI)}</a></p>',
-        '</main>', *site_footer(now or dt.datetime.now(dt.timezone.utc), prefix="../"),
+        '</main>', *site_footer(now, prefix="../"),
         '</body>', '</html>', '',
     ])
 
@@ -1586,7 +1594,7 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
         HOW_ALUMNI_PATH + "index.html": render_how_alumni(alumni_data, endowment_data, now),
         ALUMNI_PATH + "index.html": alumni_html,
         "404.html": render_404(now),
-        "bell-heist/index.html": render_bell_heist(now),
+        "bell-heist/index.html": render_bell_heist(now, heists_data),
         HEIST_PATH + "index.html": render_heist_details(data, heists_data, now, upcoming),
         privacy.PATH + "index.html": render_privacy(data, now, upcoming),
         accessibility.PATH + "index.html": render_accessibility(data, now, upcoming),

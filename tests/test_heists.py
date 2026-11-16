@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from bs4 import BeautifulSoup
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scraper"))
@@ -168,8 +169,9 @@ def test_every_story_has_its_own_card_with_an_anchor_a_rating_and_sources():
         assert f'id="{iid}"' in html and f'href="#{iid}"' in html
     assert "Other recorded thefts" not in html and "other-recorded-thefts" not in html   # no shared card of bare years
     assert html.count("Sources: ") == 6 + 1                              # six cards, plus the guarding section
-    assert html.count('<span class="heist-rating heist-rating-reported">Reported</span>') == 5
-    assert html.count('<span class="heist-rating heist-rating-documented">Documented</span>') == 1
+    cards = html[html.index('id="timeline-h"'):]                         # the legend above shows each label once more
+    assert cards.count('<span class="heist-rating heist-rating-reported">Reported</span>') == 5
+    assert cards.count('<span class="heist-rating heist-rating-documented">Documented</span>') == 1
     big = html[html.index('id="heist-big"'):html.index("</section>", html.index('id="heist-big"'))]
     assert ('<span class="heist-tag heist-stolen">Stolen</span> '
             '<span class="heist-rating heist-rating-documented">Documented</span> ') in big   # beside the outcome tag
@@ -200,12 +202,38 @@ def test_page_order_is_tally_ratings_timeline_then_date_unknown_and_guarding():
     assert 'id="date-unknown-h"' not in page(GAMES, real())            # every story on the page has a year now
 
 
-def test_the_line_under_the_tally_explains_all_four_ratings_once():
+def test_the_legend_under_the_tally_is_a_definition_list_of_the_four_ratings_in_order():
     html = page(GAMES)
-    line = html[html.index('<p class="heist-ratings"'):html.index("</p>", html.index('<p class="heist-ratings"'))]
-    assert html.count('class="heist-ratings"') == 1 and heists.RATINGS_QUESTION in line
-    for label, meaning in heists.RATINGS.values():
-        assert f"<strong>{label}:</strong> {meaning}." in line
+    soup = BeautifulSoup(html, "html.parser")
+    (legend,) = soup.select(".heist-ratings")
+    assert legend.name == "section" and legend["id"] == "ratings"
+    label = soup.find(id=legend["aria-labelledby"])
+    assert label.parent is legend and label.get_text() == heists.RATINGS_QUESTION == "How sure is each story?"
+    (listing,) = legend.find_all("dl")
+    assert [child.name for child in listing.find_all(recursive=False)] == ["dt", "dd"] * 4
+    terms, meanings = listing.find_all("dt"), listing.find_all("dd")
+    assert [term.get_text() for term in terms] == ["Documented", "Reported", "Lore", "Disputed"] == [
+        label for label, _ in heists.RATINGS.values()]
+    for term, key in zip(terms, heists.RATINGS):                         # each term is the tag the cards use
+        (tag,) = term.find_all(recursive=False)
+        assert tag.name == "span" and tag["class"] == ["heist-rating", f"heist-rating-{key}"]
+        assert str(tag) == heists._rating(key)
+    assert [meaning.get_text() for meaning in meanings] == [
+        "A source from the time says so.",
+        "A later, reputable source says so; no report from the time has been found.",
+        "Repeated without a source.",
+        "The sources disagree."]
+    assert [meaning.get_text() for meaning in meanings] == [
+        text[0].upper() + text[1:] + "." for _, text in heists.RATINGS.values()]
+    assert html.index('id="tally"') < html.index('id="ratings"') < html.index('aria-label="About these stories"')
+
+
+def test_the_legend_reuses_the_cards_rating_style_and_adds_no_color():
+    css = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+    assert len(re.findall(r"^\.heist-rating \{", css, re.M)) == 1         # one rule draws the label on cards and legend
+    rules = [line for line in css.splitlines() if line.startswith(".heist-ratings")]
+    assert len(rules) == 3 and sum("color" in rule for rule in rules) == 1 and not any("#" in rule for rule in rules)
+    assert "var(--color-text-muted)" in rules[0]                         # the muted text color the cards' tag line uses
 
 
 @pytest.fixture(scope="module")
