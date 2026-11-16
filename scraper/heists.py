@@ -6,10 +6,12 @@ Nothing here is scraped. The JSON file is edited by hand and reviewed through pu
 validates it on every build (a bad file fails the render instead of publishing half a page).
 
   validate                   refuse missing or inconsistent data (a source with a real URL for every story, a known
-                             outcome and school, unique ids, sane years)
+                             outcome, school and rating, unique ids, sane years)
   tally, tally_text          stolen / foiled / hidden counts, worked out from the incidents (never stored)
-  ordered, other_thefts      the timeline order (oldest first, "Date unknown" last) and the undocumented bare years
-  bell_game, game_line       that year's Monon Bell football result, read from series.json (skipped when no game)
+  RATINGS                    the four ratings (how well a story is sourced) and what each means
+  ordered                    the timeline order (oldest first, "Date unknown" last)
+  bell_game, game_line       that year's Monon Bell football result, read from series.json (skipped when no game);
+                             a story may name another year's game to show instead (`game_year`)
   render_main                the page's <main> content (render.py supplies the head, the header and the footer)
   correction_url             the prefilled link to .github/ISSUE_TEMPLATE/data-correction.yml
 """
@@ -30,6 +32,12 @@ CORRECTION_SPORT = "Monon Bell heist history"     # the option added to the data
 
 OUTCOMES = {"stolen": "Stolen", "foiled": "Foiled", "hidden": "Hidden"}
 SCHOOLS = {"depauw": "DePauw students", "wabash": "Wabash students", "not-recorded": "Not recorded"}
+# How well each story is sourced: the label on the card, and what it means (the line near the top of the page).
+RATINGS = {"documented": ("Documented", "a source from the time says so"),
+           "reported": ("Reported", "a later, reputable source says so, and no report from the time has been found"),
+           "lore": ("Lore", "repeated without a source"),
+           "disputed": ("Disputed", "the sources disagree")}
+RATINGS_QUESTION = "How sure is each story?"
 FIRST_YEAR, LAST_YEAR = 1832, 2100     # DePauw’s oldest year; nothing about the Bell predates the schools’ rivalry
 MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
           "November", "December"]
@@ -131,21 +139,25 @@ def validate(data: dict) -> dict:
             _fail(f"incident {iid} has invalid school {incident.get('school')!r}")
         if incident.get("outcome") not in OUTCOMES:
             _fail(f"incident {iid} has invalid outcome {incident.get('outcome')!r}")
+        if incident.get("rating") not in RATINGS:
+            _fail(f"incident {iid} has invalid rating {incident.get('rating')!r} (use one of {', '.join(RATINGS)})")
+        if "game_year" in incident:
+            shown = incident["game_year"]
+            if (isinstance(shown, bool) or not isinstance(shown, int) or not FIRST_YEAR <= shown <= LAST_YEAR
+                    or year is None or shown == year):
+                _fail(f"incident {iid}.game_year must be a year other than the story's own (leave it out to show "
+                      "that year's game)")
         _text(incident.get("title"), f"incident {iid}.title")
         _text(incident.get("summary"), f"incident {iid}.summary")
         if "details" in incident:
             _paragraphs(incident["details"], f"incident {iid}.details")
         if "consequences" in incident:
             _text(incident["consequences"], f"incident {iid}.consequences")
-        if "bare_record" in incident and not isinstance(incident["bare_record"], bool):
-            _fail(f"incident {iid}.bare_record must be true or false")
         counted = incident.get("counted_in_theft_total")
         if not isinstance(counted, bool):
             _fail(f"incident {iid}.counted_in_theft_total must be true or false")
         if counted != (incident["outcome"] == "stolen"):
             _fail(f"incident {iid}: only a stolen Bell counts in the theft total")
-        if incident.get("bare_record") and (year is None or "details" in incident):
-            _fail(f"incident {iid}: a bare record needs a year and has no details")
         _sources(incident.get("sources"), f"incident {iid}.sources")
     return data
 
@@ -176,11 +188,6 @@ def ordered(data: dict) -> list:
     return dated + [i for i in incidents if i["year"] is None]
 
 
-def other_thefts(data: dict) -> list:
-    """The bare years: recorded thefts nobody has documented further, shown together on one compact card."""
-    return [i for i in ordered(data) if i.get("bare_record")]
-
-
 def bell_game(football_games: list, year: int) -> dict | None:
     """The football game (the Monon Bell game since 1932) played in `year`, or None. A game with only a
     placeholder date has no trustworthy year, so it is skipped."""
@@ -189,17 +196,17 @@ def bell_game(football_games: list, year: int) -> dict | None:
     return max(found, key=lambda g: g["date"]) if found else None
 
 
-def game_line(game: dict) -> str:
+def game_line(game: dict, year: int | None = None) -> str:
     """"That year’s Bell game: Wabash 16, DePauw 6", winner first; "DePauw 7, Wabash 7" for a tie; just the result when
-    the score is unknown."""
-    month = MONTHS[int(game["date"][5:7]) - 1]
+    the score is unknown. With `year` (a story that shows another year's game) it starts "The 1967 Bell game:"."""
+    lead = f"The {year} Bell game" if year is not None else "That year’s Bell game"
     result = game["result"]
     if not facts.has_score(game):
         outcome = {"W": "DePauw won", "L": "Wabash won", "T": "a tie"}[result]
-        return f"That year’s Bell game: {outcome}"
+        return f"{lead}: {outcome}"
     d, w = facts.num(game["depauw"]), facts.num(game["wabash"])
     first, second = (("Wabash", w), ("DePauw", d)) if result == "L" else (("DePauw", d), ("Wabash", w))
-    return f"That year’s Bell game: {first[0]} {first[1]:,}, {second[0]} {second[1]:,}" + (" (tie)" if result == "T" else "")
+    return f"{lead}: {first[0]} {first[1]:,}, {second[0]} {second[1]:,}" + (" (tie)" if result == "T" else "")
 
 
 def correction_url(title: str | None = None, repo_url: str = REPO_URL) -> str:
@@ -246,20 +253,31 @@ def _when(incident: dict) -> str:
 def _game_html(incident: dict, football_games: list, game_href: str) -> str:
     if incident["year"] is None:
         return ""
-    game = bell_game(football_games, incident["year"])
+    other_year = incident.get("game_year")          # the burial: buried one November, dug up at the next year's game
+    game = bell_game(football_games, other_year or incident["year"])
     if not game:
         return ""
-    return f'<p class="heist-game"><a href="{_esc(game_href)}">{_esc(game_line(game))}</a></p>'
+    return f'<p class="heist-game"><a href="{_esc(game_href)}">{_esc(game_line(game, other_year))}</a></p>'
 
 
 def _tag(outcome: str) -> str:
     return f'<span class="heist-tag heist-{outcome}">{OUTCOMES[outcome]}</span>'
 
 
+def _rating(rating: str) -> str:
+    return f'<span class="heist-rating heist-rating-{rating}">{RATINGS[rating][0]}</span>'
+
+
+def _ratings_html() -> str:
+    parts = " ".join(f"<strong>{_esc(label)}:</strong> {_esc(meaning)}." for label, meaning in RATINGS.values())
+    return f'<p class="heist-ratings" id="ratings"><strong>{_esc(RATINGS_QUESTION)}</strong> {parts}</p>'
+
+
 def _card(incident: dict, football_games: list, game_href: str) -> str:
     iid = anchor(incident["id"])
     who = SCHOOLS[incident["school"]]
-    body = [f'<p class="heist-meta">{_tag(incident["outcome"])} <span class="heist-when">{_esc(_when(incident))}</span>'
+    body = [f'<p class="heist-meta">{_tag(incident["outcome"])} {_rating(incident["rating"])} '
+            f'<span class="heist-when">{_esc(_when(incident))}</span>'
             f' · <span class="heist-who">{_esc(who)}</span></p>',
             _heading(iid, incident["title"]),
             f'<p>{_esc(incident["summary"])}</p>',
@@ -274,39 +292,14 @@ def _card(incident: dict, football_games: list, game_href: str) -> str:
             + "\n".join(b for b in body if b) + '</section>')
 
 
-def _other_card(bare: list, football_games: list, game_href: str) -> str:
-    """One compact card for the years that are recorded as thefts and nothing more."""
-    rows = []
-    for incident in bare:
-        game = bell_game(football_games, incident["year"])
-        line = f' · <a href="{_esc(game_href)}">{_esc(game_line(game))}</a>' if game else ""
-        links = " · ".join(f'<a href="{_esc(s["url"])}">{_esc(s["label"])}</a>' for s in incident["sources"])
-        rows.append(f'<li id="{_esc(anchor(incident["id"]))}"><strong>{incident["year"]}</strong>{line}'
-                    f' <span class="heist-row-sources">({links})</span></li>')
-    return ('<section class="heist heist-school-not-recorded heist-other" id="other-recorded-thefts" '
-            'aria-labelledby="other-recorded-thefts-h">'
-            f'<p class="heist-meta">{_tag("stolen")} <span class="heist-when">{len(bare)} recorded years</span></p>'
-            + _heading("other-recorded-thefts", "Other recorded thefts")
-            + '<p>These years are recorded as thefts of the Bell. The details of who took it, how and what '
-              'followed haven’t been added to this page yet.</p>'
-            + f'<ul class="heist-years">{"".join(rows)}</ul></section>')
-
-
 def render_main(data: dict, football_games: list, *, back_html: str, game_href: str,
                 repo_url: str = REPO_URL) -> list:
     """The page's <main> content as lines of HTML. `back_html` is the shared back link, `game_href` points at
     the football card."""
     counts = tally(data)
     timeline = []
-    bare = other_thefts(data)
-    bare_done = False
     undated_started = False
     for incident in ordered(data):
-        if incident.get("bare_record"):
-            if not bare_done:                      # the compact card sits where the oldest bare year falls
-                timeline.append(_other_card(bare, football_games, game_href))
-                bare_done = True
-            continue
         if incident["year"] is None and not undated_started:
             timeline.append('<h2 id="date-unknown-h" class="heist-era">Date unknown</h2>')
             undated_started = True
@@ -317,8 +310,7 @@ def render_main(data: dict, football_games: list, *, back_html: str, game_href: 
         f'<h2 class="heist-title">{_esc(TITLE)}</h2>',
         f'<p class="heist-intro">{_esc(data["intro"])}</p>',
         f'<p class="heist-tally" id="tally"><strong>{_esc(tally_text(counts))}</strong></p>',
-        '<p class="heist-note">Who took the Bell is unknown for many of the thefts, so there is no scoreboard '
-        'here.</p>',
+        _ratings_html(),
         '<section class="heist-method" aria-label="About these stories">'
         + "".join(f"<p>{_esc(p)}</p>" for p in data["method"]) + '</section>',
         '<div class="heist-timeline">',

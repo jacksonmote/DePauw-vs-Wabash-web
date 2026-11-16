@@ -206,7 +206,7 @@ def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_includ
 
         '<h3>The Monon Bell heist history</h3>',
         '<p>The <a href="../../heist-details/">heist history page</a> is not part of the scraped records. Its '
-        'stories are curated by hand from news reports, school publications and Wikipedia, each with its sources '
+        'stories are curated by hand from student newspapers, school publications, and news reports, each with its sources '
         'linked, and they are not updated automatically: they change only when someone finds a source and the '
         'change is reviewed.</p>',
 

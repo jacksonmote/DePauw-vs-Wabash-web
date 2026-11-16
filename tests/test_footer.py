@@ -242,7 +242,7 @@ def test_the_totals_heading_is_renamed_and_keeps_its_anchor(site):
 
 def test_the_heist_footer_has_its_own_data_block_before_the_shared_lines(site):
     f = footer(site, "heist-details/index.html")
-    assert curated_line("Stories", "2026-11-02", "Nov 2, 2026", heists.correction_url()) in f
+    assert curated_line("Stories", "2026-11-15", "Nov 15, 2026", heists.correction_url()) in f
     assert '<a href="../data/bell-heists.json">bell-heists.json</a>' in f
     assert 'Suggest a correction</a>' in f and "Suggest an enhancement" in f
     assert "template=data-correction.yml" in f and "Monon%20Bell%20heist%20history" in f

@@ -1,4 +1,5 @@
-"""Monon Bell heist history: validation of the curated file, the tally, the page order, the game lookups, the links."""
+"""Monon Bell heist history: validation of the curated file, the ratings, the tally, the page order, the game lookups,
+the links."""
 import copy
 import datetime as dt
 import re
@@ -17,8 +18,9 @@ SRC = [{"label": "A source", "url": "https://example.com/story"}]
 
 
 def incident(iid, year, outcome="stolen", **kw):
-    base = {"id": iid, "year": year, "school": "not-recorded", "outcome": outcome, "title": f"Title {iid}",
-            "summary": "A summary.", "counted_in_theft_total": outcome == "stolen", "sources": copy.deepcopy(SRC)}
+    base = {"id": iid, "year": year, "school": "not-recorded", "outcome": outcome, "rating": "reported",
+            "title": f"Title {iid}", "summary": "A summary.", "counted_in_theft_total": outcome == "stolen",
+            "sources": copy.deepcopy(SRC)}
     base.update(kw)
     return base
 
@@ -31,10 +33,10 @@ def small(incidents):
 SAMPLE = small([
     incident("late", 2012, "foiled", school="depauw"),
     incident("unknown", None, "foiled", school="depauw"),
-    incident("bare-one", 1941, bare_record=True),
-    incident("big", 1965, school="wabash", details=["Long story."], consequences="It went home."),
-    incident("bare-two", 1959, bare_record=True),
-    incident("buried", 1967, "hidden", school="depauw"),
+    incident("early", 1941),
+    incident("big", 1965, school="wabash", rating="documented", details=["Long story."], consequences="It went home."),
+    incident("middle", 1959),
+    incident("buried", 1966, "hidden", school="depauw", game_year=1967),
 ])
 
 
@@ -84,6 +86,31 @@ def test_years_summaries_and_the_theft_flag_are_checked():
     assert heists.validate(copy.deepcopy(SAMPLE))
 
 
+def test_every_story_needs_one_of_the_four_ratings():
+    assert list(heists.RATINGS) == ["documented", "reported", "lore", "disputed"]
+    for value in (None, "Documented", "rumor", ""):
+        broken = copy.deepcopy(SAMPLE)
+        if value is None:
+            del broken["incidents"][0]["rating"]
+        else:
+            broken["incidents"][0]["rating"] = value
+        with pytest.raises(heists.HeistError, match="rating"):
+            heists.validate(broken)
+    for value in heists.RATINGS:
+        fine = copy.deepcopy(SAMPLE)
+        fine["incidents"][0]["rating"] = value
+        assert heists.validate(fine)
+    assert all(i["rating"] in heists.RATINGS for i in real()["incidents"])
+
+
+def test_the_game_year_to_show_must_be_another_real_year():
+    for index, value in ((5, 1966), (5, "1967"), (5, True), (5, 1700), (1, 1993)):   # 5 is the burial, 1 has no year
+        broken = copy.deepcopy(SAMPLE)
+        broken["incidents"][index]["game_year"] = value
+        with pytest.raises(heists.HeistError, match="game_year"):
+            heists.validate(broken)
+
+
 def test_the_tally_is_worked_out_from_the_incidents_and_says_at_least():
     counts = heists.tally(SAMPLE)
     assert counts == {"stolen": 3, "foiled": 2, "hidden": 1}
@@ -101,10 +128,13 @@ def test_the_real_tally_comes_from_the_file():
 
 def test_incidents_run_oldest_to_newest_with_date_unknown_last():
     years = [i["year"] for i in heists.ordered(SAMPLE)]
-    assert years == [1941, 1959, 1965, 1967, 2012, None]
+    assert years == [1941, 1959, 1965, 1966, 2012, None]
     real_years = [i["year"] for i in heists.ordered(real())]
     dated = [y for y in real_years if y is not None]
-    assert dated == sorted(dated) and real_years[-1] is None
+    assert dated == sorted(dated) and real_years == dated + [None] * (len(real_years) - len(dated))
+    same_year = small([incident("second", 1966, date="1966-11-19"), incident("first", 1966, date="1966-11-12"),
+                       incident("undated-a", 1966), incident("undated-b", 1966)])
+    assert [i["id"] for i in heists.ordered(same_year)] == ["undated-a", "undated-b", "first", "second"]
 
 
 def test_the_game_result_comes_from_the_series_data_and_is_skipped_without_a_game():
@@ -117,28 +147,53 @@ def test_the_game_result_comes_from_the_series_data_and_is_skipped_without_a_gam
     assert heists.game_line(heists.bell_game(changed, 1965)) == "That year’s Bell game: DePauw 21, Wabash 14"
 
 
+def test_a_story_can_show_another_years_game_and_the_line_names_that_year():
+    assert heists.game_line(heists.bell_game(GAMES, 1967), 1967) == "The 1967 Bell game: Wabash 7, DePauw 0"
+    html = page(GAMES)
+    buried = html[html.index('id="heist-buried"'):html.index("</section>", html.index('id="heist-buried"'))]
+    assert "The 1967 Bell game: Wabash 7, DePauw 0" in buried and "That year’s" not in buried
+    no_game = page([game("1965-11-13", "L", 6, 16)])              # the named year has no game: no line at all
+    assert "Bell game" not in no_game[no_game.index('id="heist-buried"'):no_game.index('id="heist-late"')]
+    burial = next(i for i in real()["incidents"] if i["outcome"] == "hidden" and i["school"] == "depauw")
+    assert burial["year"] + 1 == burial["game_year"]              # buried one November, dug up at the next game
+
+
 def page(games, data=SAMPLE):
     return "\n".join(heists.render_main(data, games, back_html="", game_href="../#football"))
 
 
-def test_cards_have_anchors_sources_and_the_bare_years_share_one_compact_card():
+def test_every_story_has_its_own_card_with_an_anchor_a_rating_and_sources():
     html = page(GAMES)
-    for iid in ("heist-late", "heist-unknown", "heist-big", "heist-buried", "other-recorded-thefts"):
+    for iid in ("heist-late", "heist-unknown", "heist-big", "heist-buried", "heist-early", "heist-middle"):
         assert f'id="{iid}"' in html and f'href="#{iid}"' in html
-    assert 'id="heist-bare-one"' in html and 'id="heist-bare-two"' in html          # each bare year keeps its own anchor
-    assert html.count('id="other-recorded-thefts"') == 1
-    assert html.count("Sources: ") == 4 + 1                              # four cards, plus the guarding section
+    assert "Other recorded thefts" not in html and "other-recorded-thefts" not in html   # no shared card of bare years
+    assert html.count("Sources: ") == 6 + 1                              # six cards, plus the guarding section
+    assert html.count('<span class="heist-rating heist-rating-reported">Reported</span>') == 5
+    assert html.count('<span class="heist-rating heist-rating-documented">Documented</span>') == 1
+    big = html[html.index('id="heist-big"'):html.index("</section>", html.index('id="heist-big"'))]
+    assert ('<span class="heist-tag heist-stolen">Stolen</span> '
+            '<span class="heist-rating heist-rating-documented">Documented</span> ') in big   # beside the outcome tag
     assert html.count('<details class="heist-details">') == 1            # only the story with details
     assert "Aftermath" in html and "It went home." in html
     assert "That year’s Bell game: Wabash 16, DePauw 6" in html
     assert 'href="../#football"' in html
 
 
-def test_page_order_places_date_unknown_last_and_the_bare_card_first():
+def test_page_order_is_tally_ratings_timeline_then_date_unknown_and_guarding():
     html = page(GAMES)
-    order = [html.index(x) for x in ('id="other-recorded-thefts"', 'id="heist-big"', 'id="heist-buried"', 'id="heist-late"',
+    order = [html.index(x) for x in ('id="tally"', 'id="ratings"', 'id="timeline-h"', 'id="heist-early"',
+                                      'id="heist-middle"', 'id="heist-big"', 'id="heist-buried"', 'id="heist-late"',
                                       'id="date-unknown-h"', 'id="heist-unknown"', 'id="guarded-now"')]
     assert order == sorted(order)
+    assert 'id="date-unknown-h"' not in page(GAMES, real())            # every story on the page has a year now
+
+
+def test_the_line_under_the_tally_explains_all_four_ratings_once():
+    html = page(GAMES)
+    line = html[html.index('<p class="heist-ratings"'):html.index("</p>", html.index('<p class="heist-ratings"'))]
+    assert html.count('class="heist-ratings"') == 1 and heists.RATINGS_QUESTION in line
+    for label, meaning in heists.RATINGS.values():
+        assert f"<strong>{label}:</strong> {meaning}." in line
 
 
 @pytest.fixture(scope="module")
@@ -217,9 +272,21 @@ def test_the_athletics_how_it_works_page_mentions_the_curated_heist_history(site
 def test_the_page_says_the_record_is_incomplete_once_and_the_intro_note_does_not_repeat_it():
     real_data = real()
     html = page(GAMES, real_data)
-    assert html.lower().count("record is incomplete") == 1             # the method paragraph; the tally note adds no second
-    assert 'class="heist-note">Who took the Bell is unknown' in html
+    assert html.lower().count("record is incomplete") == 1             # the method paragraph, and nowhere else
+    assert "heist-note" not in html and "Who took the Bell is unknown" not in html
     assert "Associated game" not in html
+
+
+def test_no_story_rests_on_wikipedia_and_archived_copies_say_so():
+    data = real()
+    sources = list(data["guarding"]["sources"]) + [s for i in data["incidents"] for s in i["sources"]]
+    text = " ".join(data["method"] + [data["intro"]])
+    assert "Wikipedia" not in text and not any("wikipedia" in (s["url"] + s["label"]).lower() for s in sources)
+    archived = [s for s in sources if s["url"].startswith("https://web.archive.org/web/")]
+    assert archived
+    for source in sources:                         # the label says "(archived copy)" exactly when the link is one
+        assert source["label"].endswith("(archived copy)") == (source in archived), source["label"]
+    assert not any("archive.org/web" in s["url"] for s in sources if s not in archived)
 
 
 def test_no_aftermath_line_only_repeats_that_years_game_score():

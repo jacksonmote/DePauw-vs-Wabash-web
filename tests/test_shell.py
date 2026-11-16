@@ -168,7 +168,7 @@ def test_the_alumni_and_heist_anchors_are_all_still_there(site):
     alumni = {e["id"] for e in soup(site, "alumni/index.html").find_all(id=True)}
     assert {"alumni-h", "endowment", "endowment-h", "nobel", "senators", "academy-awards-h", "main"} <= alumni
     heist = {e["id"] for e in soup(site, "heist-details/index.html").find_all(id=True)}
-    assert {"tally", "timeline-h", "guarded-now", "heist-1967-the-burial", "heist-2017-masked-attempt-h", "main"} <= heist
+    assert {"tally", "timeline-h", "guarded-now", "heist-1966-the-burial", "heist-2017-masked-attempt-h", "main"} <= heist
 
 
 def test_no_page_has_an_inline_style_or_script_after_the_shell_change(site):
