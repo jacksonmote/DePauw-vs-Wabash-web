@@ -370,7 +370,7 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .heist-page .heist-title { margin: 0.75rem 0 0.5rem; font-size: 1.75rem; }
 .heist-intro { margin: 0 0 0.75rem; }
 .heist-tally { margin: 0 0 0.25rem; font-size: 1.125rem; }
-.heist-note { margin: 0 0 0.75rem; color: var(--color-text-muted); font-size: 0.9375rem; }
+.heist-ratings { margin: 0 0 0.75rem; color: var(--color-text-muted); font-size: 0.9375rem; }
 .heist-method { color: var(--color-text-muted); font-size: 0.9375rem; }
 .heist-method p { margin: 0 0 0.5rem; }
 .heist-era { font-size: 1.25rem; }
@@ -384,14 +384,13 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .heist-tag { border: 2px solid var(--color-tie-accent); border-radius: 999px; padding: 0 0.6rem; font-weight: 650; font-size: 0.8125rem; color: var(--color-text); }
 .heist-school-depauw .heist-tag { border-color: var(--color-depauw-accent); }
 .heist-school-wabash .heist-tag { border-color: var(--color-wabash-accent); }
+.heist-rating { border: 1px solid currentColor; border-radius: 4px; padding: 0 0.4rem; font-weight: 600; font-size: 0.8125rem; }   /* how well the story is sourced: a plain box beside the outcome pill, in the muted text color */
 .heist-school-depauw .heist-who { color: var(--color-depauw-text); }
 .heist-school-wabash .heist-who { color: var(--color-wabash-text); }
 .heist-game { font-size: 0.9375rem; }
 .heist-details { margin: 0.5rem 0; }
 .heist-details summary { cursor: pointer; font-weight: 600; min-height: 44px; padding: 0.4rem 0; }
-.heist-consequences, .heist-sources, .heist-row-sources { color: var(--color-text-muted); font-size: 0.9375rem; }
-.heist-years { margin: 0 0 0.5rem; padding-left: 1.25rem; }
-.heist-years li { margin-block: 0.4rem; }
+.heist-consequences, .heist-sources { color: var(--color-text-muted); font-size: 0.9375rem; }
 .heist-guarding { margin-top: 2rem; }
 
 /* Home top: the scoreboard, the Bell strip, the Bell-week box, the jump list */
