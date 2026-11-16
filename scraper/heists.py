@@ -41,9 +41,9 @@ CORRECTION_SPORT = "Monon Bell heist history"     # the option added to the data
 
 OUTCOMES = {"stolen": "Stolen", "foiled": "Foiled", "hidden": "Hidden"}
 SCHOOLS = {"depauw": "DePauw students", "wabash": "Wabash students", "not-recorded": "Not recorded"}
-# How well each story is sourced: the label on the card, and what it means (the line near the top of the page).
+# How well each story is sourced: the label on the card, and what it means (the list near the top of the page).
 RATINGS = {"documented": ("Documented", "a source from the time says so"),
-           "reported": ("Reported", "a later, reputable source says so, and no report from the time has been found"),
+           "reported": ("Reported", "a later, reputable source says so; no report from the time has been found"),
            "lore": ("Lore", "repeated without a source"),
            "disputed": ("Disputed", "the sources disagree")}
 RATINGS_QUESTION = "How sure is each story?"
@@ -323,8 +323,11 @@ def _rating(rating: str) -> str:
 
 
 def _ratings_html() -> str:
-    parts = " ".join(f"<strong>{_esc(label)}:</strong> {_esc(meaning)}." for label, meaning in RATINGS.values())
-    return f'<p class="heist-ratings" id="ratings"><strong>{_esc(RATINGS_QUESTION)}</strong> {parts}</p>'
+    """The legend near the top: a definition list, each rating drawn as the cards draw it, then what it means."""
+    rows = "".join(f"<dt>{_rating(key)}</dt><dd>{_esc(meaning[0].upper() + meaning[1:])}.</dd>"
+                   for key, (_, meaning) in RATINGS.items())
+    return ('<section class="heist-ratings" id="ratings" aria-labelledby="ratings-h">'
+            f'<p id="ratings-h"><strong>{_esc(RATINGS_QUESTION)}</strong></p>\n<dl>{rows}</dl></section>')
 
 
 def _card(incident: dict, football_games: list, game_href: str) -> str:
