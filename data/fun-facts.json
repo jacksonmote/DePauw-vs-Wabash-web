@@ -876,11 +876,15 @@
     {
       "id": "both-bell-weight",
       "school": "both",
-      "text": "The Monon Bell weighs about 300 pounds, though reports have put it anywhere from 200 to 400.",
+      "text": "The Monon Bell weighs about 300 pounds, according to both schools’ athletics departments.",
       "sources": [
         {
           "label": "DePauw Athletics: Rivalry facts",
           "url": "https://depauwtigers.com/sports/2022/6/28/rivalry-facts.aspx"
+        },
+        {
+          "label": "Wabash Athletics: Monon Bell history",
+          "url": "https://sports.wabash.edu/sports/2011/7/25/FB_0725114320.aspx"
         }
       ]
     },
