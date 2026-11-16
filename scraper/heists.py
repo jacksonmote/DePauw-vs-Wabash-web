@@ -467,15 +467,16 @@ def _year_link(incident: dict, history_href: str) -> str:
 
 def lessons_html(data: dict, history_href: str) -> str:
     """The "Lessons from the archive" section, or nothing when no story is tagged: a numbered list, each step the
-    tactic's name with its record in a pill (the history page's outcome-tag style), then the line on how it went."""
+    tactic's name, its record in a pill on a line of its own (the history page's outcome-tag style; one under the
+    other, the pills line up at every width), then the line on how it went."""
     found = lessons(data)
     if not found:
         return ""
     items = []
     for lesson in found:
         clauses = "; ".join(lesson_clauses(lesson["incidents"], lambda i: _year_link(i, history_href), _esc))
-        items.append(f'<li><strong>{_esc(lesson["step"])}</strong> '
-                     f'<span class="heist-tag nowrap">{_esc(lesson["record"])}</span>'
+        items.append(f'<li><strong>{_esc(lesson["step"])}</strong>'
+                     f'<div><span class="heist-tag nowrap">{_esc(lesson["record"])}</span></div>'
                      f'<div>{clauses[0].upper() + clauses[1:]}.</div></li>')
     return ('<section class="heist-lessons" id="lessons" aria-labelledby="lessons-h">'
             f'<h3 id="lessons-h">{_esc(LESSONS_TITLE)}</h3>\n<p>{_esc(LESSONS_INTRO)}</p>\n'

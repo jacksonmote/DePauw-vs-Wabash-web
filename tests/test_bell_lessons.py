@@ -164,8 +164,12 @@ def steps(markup):
     plan = BeautifulSoup(markup, "html.parser").select_one("#lessons .heist-plan")
     rows = plan.find_all("li", recursive=False)
     for row in rows:
-        assert [child.name for child in row.find_all(recursive=False)] == ["strong", "span", "div"]   # title, pill, result
-    return plan, [(row.strong.get_text(), row.span.get_text(), row.div.get_text()) for row in rows]
+        title, record, result = row.find_all(recursive=False)                # three lines: title, pill, result
+        assert [title.name, record.name, result.name] == ["strong", "div", "div"]
+        assert row.contents[0] is title                                       # nothing sits before the title
+        assert [child.name for child in record.contents] == ["span"]          # the pill has a line to itself
+    return plan, [(row.strong.get_text(), row.span.get_text(), row.find_all("div", recursive=False)[1].get_text())
+                  for row in rows]
 
 
 def test_each_lesson_is_a_numbered_step_with_its_record_and_one_line_that_links_every_year_to_its_card():
@@ -179,7 +183,8 @@ def test_each_lesson_is_a_numbered_step_with_its_record_and_one_line_that_links_
         (heists.TACTICS[FIRST], "Record: 2–1", "Worked in 1959 and 1965; failed in 2012."),
         (heists.TACTICS[SECOND], "Record: 2–1", "Worked in 1988 and 1998; in 2017 it ended with police outside."),
         (heists.TACTICS[THIRD], "Record: 0–1", "Failed in 2012.")]
-    assert all(span["class"] == ["heist-tag", "nowrap"] for span in plan.select("li > span"))   # the history page's pill
+    assert all(span["class"] == ["heist-tag", "nowrap"] for span in plan.select("li > div > span"))   # the history page's pill
+    assert len(plan.select("li > div > span")) == len(rows) and not plan.select("li > span")   # every step, own line
     links = [(a.get_text(), a["href"]) for a in plan.find_all("li", recursive=False)[1].find_all("a")]
     assert links == [("1988", HISTORY + "#heist-stayed-late"), ("1998", HISTORY + "#heist-halloween"),
                      ("2017", HISTORY + "#heist-masks")]
