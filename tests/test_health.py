@@ -744,13 +744,14 @@ def report(**status):
 
 
 class FakeGh:
-    def __init__(self, open_issues=(), labels=(), cannot_assign=False):
+    def __init__(self, open_issues=(), labels=(), cannot_assign=False, stderr="could not assign user: not found"):
         self.open, self.labels, self.calls, self.cannot_assign = list(open_issues), list(labels), [], cannot_assign
+        self.stderr = stderr                                # what gh prints when the assignee cannot be assigned
 
     def __call__(self, *args, stdin=None):
         self.calls.append((args, stdin))
         if self.cannot_assign and args[:2] == ("issue", "create") and "--assignee" in args:
-            raise subprocess.CalledProcessError(1, ["gh", *args], stderr="could not assign user: not found")
+            raise subprocess.CalledProcessError(1, ["gh", *args], stderr=self.stderr)
         if args[:2] == ("issue", "list"):
             return json.dumps([{"number": n, "body": body} for n, body in self.open])
         if args[:2] == ("label", "list"):
@@ -1083,11 +1084,72 @@ def test_an_owner_who_cannot_be_assigned_never_costs_the_issue():
     gh = FakeGh(labels=["site-health"], cannot_assign=True)                 # an organization, say
     out = health.sync_issue(report(activity="problem"), "https://run", run=gh, assignee="octo-org")
     assert out == ("opened https://github.com/x/y/issues/9 (it could not be assigned to the repository's owner, so "
-                   "it was opened unassigned)")
+                   "it was opened unassigned; gh said: could not assign user: not found)")
     assert gh.verbs() == [("issue", "list"), ("label", "list"), ("issue", "create"), ("issue", "create")]
     first, second = gh.calls[2], gh.calls[3]
     assert "--assignee" in first[0] and "--assignee" not in second[0]
     assert first[1] == second[1] and "todo of activity" in second[1]         # the same text both times
+
+
+UNASSIGNED = ("opened https://github.com/x/y/issues/9 (it could not be assigned to the repository's owner, so it was "
+              "opened unassigned")
+
+
+def open_unassigned(stderr):
+    """Open the issue with an owner gh refuses, saying `stderr`: (the command's output, the fake gh)."""
+    gh = FakeGh(labels=["site-health"], cannot_assign=True, stderr=stderr)
+    return health.sync_issue(report(activity="problem"), "https://run", run=gh, assignee="octo-org"), gh
+
+
+def test_the_output_says_why_the_owner_could_not_be_assigned():
+    out, gh = open_unassigned("could not assign user: 'octo-org' not found\n")
+    assert out == UNASSIGNED + "; gh said: could not assign user: 'octo-org' not found)"
+    assert gh.verbs().count(("issue", "create")) == 2                       # still one more try, without the assignee
+
+
+def test_only_the_first_non_empty_line_of_ghs_error_is_repeated():
+    out, _ = open_unassigned("\n   \n  GraphQL: Could not resolve to a User (assignableUsers)  \nusage: gh issue create\n")
+    assert out == UNASSIGNED + "; gh said: GraphQL: Could not resolve to a User (assignableUsers))"
+    assert "usage" not in out and "\n" not in out
+
+
+def test_a_long_error_line_is_cut_to_the_limit():
+    assert health.GH_ERROR_MAX == 200
+    out, _ = open_unassigned("x" * 199 + "yz" + "w" * 500 + "\nsecond line\n")
+    assert out == UNASSIGNED + "; gh said: " + "x" * 199 + "y" + ")"
+
+
+@pytest.mark.parametrize("stderr", [None, "", "\n  \n"])
+def test_without_any_error_text_the_output_is_the_plain_sentence(stderr):
+    out, gh = open_unassigned(stderr)
+    assert out == UNASSIGNED + ")" and "gh said" not in out
+    assert gh.verbs().count(("issue", "create")) == 2
+
+
+def test_ghs_error_text_never_reaches_the_issue_itself():
+    out, gh = open_unassigned("could not assign user: 'octo-org' not found\nmore detail\n")
+    creates = [(args, stdin) for args, stdin in gh.calls if args[:2] == ("issue", "create")]
+    assert len(creates) == 2 and creates[0][1] == creates[1][1]              # the same text both times
+    for args, stdin in gh.calls:
+        assert "could not assign" not in (stdin or "") and "gh said" not in (stdin or "")
+        assert "octo-org" not in (stdin or "") and "@" not in (stdin or "")
+    assert gh.verbs().count(("issue", "comment")) == 0
+
+
+def test_a_second_create_that_fails_still_raises():
+    class Broken(FakeGh):
+        def __call__(self, *args, stdin=None):
+            if args[:2] == ("issue", "create"):
+                raise subprocess.CalledProcessError(1, ["gh", *args], stderr="HTTP 502")
+            return super().__call__(*args, stdin=stdin)
+    with pytest.raises(subprocess.CalledProcessError):
+        health.sync_issue(report(activity="problem"), run=Broken(labels=["site-health"]), assignee="octo-owner")
+
+
+def test_gh_said_reads_only_an_error_text_that_is_there():
+    assert health.gh_said(subprocess.CalledProcessError(1, ["gh"])) == ""    # no stderr at all
+    assert health.gh_said(ValueError("no stderr attribute")) == ""
+    assert health.gh_said(subprocess.CalledProcessError(1, ["gh"], stderr="  one  \ntwo")) == "one"
 
 
 def test_rewriting_commenting_on_or_closing_an_open_issue_never_assigns():

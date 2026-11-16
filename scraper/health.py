@@ -105,6 +105,7 @@ ISSUE_TITLE = "Site health: a check needs attention"
 MARKER = re.compile(r"<!-- site-health: ([a-z, -]*) -->")
 # The reminders already sent, kept in the issue's text: the limit they belong to and the smallest threshold covered.
 REMINDED = re.compile(r"<!-- site-health-reminded: (\S+) (\d+) -->")
+GH_ERROR_MAX = 200                      # the most characters of gh's error text that the command's output repeats
 CARRIED = "Could not be checked today; it was a problem at the last check that could be made."
 MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
@@ -566,6 +567,15 @@ def gh(*args: str, stdin: str | None = None) -> str:
     return subprocess.run(["gh", *args], input=stdin, capture_output=True, text=True, check=True).stdout
 
 
+def gh_said(exc: Exception) -> str:
+    """What gh said when it failed, for the command's output (the job log): the first non-empty line of its error
+    text, stripped, at most GH_ERROR_MAX characters; "" when the failure carries no error text."""
+    for line in (getattr(exc, "stderr", None) or "").splitlines():
+        if line.strip():
+            return line.strip()[:GH_ERROR_MAX]
+    return ""
+
+
 def due_threshold(left: dt.timedelta) -> int | None:
     """The reminder that is due with `left` to go before GitHub's limit: the smallest N in REMIND_AT with at most
     N days left. None with more time than the largest N, and None once the limit has passed."""
@@ -630,7 +640,9 @@ def sync_issue(report: dict, run_url: str = "", run=gh, assignee: str = "") -> s
     `assignee`: the login the issue is assigned to when it is opened (the repository's owner in the workflow), or
     "" for nobody. Only then: a later run never assigns again, so an owner who removes themselves stays removed. If
     the issue cannot be opened with the assignee (an organization cannot be assigned, say), it is opened without
-    one: the issue is never lost for that. The text and every comment mention nobody."""
+    one: the issue is never lost for that. The returned line then says so and, when gh gave one, repeats gh's
+    reason (gh_said); that reason goes only into this output, never into the issue's text or a comment. The text
+    and every comment mention nobody."""
     open_issues = sorted(json.loads(run("issue", "list", "--label", LABEL, "--state", "open",
                                         "--json", "number,body", "--limit", "100")), key=lambda i: i["number"])
     when = fmt_date(parse_time(report["checked_at"]))
@@ -685,8 +697,10 @@ def sync_issue(report: dict, run_url: str = "", run=gh, assignee: str = "") -> s
             url = run("issue", "create", "--title", ISSUE_TITLE, "--label", LABEL, "--body-file", "-",
                       "--assignee", assignee, stdin=body).strip()
             return f"opened {url}, assigned to the repository's owner"
-        except subprocess.CalledProcessError:
-            unassigned = " (it could not be assigned to the repository's owner, so it was opened unassigned)"
+        except subprocess.CalledProcessError as exc:
+            said = gh_said(exc)
+            unassigned = (" (it could not be assigned to the repository's owner, so it was opened unassigned"
+                          + (f"; gh said: {said}" if said else "") + ")")
     else:
         unassigned = ""
     url = run("issue", "create", "--title", ISSUE_TITLE, "--label", LABEL, "--body-file", "-", stdin=body).strip()
