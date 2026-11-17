@@ -10,6 +10,11 @@ from __future__ import annotations
 
 from merge import season_years
 
+# Between the items of one line of display text (a decade's summary in a game list, a heist card's tag line): a
+# no-break space holds each "·" to the item before it, so a line may end with the dot but can never start with
+# one, however the line wraps.
+SEPARATOR = "\u00a0· "
+
 # The football game became the Monon Bell game with the 1932 season.
 BELL_START = 1932
 

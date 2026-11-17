@@ -200,7 +200,7 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 
 /* Game list: a disclosure per decade, a table in each */
 .games { margin-top: 1.25rem; border-top: 1px solid var(--color-border); padding-top: 0.75rem; }
-.games summary { cursor: pointer; font-weight: 600; padding: 0.5rem 0; }
+.games summary { cursor: pointer; font-weight: 600; padding: 0.625rem 0; }
 .games details { border-top: var(--border); }
 .games abbr, .wl { display: none; }   /* the result letter and its hint: the phone layout only */
 .hint { color: var(--color-text-muted); font-size: 0.875rem; margin: 0.25rem 0 0.75rem; }

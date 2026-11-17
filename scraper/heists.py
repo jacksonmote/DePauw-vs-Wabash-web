@@ -11,7 +11,8 @@ validates it on every build (a bad file fails the render instead of publishing h
   tally, tally_text          stolen / foiled / hidden counts, worked out from the incidents (never stored)
   RATINGS                    the four ratings (how well a story is sourced) and what each means
   SEPARATOR                  the "·" between the items of a card's tag line, held to the item before it by a
-                             no-break space so a wrapped line never starts with the dot
+                             no-break space so a wrapped line never starts with the dot (facts.SEPARATOR, which
+                             the game list's decade summaries use too)
   ordered                    the timeline order (oldest first, "Date unknown" last)
   bell_game, game_line       that year's Monon Bell football result, read from series.json (skipped when no game);
                              a story may name another year's game to show instead (`game_year`)
@@ -48,9 +49,9 @@ RATINGS = {"documented": ("Documented", "a source from the time says so"),
            "lore": ("Lore", "repeated without a source"),
            "disputed": ("Disputed", "the sources disagree")}
 RATINGS_QUESTION = "How sure is each story?"
-# Between the items of a card's tag line: a no-break space holds each "·" to the item before it, so a line may end
+# Between the items of a card's tag line: the shared separator (a no-break space, then the dot), so a line may end
 # with the dot but can never start with one, however the line wraps.
-SEPARATOR = " · "
+SEPARATOR = facts.SEPARATOR
 # The fictional /bell-heist/ page. A story may be tagged with the classic tactics its sourced text clearly shows; the
 # keys, in checklist order, and each step as the checklist words it. A lesson names what was tried and how it ended,
 # never how the Bell is kept or guarded now.

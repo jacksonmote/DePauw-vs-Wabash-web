@@ -23,7 +23,7 @@ import render  # noqa: E402
 NOW = dt.datetime(2026, 10, 30, 12, tzinfo=dt.timezone.utc)
 FROZEN = ROOT / "tests" / "fixtures" / "series-frozen-2026-10-30.json"
 CSS = (ROOT / "static" / "styles.css").read_text(encoding="utf-8").replace("\r\n", "\n")
-SEP = " · "                                   # a no-break space, then the dot: a line never starts with the dot
+SEP = "\u00a0· "                              # a no-break space, then the dot: a line never starts with the dot
 PHONE_MAX = "42rem"                                # the widest screen that gets the two-line layout
 
 
@@ -98,6 +98,7 @@ def test_a_decades_summary_gives_its_name_its_count_and_its_record_from_its_own_
     assert render.decade_summary(1900, five[:1], ("match", "matches")) == f"1900s{SEP}1 match{SEP}Wabash 1-0"
     assert render.decade_summary(None, five[:2], ("meet", "meets")) == f"Date not recorded{SEP}2 meets{SEP}Split 1-1"
     assert render.decade_label(None) == render.UNDATED_GROUP == "Date not recorded"
+    assert facts.SEPARATOR == SEP            # one separator for every dotted line (the heist cards use it too)
 
 
 # --- the rendered list ----------------------------------------------------------------------------------------------
@@ -225,17 +226,32 @@ def home_targets(site_dir):
     return found
 
 
-@pytest.mark.parametrize("now", [NOW, dt.datetime(2025, 11, 16, 1, 0, tzinfo=dt.timezone.utc)],
-                         ids=["ordinary-day", "final-banner"])
-def test_no_link_lands_inside_a_closed_group_so_every_link_target_is_in_view(tmp_path, now):
+BELL_GAME = {"football": {"schedule_url": "https://depauwtigers.com/sports/football/schedule", "games": [{
+    "date": "2026-11-14", "time": "1:07 PM", "time_note": None, "location": "away", "status": "scheduled",
+    "site": "Hollett Little Giant Stadium, Crawfordsville, Ind.", "doubleheader": False}]}}
+
+
+@pytest.mark.parametrize("now, upcoming, banner", [
+    (NOW, None, None),
+    (dt.datetime(2026, 11, 14, 14, 0, tzinfo=dt.timezone.utc), BELL_GAME,                # 9 AM Eastern
+     "Game day: Football vs. Wabash today, 1:07 PM"),
+    (dt.datetime(2026, 11, 14, 18, 30, tzinfo=dt.timezone.utc), BELL_GAME,               # 1:30 PM Eastern
+     "Football vs. Wabash is underway or just finished."),
+    (dt.datetime(2025, 11, 16, 1, 0, tzinfo=dt.timezone.utc), None, "Final: DePauw 41, Wabash 20"),
+], ids=["ordinary-day", "game-morning", "underway", "final-banner"])
+def test_no_link_lands_inside_a_closed_group_so_every_link_target_is_in_view(tmp_path, now, upcoming, banner):
     """Every link to a place on the home page (the jump list, the headings' own links, the Bell strip, the game-day
     banner's final score, "That year's Bell game" on the heist history, the joke page's Bell link) goes to a card or
     a section, never to something inside a disclosure. A closed <details> hides what is in it, and not every browser
     opens it for a link, so a link to a game would need the script to open its decade: this test fails the day such
     a link or such an id is added, before it can land on something hidden."""
-    out = tmp_path / "site"
-    render.build(FROZEN, out, now=now, upcoming_path=out / "missing.json")
+    out, up = tmp_path / "site", tmp_path / "upcoming.json"                           # no file: nothing scheduled
+    if upcoming:
+        up.write_text(json.dumps({"schema_version": 1, "sports": upcoming}), encoding="utf-8")
+    render.build(FROZEN, out, now=now, upcoming_path=up)
     page = BeautifulSoup((out / "index.html").read_text(encoding="utf-8"), "html.parser")
+    shown = page.find(id="game-day")
+    assert (banner in shown.get_text()) if banner else shown is None                    # the state asked for
     targets = home_targets(out)
     sports = [c["id"] for c in page.select("article.sport")]
     assert set(sports) | {"monon-bell", "next-meeting", "main"} >= set(targets) >= set(sports) | {"monon-bell", "main"}
@@ -243,8 +259,10 @@ def test_no_link_lands_inside_a_closed_group_so_every_link_target_is_in_view(tmp
         el = page.find(id=fragment)
         assert el is not None, (fragment, uses)
         assert el.find_parent("details") is None, (fragment, uses)
-    if now != NOW:                                                                      # the banner's final score
-        assert ("/", "Final: DePauw 41, Wabash 20") in targets["football"]
+    if banner and banner.startswith("Final"):                                           # the final score is a link
+        assert ("/", banner) in targets["football"]
+    elif banner:                                                                        # before it, plain text
+        assert shown.find_all("a") == []
     assert ("/heist-details/", ) == tuple({p for p, _ in targets["football"]} - {"/"})  # the Bell-game links
     assert ("/bell-heist/", "Check the real Bell holder") in targets["monon-bell"]
     # nothing inside a game list can be linked to at all: no id, and no link but a box score
@@ -256,7 +274,7 @@ def test_no_link_lands_inside_a_closed_group_so_every_link_target_is_in_view(tmp
 
 def test_the_script_is_unchanged_because_no_link_needs_a_decade_opened():
     script = (ROOT / "static" / "easter-eggs.js").read_text(encoding="utf-8")
-    assert "hashchange" not in script and "location" not in script and "details" not in script
+    assert "hashchange" not in script and "location.hash" not in script
 
 
 # --- the phone layout -----------------------------------------------------------------------------------------------
@@ -346,5 +364,6 @@ def test_on_wide_screens_every_decades_table_has_the_same_columns():
 
 def test_decade_summaries_get_the_focus_ring_and_a_separating_line():
     assert re.search(r"a:focus-visible, summary:focus-visible, button:focus-visible \{ outline: 3px solid", CSS)
-    assert ".games summary { cursor: pointer; font-weight: 600; padding: 0.5rem 0; }" in CSS
+    # 0.625rem above and below a line of text: 44 px tall, like the nav links
+    assert ".games summary { cursor: pointer; font-weight: 600; padding: 0.625rem 0; }" in CSS
     assert ".games details { border-top: var(--border); }" in CSS

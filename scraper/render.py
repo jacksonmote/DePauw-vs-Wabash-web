@@ -812,8 +812,8 @@ def decade_summary(decade: int | None, games: list, words: tuple = ("game", "gam
     """What a decade's closed disclosure shows: its name, how many games and its record, leader first with ties
     last when there are any ("2020s · 6 games · DePauw 5-1", "1950s · 10 games · Wabash 6-3-1"), all counted
     from the group's own games. The record reads like the season-by-season list's (facts.record_words)."""
-    return heists_page.SEPARATOR.join([decade_label(decade), count_noun(len(games), words),
-                                       facts.record_words(facts.tally(games))])
+    return facts.SEPARATOR.join([decade_label(decade), count_noun(len(games), words),
+                                 facts.record_words(facts.tally(games))])
 
 
 def games_table(key: str, games: list, words: tuple = ("game", "games"), merged: bool = False,
