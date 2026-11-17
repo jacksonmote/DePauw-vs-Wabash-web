@@ -780,6 +780,10 @@ def result_html(g: dict) -> str:
 # position in the row, so the order here is also the order static/styles.css counts on.
 GAME_COLUMNS = ("Date", "Site", "Result", "Notes", "Box score")
 UNDATED_GROUP = "Date not recorded"      # the last group's name: games whose date neither school recorded
+# Added to the hint above a list that has that group. A decade's summary counts only the games dated in it, so
+# "1900s · 1 game" can sit above a last group that holds ten more games of those years; this says why. It opens
+# with what the sport plays ("Games", "Matches").
+UNDATED_HINT = "with no recorded date are in the last group and aren’t included in any decade’s count."
 # The result letter that leads the result on a phone, from DePauw's side like "Home" and "Away"; the winner is
 # always named in the words after it, so the letter is never the only cue.
 RESULT_LETTERS = {"W": "win", "L": "loss", "T": "tie"}
@@ -820,9 +824,10 @@ def games_table(key: str, games: list, words: tuple = ("game", "games"), merged:
                 name: str | None = None) -> str:
     """One card's every-game list: the games grouped by decade (facts.by_decade), newest decade first and newest
     game first inside it, each decade a native <details> holding its own table. The newest decade is open and the
-    rest are closed; games with no recorded date are one last group, closed. Nothing here needs a script. `name`
-    is the sport's name for each table's hidden caption ("men's basketball"); without it the caption falls back
-    to the key with its hyphens removed."""
+    rest are closed; games with no recorded date are one last group, closed, and the hint above the list then
+    says they are in no decade's count (UNDATED_HINT). Nothing here needs a script. `name` is the sport's name
+    for each table's hidden caption ("men's basketball"); without it the caption falls back to the key with its
+    hyphens removed."""
     captioned = sport_label(name) if name else key.replace("-", " ")
     groups = facts.by_decade(games)
     columns = "".join(f'<th scope="col">{c}</th>' for c in GAME_COLUMNS)
@@ -840,12 +845,13 @@ def games_table(key: str, games: list, words: tuple = ("game", "games"), merged:
             + (f'<p class="history-reward">{HISTORY_REWARD}</p>\n' if i == len(groups) - 1 else '')
             + '</details>\n')
     letters = join_and([f"{letter} ({word})" for letter, word in RESULT_LETTERS.items()])
+    undated = f" {esc(words[1].capitalize())} {UNDATED_HINT}" if groups and groups[-1][0] is None else ""
     return (
         f'<details class="games">\n<summary>All {count_noun(len(games), words)}</summary>\n'
         f'{series_html(facts.season_series(games))}'
         # the letters show only in the phone layout, and so does the part of the hint that explains them
         f'<p class="hint">Newest first, by decade. Home and away<span class="wl">, {letters}</span> are from '
-        'DePauw’s point of view.</p>\n'
+        f'DePauw’s point of view.{undated}</p>\n'
         + "".join(blocks) + '</details>'
     )
 

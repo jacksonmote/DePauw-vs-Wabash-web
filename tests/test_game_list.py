@@ -25,6 +25,8 @@ FROZEN = ROOT / "tests" / "fixtures" / "series-frozen-2026-10-30.json"
 CSS = (ROOT / "static" / "styles.css").read_text(encoding="utf-8").replace("\r\n", "\n")
 SEP = "\u00a0· "                              # a no-break space, then the dot: a line never starts with the dot
 PHONE_MAX = "42rem"                                # the widest screen that gets the two-line layout
+# the hint above every list; a list with undated games adds one sentence about them
+HINT = "Newest first, by decade. Home and away, W (win), L (loss), and T (tie) are from DePauw’s point of view."
 
 
 def game(date, result, d=None, w=None, **extra):
@@ -313,9 +315,34 @@ def test_the_result_letter_is_text_and_always_agrees_with_the_words_and_the_edge
     hints = home.select("details.games > p.hint")
     assert len(hints) == len(home.select("article.sport"))
     for hint in hints:
-        assert hint.get_text() == ("Newest first, by decade. Home and away, W (win), L (loss), and T (tie) are from "
-                                   "DePauw’s point of view.")
+        assert hint.get_text().startswith(HINT)
         assert hint.find("span", class_="wl").get_text() == ", W (win), L (loss), and T (tie)"
+
+
+def test_a_card_with_undated_games_says_they_are_in_no_decades_count_and_no_other_card_does(home):
+    """A decade's summary counts only the games dated in it, so on a card with undated games the hint says where
+    those are; a card with none says nothing about them."""
+    said = {}
+    for card in home.select("article.sport"):
+        hint = card.select_one("details.games > p.hint").get_text()
+        names = [d.find("summary").get_text().split(SEP)[0] for d in card.select("details.games > details")]
+        assert (render.UNDATED_GROUP in names) == (names[-1] == render.UNDATED_GROUP) == (hint != HINT), card["id"]
+        if hint != HINT:
+            said[card["id"]] = hint[len(HINT):]
+    assert said == {
+        "baseball": " Games with no recorded date are in the last group and aren’t included in any decade’s count.",
+        "mens-tennis": " Matches with no recorded date are in the last group and aren’t included in any decade’s "
+                       "count."}
+
+
+def test_the_undated_sentence_follows_the_group_and_names_what_the_sport_plays():
+    undated, dated = game("1915-01-01", "W", date_known=False), game("2026-11-14", "W")
+    hint = lambda *args: BeautifulSoup(render.games_table(*args), "html.parser").select_one("p.hint").get_text()
+    assert hint("football", [dated]) == HINT and hint("football", []) == HINT
+    assert hint("football", [undated, dated]) == f"{HINT} Games {render.UNDATED_HINT}"
+    assert hint("mens-swimming-and-diving", [undated], ("meet", "meets")) == f"{HINT} Meets {render.UNDATED_HINT}"
+    assert render.UNDATED_HINT == ("with no recorded date are in the last group and aren’t included in any "
+                                   "decade’s count.")
 
 
 def phone_block():
