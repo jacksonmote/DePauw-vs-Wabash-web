@@ -261,6 +261,8 @@ def test_new_assets_and_stylesheet_stay_within_the_approved_budgets():
     # bars with 101 width classes, jump list) to 32,768; later polish PRs state their own. The count is of the
     # file as it ships (shipped_size), not of a Windows working copy with its longer line endings.
     assert shipped_size((ROOT / "static/styles.css").read_bytes()) <= STYLESHEET_LIMIT
+    # one .sr-only rule: a second copy once sat beside the alumni styles, bytes for nothing
+    assert (ROOT / "static/styles.css").read_text(encoding="utf-8").count(".sr-only {") == 1
     # The one web font: a Latin subset of Barlow Condensed Bold, served from this site, license text beside it.
     assert (ROOT / "static/fonts/BarlowCondensed-Bold-latin.woff2").stat().st_size <= 16384
 

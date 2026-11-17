@@ -399,6 +399,20 @@ def test_on_wide_screens_every_decades_table_has_the_same_columns():
     assert "table-layout" not in phone_block()[1]
 
 
+def test_a_result_that_wraps_is_balanced_so_no_score_is_left_alone_on_a_line():
+    """A narrow Result column wraps most results, and plain wrapping fills the first line and can leave the last
+    score by itself on the second ("Wabash 5, DePauw" / "2"). `text-wrap: balance` splits the two lines evenly
+    instead; a browser without it wraps as before. The rule is for every width, so it sits at the top level
+    beside the other game-list rules, in no media block, and it names the Result cell by its position in the
+    row, like the phone layout does."""
+    child = render.GAME_COLUMNS.index("Result") + 1
+    rule = f".games td:nth-child({child}) {{ text-wrap: balance; }}"
+    assert child == 3 and CSS.count(rule) == 1 and CSS.count("text-wrap") == 1      # this cell, and only once
+    at = CSS.index(rule)
+    assert CSS[at - 1] == "\n" and CSS[:at].count("{") == CSS[:at].count("}")       # top level: in no block
+    assert CSS.index(".games table { width: 100%;") < at < CSS.index(f"@media (max-width: {PHONE_MAX})")
+
+
 def test_decade_summaries_get_the_focus_ring_and_a_separating_line():
     assert re.search(r"a:focus-visible, summary:focus-visible, button:focus-visible \{ outline: 3px solid", CSS)
     # 0.625rem above and below a line of text: 44 px tall, like the nav links
