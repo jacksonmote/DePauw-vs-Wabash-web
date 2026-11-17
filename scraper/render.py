@@ -775,39 +775,84 @@ def result_html(g: dict) -> str:
     return esc(score_text(g))      # DePauw's version, the one that counts; a dispute is spelled out in the notes
 
 
+# The every-game list on a card (games_table): one disclosure per decade, a table in each. The columns are the same
+# five at every width; on a phone the stylesheet lays each row out as two lines and places the cells by their
+# position in the row, so the order here is also the order static/styles.css counts on.
+GAME_COLUMNS = ("Date", "Site", "Result", "Notes", "Box score")
+UNDATED_GROUP = "Date not recorded"      # the last group's name: games whose date neither school recorded
+# Added to the hint above a list that has that group. A decade's summary counts only the games dated in it, so
+# "1900s · 1 game" can sit above a last group that holds ten more games of those years; this says why. It opens
+# with what the sport plays ("Games", "Matches").
+UNDATED_HINT = "with no recorded date are in the last group and aren’t included in any decade’s count."
+# The result letter that leads the result on a phone, from DePauw's side like "Home" and "Away"; the winner is
+# always named in the words after it, so the letter is never the only cue.
+RESULT_LETTERS = {"W": "win", "L": "loss", "T": "tie"}
+RESULT_CLASSES = {"W": "win-depauw", "L": "win-wabash", "T": "tied"}
+HISTORY_REWARD = "You’ve reached the bottom. Wabash jokes practically write themselves."
+
+
+def game_row(key: str, g: dict, merged: bool = False) -> str:
+    """One game as a table row: its date (the row's header), site, result, notes and box-score link. The result
+    cell opens with the result letter in an <abbr>, which the stylesheet shows only in the phone layout."""
+    box = safe_url(g.get("boxscore"))
+    box_html = f'<a href="{esc(box)}">Box score</a>' if box else ""
+    notes = [esc(fmt_note(g.get("note")))] if g.get("note") else []
+    notes += [f'<span class="game-flag">{esc(f)}</span>' for f in game_flags(key, g, merged)]
+    return ("<tr>"
+            f'<th scope="row">{date_html(g)}</th>'
+            f'<td>{esc(where_text(g))}</td>'
+            f'<td class="{RESULT_CLASSES[g["result"]]}"><abbr>{g["result"]}</abbr> {result_html(g)}</td>'
+            f'<td>{"<br>".join(notes)}</td>'
+            f'<td>{box_html}</td>'
+            "</tr>")
+
+
+def decade_label(decade: int | None) -> str:
+    """A group's name: "2020s", or UNDATED_GROUP for the games with no recorded date (decade None)."""
+    return UNDATED_GROUP if decade is None else f"{decade}s"
+
+
+def decade_summary(decade: int | None, games: list, words: tuple = ("game", "games")) -> str:
+    """What a decade's closed disclosure shows: its name, how many games and its record, leader first with ties
+    last when there are any ("2020s · 6 games · DePauw 5-1", "1950s · 10 games · Wabash 6-3-1"), all counted
+    from the group's own games. The record reads like the season-by-season list's (facts.record_words)."""
+    return facts.SEPARATOR.join([decade_label(decade), count_noun(len(games), words),
+                                 facts.record_words(facts.tally(games))])
+
+
 def games_table(key: str, games: list, words: tuple = ("game", "games"), merged: bool = False,
                 name: str | None = None) -> str:
-    """One card's every-game list. `name` is the sport's name for the table's hidden caption ("men's basketball");
-    without it the caption falls back to the key with its hyphens removed."""
+    """One card's every-game list: the games grouped by decade (facts.by_decade), newest decade first and newest
+    game first inside it, each decade a native <details> holding its own table. The newest decade is open and the
+    rest are closed; games with no recorded date are one last group, closed, and the hint above the list then
+    says they are in no decade's count (UNDATED_HINT). Nothing here needs a script. `name` is the sport's name
+    for each table's hidden caption ("men's basketball"); without it the caption falls back to the key with its
+    hyphens removed."""
     captioned = sport_label(name) if name else key.replace("-", " ")
-    rows = []
-    # games arrive oldest first (doubleheaders in playing order), so reverse for newest first
-    for g in reversed(games):
-        winner = {"W": "win-depauw", "L": "win-wabash", "T": "tied"}[g["result"]]
-        box = safe_url(g.get("boxscore"))
-        box_html = f'<a href="{esc(box)}">Box score</a>' if box else ""
-        notes = [esc(fmt_note(g.get("note")))] if g.get("note") else []
-        notes += [f'<span class="game-flag">{esc(f)}</span>' for f in game_flags(key, g, merged)]
-        rows.append(
-            "<tr>"
-            f'<th scope="row" data-label="Date">{date_html(g)}</th>'
-            f'<td data-label="Site">{esc(where_text(g))}</td>'
-            f'<td data-label="Result" class="{winner}">{result_html(g)}</td>'
-            f'<td data-label="Notes">{"<br>".join(notes)}</td>'
-            f'<td data-label="Box score">{box_html}</td>'
-            "</tr>"
-        )
+    groups = facts.by_decade(games)
+    columns = "".join(f'<th scope="col">{c}</th>' for c in GAME_COLUMNS)
+    blocks = []
+    for i, (decade, group) in enumerate(groups):
+        which = "with no recorded date" if decade is None else f"of the {decade_label(decade)}"
+        blocks.append(
+            f'<details{" open" if i == 0 and decade is not None else ""}>\n'
+            f'<summary>{esc(decade_summary(decade, group, words))}</summary>\n'
+            '<table>\n'
+            f'<caption class="sr-only">Every {esc(captioned)} {esc(words[0])} {which}, newest first</caption>\n'
+            f'<thead><tr>{columns}</tr></thead>\n'
+            '<tbody>\n' + "\n".join(game_row(key, g, merged) for g in group) + '\n</tbody>\n</table>\n'
+            # the joke waits at the very bottom: under the oldest games, inside the last group
+            + (f'<p class="history-reward">{HISTORY_REWARD}</p>\n' if i == len(groups) - 1 else '')
+            + '</details>\n')
+    letters = join_and([f"{letter} ({word})" for letter, word in RESULT_LETTERS.items()])
+    undated = f" {esc(words[1].capitalize())} {UNDATED_HINT}" if groups and groups[-1][0] is None else ""
     return (
         f'<details class="games">\n<summary>All {count_noun(len(games), words)}</summary>\n'
         f'{series_html(facts.season_series(games))}'
-        '<p class="hint">Newest first. Home and away are from DePauw’s point of view.</p>\n'
-        '<table>\n'
-        f'<caption class="sr-only">Every {esc(captioned)} {esc(words[0])}, newest first</caption>\n'
-        '<thead><tr><th scope="col">Date</th><th scope="col">Site</th><th scope="col">Result</th>'
-        '<th scope="col">Notes</th><th scope="col">Box score</th></tr></thead>\n'
-        '<tbody>\n' + "\n".join(rows) + '\n</tbody>\n</table>\n'
-        + ('<p class="history-reward">You’ve reached the bottom. Wabash jokes practically write themselves.</p>\n'
-           if games else '') + '</details>'
+        # the letters show only in the phone layout, and so does the part of the hint that explains them
+        f'<p class="hint">Newest first, by decade. Home and away<span class="wl">, {letters}</span> are from '
+        f'DePauw’s point of view.{undated}</p>\n'
+        + "".join(blocks) + '</details>'
     )
 
 

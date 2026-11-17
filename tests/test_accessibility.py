@@ -274,13 +274,16 @@ def test_links_that_repeat_on_every_card_say_which_card_they_belong_to(site):
 def test_every_table_has_a_caption_named_after_the_sport_and_scoped_headers(site):
     home = soup(site, "index.html")
     tables = [t for name, page in each_page(site) for t in page.find_all("table")]
-    assert len(tables) == len(home.select("article.sport")) + 1                   # every game list and the scoreboard
+    groups = home.select("details.games details")                                 # a table per decade of each game list
+    assert len(tables) == len(groups) + 1 and len(groups) > len(home.select("article.sport"))   # and the scoreboard
     for table in tables:
         assert table.caption is not None and table.caption.get_text(strip=True)
         assert all(th.get("scope") in ("col", "row") for th in table.find_all("th"))
     captions = [t.caption.get_text() for t in home.select("details.games table")]
-    assert "Every men’s basketball game, newest first" in captions
-    assert "Every men’s tennis match, newest first" in captions
+    assert len(set(captions)) == len(captions)                                    # no two tables share a name
+    assert "Every men’s basketball game of the 2020s, newest first" in captions
+    assert "Every men’s tennis match of the 2020s, newest first" in captions
+    assert "Every baseball game with no recorded date, newest first" in captions
     assert not any(re.search(r"\bmens\b", c) for c in captions)                   # the name, never the key
 
 
@@ -359,7 +362,14 @@ def test_the_axe_script_checks_every_tiger_fact_and_every_wcag_level_it_says_it_
             < script.index("await window.axe.run("))
     assert script.count("f.hidden = false") == 1
     assert "hiddenFacts: facts.filter((f) => f.hidden).length" in script
-    assert "if (result.hiddenFacts) {\n            problems.push(" in script.replace("\r\n", "\n")
+    assert "if (result.hiddenFacts) {\n              problems.push(" in script.replace("\r\n", "\n")
+    # three states on one load, in this order: as loaded, each game list open with its decades as shipped, all open
+    states = re.search(r"const STATES = \[([^\]]+)\]", script).group(1)
+    assert re.findall(r'"([^"]+)"', states) == ["as it loads", "game lists open", "everything open"]
+    assert "for (const state of STATES) {" in script and 'querySelectorAll("details.games")' in script
+    assert "list.open = true" in script and "if (result.stillClosed) problems.push(" in script
+    assert ('stillClosed: state === "everything open" ? document.querySelectorAll("details:not([open])").length : 0'
+            in script)
     tags = re.search(r"const TAGS = \[([^\]]+)\]", script).group(1)
     assert re.findall(r'"([^"]+)"', tags) == ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"]
 

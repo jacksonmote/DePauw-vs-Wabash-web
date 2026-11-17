@@ -5,12 +5,14 @@
 //
 // The pages are served from this process on 127.0.0.1 (so the 404 page's root-relative links work); no other
 // address is contacted. The browser is the Chrome the machine already has (`channel: "chrome"`), or the program
-// named in AXE_BROWSER. Each page is checked with its script running, every disclosure open and every tiger fact
-// shown, so nothing is skipped for being collapsed. The pages' Content-Security-Policy forbids injected scripts,
-// so this test browser alone is told to bypass it; the published pages are not changed.
+// named in AXE_BROWSER. Each page is checked with its script running, in up to three states (STATES below): as it
+// loads, with each card's game list open and its decades as the page ships them (the newest open, the rest closed),
+// and with every disclosure open and every tiger fact shown, so nothing is skipped for being collapsed and the
+// closed state is checked too. The pages' Content-Security-Policy forbids injected scripts, so this test browser
+// alone is told to bypass it; the published pages are not changed.
 //
-// Exits 1 when a rule is violated, a page overflows or a tiger fact was hidden while axe ran, 2 when the check
-// could not run.
+// Exits 1 when a rule is violated, a page overflows, a disclosure stayed closed in the last state or a tiger fact
+// was hidden while axe ran, 2 when the check could not run.
 "use strict";
 
 const fs = require("fs");
@@ -20,6 +22,9 @@ const path = require("path");
 const ROOT = path.resolve(process.argv[2] || path.join(__dirname, "..", "site"));
 const THEMES = ["light", "dark"];
 const WIDTHS = [320, 375, 1280];
+// The states a page is checked in, in this order on one load. "game lists open" only exists on a page that has a
+// list of games (the home page); the other pages skip it.
+const STATES = ["as it loads", "game lists open", "everything open"];
 // WCAG 2.0, 2.1 and 2.2 at levels A and AA, plus axe's best-practice rules.
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"];
 const TYPES = {
@@ -52,17 +57,28 @@ function serve() {
   return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(server)));
 }
 
-// Runs in the page: open everything, show every fact, run axe, measure sideways overflow. Opening the tiger's
-// disclosure makes the page's own script pick one fact and hide the rest, in a `toggle` event that fires a moment
-// later; the facts are shown only after every toggle event has fired (or a second has passed), so that script
-// cannot hide them again while axe looks. `hiddenFacts` counts any that were hidden when axe finished.
-async function check(tags) {
-  const closed = Array.from(document.querySelectorAll("details:not([open])"));
-  const toggled = closed.map((d) => new Promise((done) => d.addEventListener("toggle", done, { once: true })));
-  closed.forEach((d) => { d.open = true; });
-  await Promise.race([Promise.all(toggled), new Promise((done) => setTimeout(done, 1000))]);
-  const facts = Array.from(document.querySelectorAll(".tiger-fact"));
-  facts.forEach((f) => { f.hidden = false; });
+// Runs in the page: put it in the state asked for, run axe, measure sideways overflow. Returns null when the page
+// has no such state. "game lists open" opens only the outer list on each card, so the decades inside are checked as
+// a visitor first sees them. "everything open" opens every disclosure, the decades included, and shows every fact.
+// Opening the tiger's disclosure makes the page's own script pick one fact and hide the rest, in a `toggle` event
+// that fires a moment later; the facts are shown only after every toggle event has fired (or a second has passed),
+// so that script cannot hide them again while axe looks. `hiddenFacts` counts any that were hidden when axe
+// finished, and `stillClosed` any disclosure that was not open then.
+async function check([tags, state]) {
+  let facts = [];
+  if (state === "game lists open") {
+    const lists = Array.from(document.querySelectorAll("details.games"));
+    if (!lists.length) return null;
+    lists.forEach((list) => { list.open = true; });
+  }
+  if (state === "everything open") {
+    const closed = Array.from(document.querySelectorAll("details:not([open])"));
+    const toggled = closed.map((d) => new Promise((done) => d.addEventListener("toggle", done, { once: true })));
+    closed.forEach((d) => { d.open = true; });
+    await Promise.race([Promise.all(toggled), new Promise((done) => setTimeout(done, 1000))]);
+    facts = Array.from(document.querySelectorAll(".tiger-fact"));
+    facts.forEach((f) => { f.hidden = false; });
+  }
   const result = await window.axe.run(document, { runOnly: { type: "tag", values: tags } });
   const root = document.documentElement;
   return {
@@ -72,6 +88,7 @@ async function check(tags) {
     incomplete: result.incomplete.reduce((n, v) => n + v.nodes.length, 0),
     overflow: root.scrollWidth > root.clientWidth ? root.scrollWidth - root.clientWidth : 0,
     hiddenFacts: facts.filter((f) => f.hidden).length,
+    stillClosed: state === "everything open" ? document.querySelectorAll("details:not([open])").length : 0,
   };
 }
 
@@ -103,18 +120,22 @@ async function main() {
         for (const url of pages) {
           await page.goto(base + url, { waitUntil: "load" });
           await page.addScriptTag({ content: axeSource });
-          const result = await page.evaluate(check, TAGS);
-          runs += 1;
-          incomplete += result.incomplete;
-          for (const v of result.violations) {
-            nodes += v.nodes;
-            problems.push(`${url} (${theme}, ${width}px): ${v.id} [${v.impact}] on ${v.nodes} element(s), ` +
-                          `first ${v.first}: ${v.help}`);
-          }
-          if (result.overflow) problems.push(`${url} (${theme}, ${width}px): scrolls sideways by ${result.overflow}px`);
-          if (result.hiddenFacts) {
-            problems.push(`${url} (${theme}, ${width}px): ${result.hiddenFacts} tiger fact(s) were hidden while ` +
-                          "axe ran, so they were not checked");
+          for (const state of STATES) {
+            const result = await page.evaluate(check, [TAGS, state]);
+            if (!result) continue;
+            const where = `${url} (${theme}, ${width}px, ${state})`;
+            runs += 1;
+            incomplete += result.incomplete;
+            for (const v of result.violations) {
+              nodes += v.nodes;
+              problems.push(`${where}: ${v.id} [${v.impact}] on ${v.nodes} element(s), first ${v.first}: ${v.help}`);
+            }
+            if (result.overflow) problems.push(`${where}: scrolls sideways by ${result.overflow}px`);
+            if (result.stillClosed) problems.push(`${where}: ${result.stillClosed} disclosure(s) stayed closed`);
+            if (result.hiddenFacts) {
+              problems.push(`${where}: ${result.hiddenFacts} tiger fact(s) were hidden while axe ran, so they ` +
+                            "were not checked");
+            }
           }
         }
         await context.close();
@@ -126,7 +147,8 @@ async function main() {
   }
   const summary = [
     `axe-core ${axeVersion} in ${browser.version()}: ${pages.length} pages, ${THEMES.length} themes, ` +
-    `${WIDTHS.length} widths (${WIDTHS.join(", ")} px) = ${runs} runs.`,
+    `${WIDTHS.length} widths (${WIDTHS.join(", ")} px), up to ${STATES.length} states (${STATES.join("; ")}) = ` +
+    `${runs} runs.`,
     `Problems: ${problems.length} (${nodes} element(s) in rule violations). ` +
     `Needs a person to judge ("incomplete"): ${incomplete} element(s).`,
     ...problems.map((p) => "- " + p),

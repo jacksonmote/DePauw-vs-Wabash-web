@@ -123,14 +123,20 @@ def test_each_nonempty_history_gets_one_reward_and_empty_history_gets_none():
     histories = home.select("details.games")
     assert len(histories) == sum(bool(sport["games"]) for sport in data["sports"].values())
     for details in histories:
-        table = details.find("table")
-        result = table.find_next_sibling("p", class_="history-reward")
-        assert result and result.get_text(" ", strip=True) == reward
+        rewards = details.select("p.history-reward")
+        assert len(rewards) == 1 and rewards[0].get_text(" ", strip=True) == reward
+        # it waits at the very bottom: after the table of the last group (the oldest games), inside that group
+        last_group = details.find_all("details")[-1]
+        assert rewards[0].parent is last_group
+        assert rewards[0].find_previous_sibling("table") is last_group.find("table")
+        assert rewards[0].find_next_sibling() is None
         sport_key = details.find_parent("article", class_="sport")["id"]
-        expected_dates = [BeautifulSoup(render.date_html(g), "html.parser").get_text(" ", strip=True)
-                          for g in reversed(data["sports"][sport_key]["games"])]
-        actual_dates = [row.find("th", attrs={"data-label": "Date"}).get_text(" ", strip=True)
-                        for row in table.select("tbody tr")]
+        games = data["sports"][sport_key]["games"]
+        # every game is in the list exactly once: the dated ones newest first, then the ones with no recorded date
+        ordered = [g for g in reversed(games) if render.date_known(g)] + \
+                  [g for g in reversed(games) if not render.date_known(g)]
+        expected_dates = [BeautifulSoup(render.date_html(g), "html.parser").get_text(" ", strip=True) for g in ordered]
+        actual_dates = [row.find("th", scope="row").get_text(" ", strip=True) for row in details.select("tbody tr")]
         assert actual_dates == expected_dates
     assert "history-reward" not in render.games_table("football", [])
     assert len(home.select("details.tiger-note")) == 1
@@ -147,14 +153,23 @@ def test_history_reward_keeps_ties_undated_games_and_swimming_rows_intact():
     soup = BeautifulSoup(output, "html.parser")
     rows = soup.select("tbody tr")
     assert len(rows) == 3
+
+    def result_of(row):
+        """(letter, words) of a row's result cell: the phone layout's letter, then the result as every width shows it."""
+        cell = row.find_all("td")[render.GAME_COLUMNS.index("Result") - 1]
+        letter = cell.find("abbr").extract().get_text()
+        return letter, cell.get_text(" ", strip=True)
+
+    # newest first by decade (the swimming meet, then the 1954 tie), and the game with no date in the last group
     assert [r.find("th").get_text(" ", strip=True) for r in rows] == [
-        BeautifulSoup(render.date_html(g), "html.parser").get_text(" ", strip=True) for g in reversed(examples)]
-    assert rows[0].find(attrs={"data-label": "Result"}).get_text(" ", strip=True) == render.result_html(swim)
-    tie_row = next(row for row in rows if row.find(attrs={"data-label": "Result"}).get_text(" ", strip=True)
-                   == render.result_html(tie))
-    assert tie_row.find(attrs={"data-label": "Result"}) is not None
+        BeautifulSoup(render.date_html(g), "html.parser").get_text(" ", strip=True) for g in (swim, tie, undated)]
+    assert result_of(rows[0]) == (swim["result"], render.result_html(swim))
+    assert result_of(rows[1]) == ("T", render.result_html(tie))
     assert "date not recorded" in " ".join(cell.get_text(" ", strip=True) for cell in rows[-1].find_all(["th", "td"]))
-    assert soup.find("table").find_next_sibling("p", class_="history-reward") is not None
+    groups = soup.select("details.games details")
+    assert [g.find("summary").get_text().split(" ")[0] for g in groups][-1] == render.UNDATED_GROUP
+    assert groups[-1].find("table").find_next_sibling("p", class_="history-reward") is not None
+    assert len(soup.select("p.history-reward")) == 1
 
 
 def test_the_removed_side_taking_jokes_are_on_no_page(site):
@@ -227,16 +242,42 @@ def test_shared_footer_comment_is_exactly_once_and_no_impartiality_note_on_all_n
         assert "Only one supplied the developers." not in (site / export).read_text(encoding="utf-8")
 
 
+STYLESHEET_LIMIT = 32768
+
+
+def shipped_size(data: bytes) -> int:
+    """A text file's size as it ships. The repository and the deployed site hold LF line endings; a Windows working
+    copy may hold CRLF (git's autocrlf), one byte more per line that no visitor ever downloads. So each CRLF is
+    counted as the single byte it is on the site, and the budget reads the same on every machine."""
+    return len(data.replace(b"\r\n", b"\n"))
+
+
 def test_new_assets_and_stylesheet_stay_within_the_approved_budgets():
     assert len((ROOT / "static/easter-eggs.js").read_bytes()) <= 4096
     assert sum((ROOT / f"static/{asset}").stat().st_size for asset in
                ("easter-bell.svg", "easter-paw.svg", "easter-tiger.svg")) <= 12288
     # Baseline stylesheet on c9fcced: 13,666 bytes; feature allowance: 6,144 bytes. The front-end polish (design
     # tokens, compact header, quiet footer) raised the allowance to 24,576 bytes; the home top (scoreboard, record
-    # bars with 101 width classes, jump list) to 32,768; later polish PRs state their own.
-    assert (ROOT / "static/styles.css").stat().st_size <= 32768
+    # bars with 101 width classes, jump list) to 32,768; later polish PRs state their own. The count is of the
+    # file as it ships (shipped_size), not of a Windows working copy with its longer line endings.
+    assert shipped_size((ROOT / "static/styles.css").read_bytes()) <= STYLESHEET_LIMIT
+    # one .sr-only rule: a second copy once sat beside the alumni styles, bytes for nothing
+    assert (ROOT / "static/styles.css").read_text(encoding="utf-8").count(".sr-only {") == 1
     # The one web font: a Latin subset of Barlow Condensed Bold, served from this site, license text beside it.
     assert (ROOT / "static/fonts/BarlowCondensed-Bold-latin.woff2").stat().st_size <= 16384
+
+
+def test_the_stylesheet_budget_counts_what_ships_whatever_the_working_copys_line_endings():
+    lf = b".a { margin: 0; }\n.b { padding: 0; }\n"
+    crlf = lf.replace(b"\n", b"\r\n")
+    assert len(crlf) == len(lf) + 2 and shipped_size(crlf) == shipped_size(lf) == len(lf)
+    assert shipped_size(b"a\rb") == 3 and shipped_size(b"a\n\rb") == 4 and shipped_size(b"") == 0   # only a CRLF pair
+    # at the limit itself: a file of exactly the allowed size passes with either line ending, one byte more does not
+    full = (b"x" * 63 + b"\n") * (STYLESHEET_LIMIT // 64)
+    assert shipped_size(full) == shipped_size(full.replace(b"\n", b"\r\n")) == STYLESHEET_LIMIT
+    assert shipped_size(full + b"x") > STYLESHEET_LIMIT
+    css = (ROOT / "static/styles.css").read_bytes()
+    assert shipped_size(css) == len(css) - css.count(b"\r\n") <= STYLESHEET_LIMIT
 
 
 def test_original_art_is_safe_well_formed_svg():

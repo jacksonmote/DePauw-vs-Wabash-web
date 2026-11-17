@@ -161,7 +161,7 @@ def test_the_tennis_card_says_matches_where_other_cards_say_games(tmp_path):
     t = text_of(card(html, "mens-tennis"))
     assert "Matches played 3" in t and "All 3 matches" in t
     assert re.search(r"\bgames?\b", t, re.I) is None
-    assert "Every men’s tennis match, newest first" in card(html, "mens-tennis")   # the name, not the key
+    assert "Every men’s tennis match of the 2020s, newest first" in card(html, "mens-tennis")   # the name, not the key
     f = text_of(card(html, "football"))
     assert "Games played 5" in f and "All 5 games" in f and "match" not in f.lower()
 
