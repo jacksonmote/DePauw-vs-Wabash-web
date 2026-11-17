@@ -333,6 +333,37 @@ def test_years_without_a_bell_game_are_empty_and_say_why(page):
     assert (grid[2026]["class"], shown(grid[2026]), said(grid[2026])) == (["bt-next"], "…", "2026: not yet played")
 
 
+def test_a_year_without_a_game_says_so_and_says_who_kept_the_bell_because_it_counts_for_that_school(page):
+    """2020 is an empty box, yet it is one of the seasons DePauw ended with the Bell: the cell's hidden text has to
+    say both things, and the count above the grid has to include it."""
+    seasons = facts.bell_seasons(frozen_football(), 2026)
+    gaps = [s for s in seasons if s["status"] == facts.NO_GAME]
+    assert [(s["year"], s["holder"]) for s in gaps] == [(2020, D)]
+    cell = cells(page)[2020]
+    assert said(cell) == "2020: no game; DePauw kept the Bell"
+    assert "no game" in said(cell) and "DePauw kept the Bell" in said(cell)
+    assert shown(cell) == "" and not cell.get("class") and cell.find("span", class_="bt-l") is None   # still empty
+    played = sum(1 for s in seasons if s["status"] == facts.PLAYED and s["holder"] == D)
+    counted = facts.bell_summary(seasons)["seasons"][D]
+    assert counted == played + len(gaps) == 46                                       # the year is in DePauw's count
+    row = page.find("dt", string="Seasons ended with the Bell").find_next_sibling("dd").get_text()
+    assert f"DePauw {counted}" in row
+
+
+@pytest.mark.parametrize("games, year, words", [
+    ([g(1933, "W"), g(1935, "L")], 1934, "1934: no game; DePauw kept the Bell"),
+    ([g(1933, "L"), g(1936, "L")], 1935, "1935: no game; Wabash kept the Bell"),
+    ([g(1932, "T", 0, 0), g(1934, "W")], 1933, "1933: no game"),                     # nobody had won it yet
+])
+def test_any_year_without_a_game_names_the_school_that_kept_the_bell(games, year, words):
+    seasons = {s["year"]: s for s in facts.bell_seasons(games)}
+    assert seasons[year]["status"] == facts.NO_GAME
+    assert belltimeline.season_text(seasons[year]) == words
+    held = facts.bell_summary(list(seasons.values()))["seasons"]
+    assert sum(held.values()) == len(seasons)                                        # every season is counted once
+    assert held[seasons[year]["holder"]] >= 1
+
+
 def test_every_dated_heist_story_has_a_link_in_its_year_to_its_card(site, page):
     history = soup((site / "heist-details" / "index.html").read_text(encoding="utf-8"))
     anchors = {el["id"] for el in history.find_all(id=True)}
@@ -365,10 +396,12 @@ def test_the_legend_explains_every_mark_in_words(page):
 def test_the_notes_say_what_the_grid_cannot_and_name_their_source(page):
     notes = [li.get_text() for li in page.select("ul.bt-notes li")]
     assert len(notes) == 3
-    assert notes[0].startswith("1932: the first Bell game ended in a 0–0 tie. Neither team had won the Bell")
+    assert notes[0] == ("1932: the first Bell game ended in a 0–0 tie. Neither team had won the Bell, so it was kept "
+                        "out of sight for the year, and that season counts for neither school.")
     assert f"before overtime came to college football in {render.OVERTIME_START}" in notes[1]
     assert "after the 1935 tie, the first with a holder, so the grid leaves the Bell with Wabash." in notes[1]
-    assert notes[2] == "2020: no game was played, so DePauw kept the Bell."
+    assert notes[2] == ("2020: no game was played, so DePauw kept the Bell and the season counts as one DePauw "
+                        "ended with it.")
     source = page.select_one("p.bt-source a")
     facts_file = json.loads((ROOT / "data" / "fun-facts.json").read_text(encoding="utf-8"))
     tie_rule = next(f for f in facts_file["facts"] if f["id"] == "both-tie-rule")
@@ -386,6 +419,38 @@ def test_the_summary_is_counted_from_the_seasons(page):
         "3 seasons (twice, most recently 1987–1989)")
     assert belltimeline.run_text({"seasons": 1, "first": 1938, "last": 1938, "times": 1}) == "1 season · 1938"
     assert belltimeline.run_text(None) == "None yet"
+
+
+# ---- the same rules on the how-it-works page ------------------------------------------------------------------
+
+def test_the_how_it_works_page_tells_the_bell_rules_from_the_same_notes(site, page):
+    how = soup((site / "how-it-works" / "athletics" / "index.html").read_text(encoding="utf-8"))
+    heading = how.find("h3", string=belltimeline.RULES_HEADING)
+    assert heading.get_text() == "Monon Bell rules"
+    following = [h.get_text() for h in heading.find_all_next("h3")]
+    assert following[0] == "The Monon Bell heist history"                            # right before the heist history
+    intro, rules, cited = heading.find_next_sibling("p"), heading.find_next_sibling("ul"), None
+    cited = rules.find_next_sibling("p")
+    assert (intro.a["href"], intro.a.get_text()) == ("../../monon-bell/", "The Monon Bell, year by year")
+    assert "since the 1932 season" in intro.get_text()
+    items = [li.get_text() for li in rules.find_all("li")]
+    assert [li.strong.get_text() for li in rules.find_all("li")] == ["After a game:", "1932:", "Ties:", "2020:"]
+    assert items[0] == "After a game: the winner takes the Bell and holds it until the other school wins."
+    assert items[1].endswith("so it was kept out of sight for the year, and that season counts for neither school.")
+    assert f"before overtime came to college football in {render.OVERTIME_START}" in items[2]
+    assert items[2].endswith("after the 1935 tie, the first with a holder, so the site leaves the Bell with Wabash.")
+    assert items[3] == ("2020: no game was played, so DePauw kept the Bell and the season counts as one DePauw "
+                        "ended with it.")
+    under_grid = [li.get_text() for li in page.select("ul.bt-notes li")]             # the page's own notes
+    assert items[1:] == [note.replace("so the grid leaves", "so the site leaves") for note in under_grid]
+    source = page.select_one("p.bt-source a")
+    assert (cited.a["href"], cited.a.get_text()) == (source["href"], source.get_text())   # the one source, cited the same
+
+
+def test_the_rules_section_is_left_out_when_no_bell_game_is_on_record():
+    assert belltimeline.rules_lines([], render.OVERTIME_START, "../../monon-bell/") == []
+    only_wins = belltimeline.rules_lines(facts.bell_seasons([g(1932, "W"), g(1933, "L")]), 1996, "x/")
+    assert sum(line.startswith("<li>") for line in only_wins) == 1                   # no tie, no gap: only the rule
 
 
 # ---- the page itself --------------------------------------------------------------------------------------------

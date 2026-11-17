@@ -10,6 +10,7 @@ from the hand-curated data/bell-heists.json, each linking to its story's card on
   grid_html                  the table: a row per decade, a column per final digit of the year
   legend_html, notes_html    what the marks mean; the three things the grid cannot say by itself (the first game's
                              tie, the tie rules, a year without a game), with their source
+  rules_lines                the same notes as the "Monon Bell rules" section of /how-it-works/athletics/
   summary_rows               the figures above the grid, from facts.bell and facts.bell_summary
   description                the page's meta description, from the same figures
   render_main                the page's <main> content (render.py supplies the head, the header and the footer)
@@ -139,39 +140,70 @@ def legend_html(seasons: list, heists_data: dict | None) -> str:
     return '<ul class="bt-legend">\n' + "\n".join(items) + '\n</ul>'
 
 
-def notes(seasons: list, overtime_start: int) -> list:
-    """The sentences under the grid, each worked out from the seasons: the first game when it was a tie nobody
-    could keep the Bell after, the tie rule (with the early rule the source also gives, and the first tie it could
-    have applied to), and every year without a game."""
+def notes(seasons: list, overtime_start: int, where: str = "the grid") -> list:
+    """[(label, sentence)] for what the grid cannot say by itself, each worked out from the seasons: the first
+    game when it was a tie nobody could keep the Bell after, the tie rule (with the early rule the source also
+    gives, and the first tie it could have applied to), and every year without a game. `where` names what follows
+    the rule: "the grid" under the grid, "the site" on the how-it-works page."""
     out = []
     opener = seasons[0]
     if opener["result"] == "T" and opener["holder"] is None:
         score = score_words(opener["game"]).replace(" to ", "–")
-        out.append(f"{opener['year']}: the first Bell game ended in a {score + ' ' if score else ''}tie. Neither "
-                   "team had won the Bell, so it was kept out of sight for the year.")
+        out.append((str(opener["year"]),
+                    f"the first Bell game ended in a {score + ' ' if score else ''}tie. Neither team had won the "
+                    "Bell, so it was kept out of sight for the year, and that season counts for neither school."))
     ties = [s for s in seasons if s["result"] == "T"]
     if ties:
-        text = (f"Ties: before overtime came to college football in {overtime_start}, a tied game left the Bell "
+        text = (f"before overtime came to college football in {overtime_start}, a tied game left the Bell "
                 "with the school that already had it.")
         kept = [s for s in ties if s["holder"]]
         if kept:
             text += (" Early rules had the schools share it for six months each after a tie. No source we have "
                      f"read says whether that was done after the {kept[0]['year']} tie, the first with a holder, "
-                     f"so the grid leaves the Bell with {kept[0]['holder']}.")
-        out.append(text)
+                     f"so {where} leaves the Bell with {kept[0]['holder']}.")
+        out.append(("Ties", text))
     for s in seasons:
         if s["status"] == facts.NO_GAME:
-            out.append(f"{s['year']}: no game was played" + (f", so {s['holder']} kept the Bell." if s["holder"] else "."))
+            out.append((str(s["year"]), "no game was played" + (
+                f", so {s['holder']} kept the Bell and the season counts as one {s['holder']} ended with it."
+                if s["holder"] else ".")))
     return out
+
+
+def _source_link() -> str:
+    return f'<a href="{_esc(SOURCE["url"])}">{_esc(SOURCE["label"])}</a>'
 
 
 def notes_html(seasons: list, overtime_start: int) -> str:
     found = notes(seasons, overtime_start)
     if not found:
         return ""
-    return ('<ul class="bt-notes">\n' + "\n".join(f"<li>{_esc(n)}</li>" for n in found) + '\n</ul>\n'
-            f'<p class="bt-source">Source for the first season and the tie rules: '
-            f'<a href="{_esc(SOURCE["url"])}">{_esc(SOURCE["label"])}</a>.</p>')
+    return ('<ul class="bt-notes">\n' + "\n".join(f"<li>{_esc(label)}: {_esc(text)}</li>" for label, text in found)
+            + '\n</ul>\n'
+            f'<p class="bt-source">Source for the first season and the tie rules: {_source_link()}.</p>')
+
+
+RULES_HEADING = "Monon Bell rules"
+
+
+def rules_lines(seasons: list, overtime_start: int, page_href: str) -> list:
+    """The "Monon Bell rules" section of the athletics how-it-works page, as lines of HTML: the rule after a game,
+    then the same notes the grid carries (worded for the whole site), their source and a link to this page at
+    `page_href`. Nothing when no Bell game is on record."""
+    if not seasons:
+        return []
+    items = [("After a game", "the winner takes the Bell and holds it until the other school wins.")]
+    items += notes(seasons, overtime_start, where="the site")
+    return [
+        f'<h3>{_esc(RULES_HEADING)}</h3>',
+        f'<p>The football game has been played for the Monon Bell since the {seasons[0]["year"]} season. The home '
+        f'page’s Bell record and holder and <a href="{_esc(page_href)}">{_esc(TITLE)}</a>, which shows who had the '
+        'Bell after every season, are worked out from one set of rules:</p>',
+        '<ul>',
+        *[f'<li><strong>{_esc(label)}:</strong> {_esc(text)}</li>' for label, text in items],
+        '</ul>',
+        f'<p>The first season’s story and the tie rules are from {_source_link()}.</p>',
+    ]
 
 
 def _times(n: int) -> str:

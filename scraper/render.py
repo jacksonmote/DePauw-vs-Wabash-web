@@ -1450,7 +1450,11 @@ def render_how_athletics(data: dict, rules: dict, kept: int, checked: str | None
     return how_page(
         howitworks.TITLE, description, prefix="../../", path=HOW_ATHLETICS_PATH, current="athletics",
         preview=athletics_preview(data, now, upcoming), back=("../../", BACK_ATHLETICS),
-        body=howitworks.content(data, rules, kept, sources_html=sources, not_included=NOT_INCLUDED, repo_url=REPO_URL),
+        body=howitworks.content(data, rules, kept, sources_html=sources, not_included=NOT_INCLUDED, repo_url=REPO_URL,
+                                bell_rules=belltimeline.rules_lines(
+                                    facts.bell_seasons(data["sports"].get("football", {}).get("games", []),
+                                                       to_eastern(now)[0].year),
+                                    OVERTIME_START, f"../../{belltimeline.PATH}")),
         footer=site_footer(now, prefix="../../", data=data, checked=checked, upcoming=upcoming))
 
 

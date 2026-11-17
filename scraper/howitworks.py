@@ -1,7 +1,9 @@
 """
 The "How the numbers work" pages, written for fans. Three pages share render.py's how_page() shell:
   /how-it-works/            landing_content():       one line and a link for each of the two pages below
-  /how-it-works/athletics/  content():               the same facts as the README's merge section
+  /how-it-works/athletics/  content():               the same facts as the README's merge section, plus the
+                                                     "Monon Bell rules" section render.py passes in
+                                                     (belltimeline.rules_lines)
   /how-it-works/alumni/     alumni_content():        who counts, sourcing, the endowment basis, enrollment,
                                                      rounding, the "about even" rule, the size and history note.
                                                      "Who counts" repeats privacy.PUBLIC_INFO (the privacy page's
@@ -116,9 +118,12 @@ def frequent_minutes() -> int:
     return int(watcher.CADENCE.total_seconds() // 60)
 
 
-def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_included: str, repo_url: str) -> list:
+def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_included: str, repo_url: str,
+            bell_rules: list | None = None) -> list:
     """The page's <main> section as lines of HTML. `rules` is merge.load_overrides, `kept` the number of
-    keep_previous rulings, `sources_html` the same per-sport source links the footer shows."""
+    keep_previous rulings, `sources_html` the same per-sport source links the footer shows, and `bell_rules` the
+    "Monon Bell rules" section (belltimeline.rules_lines: the notes of the year-by-year page, worked out from
+    the same seasons), placed before the heist history."""
     sports = data["sports"]
     t = data["totals"]
     n = totals(sports)
@@ -203,6 +208,8 @@ def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_includ
         'the site keeps showing the old version until a person reviews the change'
         + (f' ({kept:,} rejected so far)' if kept else '')
         + '. Results from the current season update as soon as the school’s page does.</p>',
+
+        *(bell_rules or []),
 
         '<h3>The Monon Bell heist history</h3>',
         '<p>The <a href="../../heist-details/">heist history page</a> is not part of the scraped records. Its '

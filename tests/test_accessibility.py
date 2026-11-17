@@ -486,6 +486,24 @@ def test_the_last_updated_date_comes_from_the_constant_not_the_clock(tmp_path):
     assert accessibility.REVIEWED <= accessibility.UPDATED          # the page cannot predate the review it describes
 
 
+# The pages the review of accessibility.REVIEWED covered. "We reviewed every page" is true only while every page
+# of the site is either one of these or listed in accessibility.ADDED_PAGES with the day it was checked.
+REVIEWED_PAGES = {
+    "index.html", "alumni/index.html", "how-it-works/index.html", "how-it-works/athletics/index.html",
+    "how-it-works/alumni/index.html", "404.html", "bell-heist/index.html", "heist-details/index.html",
+    "privacy/index.html", "accessibility/index.html",
+}
+
+
+def test_every_page_was_in_the_review_or_is_named_as_added_since(site):
+    added = {path + "index.html": day for path, _, day in accessibility.ADDED_PAGES}
+    built = {p.relative_to(site).as_posix() for p in site.rglob("*.html")}
+    assert built == REVIEWED_PAGES | set(added) and not REVIEWED_PAGES & set(added)   # a new page fails until listed
+    assert added == {"monon-bell/index.html": "2026-11-17"}
+    for day in added.values():
+        assert accessibility.REVIEWED < day <= accessibility.UPDATED                  # the page's date covers it
+
+
 def test_the_page_is_in_the_sitemap_right_after_the_privacy_page(site):
     locs = re.findall(r"<loc>([^<]+)</loc>", (site / "sitemap.xml").read_text(encoding="utf-8"))
     assert locs[-2:] == ["https://depauwvswabash.com/privacy/", "https://depauwvswabash.com/accessibility/"]
@@ -553,6 +571,13 @@ def test_the_numbers_on_the_page_are_the_ones_the_checks_use(site):
     assert widths == [*accessibility.PHONE_WIDTHS, accessibility.DESKTOP_WIDTH]
     assert re.search(r'const THEMES = \["light", "dark"\]', script)
     assert f"On {privacy.updated_text(accessibility.REVIEWED)} we reviewed every page" in text
+    for path, name, day in accessibility.ADDED_PAGES:               # a page added since: named, with its own day
+        link = soup(site, TARGET).find("a", string=name)
+        assert link["href"] == "../" + path
+        assert link.find_parent("p").get_text() == (
+            f"On {privacy.updated_text(day)} we added a page, {name}, and checked it with the same tools: "
+            f"axe-core, the contrast of its colors, a keyboard alone, zoom to {accessibility.ZOOM_PERCENT}%, "
+            "and wider text spacing.")
     assert soup(site, TARGET).find("a", string="axe-core")["href"] == accessibility.AXE_URL
 
 
