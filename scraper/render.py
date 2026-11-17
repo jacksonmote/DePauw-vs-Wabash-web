@@ -358,13 +358,35 @@ def score_text(g: dict) -> str:
         return f"DePauw {d}, Wabash {w}"
     if g["result"] == "L":
         return f"Wabash {w}, DePauw {d}"
-    return f"Tie {d}–{w}"
+    return facts.TIE_FORMAT.format(depauw=d, wabash=w)
+
+
+NO_SITE = "Site not recorded"
+CSV_NO_SITE = "not recorded"        # the same thing in the `location` column of games.csv
+
+
+def no_site(g: dict) -> bool:
+    """A game only Wabash lists, marked neutral with no site: Wabash's page listing no place (merge.no_place)."""
+    return g.get("source") == "wabash" and merge.no_place(g)
 
 
 def where_text(g: dict) -> str:
+    """'Home · Greencastle, Ind.' and so on. A game with no recorded place (no_site) reads 'Site not recorded',
+    never 'Neutral'."""
+    if no_site(g):
+        return NO_SITE
     label = {"home": "Home", "away": "Away", "neutral": "Neutral"}.get(g["location"], "Site unknown")
     site = places.ap_place(g.get("site")) or {"home": HOME_SITE, "away": AWAY_SITE}.get(g["location"])
     return f"{label} · {site}" if site else label
+
+
+PLACE_WORDS = {"home": "at DePauw", "away": "at Wabash", "neutral": "at a neutral site"}
+
+
+def place_words(place: dict) -> str:
+    """A school's place for a game, in a note: 'at Wabash (Crawfordsville, Ind.)', 'at a neutral site'."""
+    site = places.ap_place(place.get("site"))
+    return PLACE_WORDS[place["location"]] + (f" ({site})" if site else "")
 
 
 WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -700,9 +722,13 @@ def fun_facts(key: str, s: dict) -> list:
     close = facts.one_score_games(key, games)
     if close:
         limit = facts.ONE_SCORE[key]
-        by = f"by {unit(limit, label)}" + (" or fewer" if limit > 1 else "")
-        out.append((f"{facts.CLOSE_WORD.get(key, 'One-score')} {game_words(s)[1]}",
-                    f"{len(close):,} decided {by} · most recent: {game_line(facts.most_recent(close))}"))
+        margin = unit(limit, label) + (" or fewer" if limit > 1 else "")
+        name = f"{facts.CLOSE_WORD.get(key, 'One-score')} {game_words(s)[1]}"
+        recent = f"most recent: {game_line(facts.most_recent(close))}"
+        if key in facts.MARGIN_IN_LABEL:        # "Close games (8 points or fewer): 59 · most recent: ..."
+            out.append((f"{name} ({margin})", f"{len(close):,} · {recent}"))
+        else:
+            out.append((name, f"{len(close):,} decided by {margin} · {recent}"))
     # nine matches are always played, so a tennis total never varies
     tops = facts.highest_scoring_games(games) if label != "individual matches" else []
     if tops:
@@ -794,6 +820,11 @@ def game_flags(key: str, g: dict, merged: bool) -> list:
         flags.append(f"Wabash’s record lists this game on {fmt_date(g['wabash_date'])}")
     if g.get("date_differs") and g.get("depauw_date"):
         flags.append(f"DePauw’s record lists this game on {fmt_date(g['depauw_date'])}")
+    if g.get("place_differs") and g.get("wabash_place"):
+        theirs = g["wabash_place"]
+        if places.ap_place(theirs.get("site")) == places.ap_place(g.get("site")):
+            theirs = {**theirs, "site": None}       # the same town on both rows: only home or away differs
+        flags.append(f"Wabash’s record lists this game {place_words(theirs)}")
     v = g.get("wabash_version")
     if g.get("disputed") and v:
         flags.append(f"DePauw’s record (DePauw-Wabash): {fmt_num(g['depauw'])}-{fmt_num(g['wabash'])} · "
@@ -948,7 +979,7 @@ def provenance_text(s: dict) -> str:
         return ""
     words = game_words(s)
     if not (c["depauw_only"] or c["wabash_only"] or c["disputed"] or c["date_differs"] or c.get("session_rows")
-            or c.get("rows_set_aside")):
+            or c.get("rows_set_aside") or c.get("place_differs")):
         return "DePauw and Wabash records agree."
     parts = [f"{count_noun(c['both'], words)} listed by both", f"{c['wabash_only']:,} by Wabash only",
              f"{c['depauw_only']:,} by DePauw only", f"{c['disputed']:,} disputed"]
@@ -957,6 +988,9 @@ def provenance_text(s: dict) -> str:
         n = c["date_differs"]
         text += (f" {n:,} of the shared {words[1]} have different dates in the two records." if n != 1 else
                  f" 1 of the shared {words[1]} has a different date in the two records.")
+    if n := c.get("place_differs"):
+        text += (f" {n:,} of the shared {words[1]} are listed at different places in the two records." if n != 1 else
+                 f" 1 of the shared {words[1]} is listed at a different place in the two records.")
     if rows := c.get("session_rows"):       # running scores a ruling set aside (see session_of in overrides.json)
         text += (f" {plural(rows, 'row')} listed as separate {words[1]} {'is' if rows == 1 else 'are'} the running "
                  f"score of a multi-day {words[0]} already counted once, so {'it is' if rows == 1 else 'they are'} "
@@ -1675,7 +1709,8 @@ def render_sitemap(data: dict, checked: str | None = None, alumni_verified: str 
 
 CSV_COLUMNS = ["sport", "date", "season", "location", "site", "depauw_score", "wabash_score",
                "result", "note", "boxscore_url", "source", "date_recorded", "disputed", "date_differs",
-               "wabash_record_date", "depauw_record_score", "wabash_record_score", "ruling_notes"]
+               "wabash_record_date", "depauw_record_score", "wabash_record_score", "ruling_notes",
+               "place_differs", "wabash_record_location", "wabash_record_site"]
 RESULT_WORDS = {"W": "DePauw win", "L": "Wabash win", "T": "Tie"}
 
 
@@ -1695,7 +1730,9 @@ def fmt_csv_num(x) -> str:
 
 
 def render_csv(data: dict) -> str:
-    """One row per game, oldest first within each sport, in the order the sports appear on the page."""
+    """One row per game, oldest first within each sport, in the order the sports appear on the page. The location
+    says what the page says: a game the page shows as 'Site not recorded' is `not recorded` here, never `neutral`
+    (series.json, the merged data as it is, keeps Wabash's `neutral`)."""
     buf = io.StringIO()
     writer = csv.writer(buf, lineterminator="\n")
     writer.writerow(CSV_COLUMNS)
@@ -1703,7 +1740,7 @@ def render_csv(data: dict) -> str:
         for g in s["games"]:
             v = g.get("wabash_version")
             writer.writerow([csv_text(s["name"]), g["date"] if date_known(g) else "", csv_text(g.get("season")),
-                             csv_text(g["location"]), csv_text(g.get("site")),
+                             csv_text(CSV_NO_SITE if no_site(g) else g["location"]), csv_text(g.get("site")),
                              fmt_csv_num(g["depauw"]) if facts.has_score(g) else "",
                              fmt_csv_num(g["wabash"]) if facts.has_score(g) else "",
                              RESULT_WORDS[g["result"]], csv_text(fmt_note(g.get("note"))),
@@ -1712,7 +1749,10 @@ def render_csv(data: dict) -> str:
                              "yes" if g.get("date_differs") else "no", csv_text(g.get("wabash_date")),
                              f"{fmt_csv_num(g['depauw'])}-{fmt_csv_num(g['wabash'])}" if g.get("disputed") and v else "",
                              f"{fmt_csv_num(v['depauw'])}-{fmt_csv_num(v['wabash'])}" if g.get("disputed") and v else "",
-                             csv_text(" ".join(ruled_flags(g)))])
+                             csv_text(" ".join(ruled_flags(g))),
+                             "yes" if g.get("place_differs") else "no",
+                             csv_text((g.get("wabash_place") or {}).get("location")),
+                             csv_text((g.get("wabash_place") or {}).get("site"))])
     return buf.getvalue()
 
 

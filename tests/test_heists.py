@@ -140,7 +140,7 @@ def test_incidents_run_oldest_to_newest_with_date_unknown_last():
 
 def test_the_game_result_comes_from_the_series_data_and_is_skipped_without_a_game():
     assert heists.game_line(heists.bell_game(GAMES, 1965)) == "That year’s Bell game: Wabash 16, DePauw 6"
-    assert heists.game_line(heists.bell_game(GAMES, 2012)) == "That year’s Bell game: DePauw 7, Wabash 7 (tie)"
+    assert heists.game_line(heists.bell_game(GAMES, 2012)) == "That year’s Bell game: Tie 7–7"
     assert heists.bell_game(GAMES, 1941) is None                       # before the Bell game
     assert heists.bell_game(GAMES, 1999) is None
     assert heists.bell_game([game("1965-01-01", "L", 6, 16, date_known=False)], 1965) is None
