@@ -267,7 +267,6 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 /* Curated alumni and endowment page */
 .alumni-main { max-width: 62rem; }
 .alumni-lede { margin: 0 0 1rem; }
-.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 /* Scoreboard: one row per category, the larger count in its school's accent */
 .scoreboard { width: 100%; border-collapse: collapse; margin-bottom: 0.75rem; }
 .scoreboard caption { text-align: left; color: var(--color-text-muted); font-size: 0.875rem; padding-bottom: 0.5rem; }

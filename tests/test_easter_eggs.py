@@ -242,16 +242,40 @@ def test_shared_footer_comment_is_exactly_once_and_no_impartiality_note_on_all_n
         assert "Only one supplied the developers." not in (site / export).read_text(encoding="utf-8")
 
 
+STYLESHEET_LIMIT = 32768
+
+
+def shipped_size(data: bytes) -> int:
+    """A text file's size as it ships. The repository and the deployed site hold LF line endings; a Windows working
+    copy may hold CRLF (git's autocrlf), one byte more per line that no visitor ever downloads. So each CRLF is
+    counted as the single byte it is on the site, and the budget reads the same on every machine."""
+    return len(data.replace(b"\r\n", b"\n"))
+
+
 def test_new_assets_and_stylesheet_stay_within_the_approved_budgets():
     assert len((ROOT / "static/easter-eggs.js").read_bytes()) <= 4096
     assert sum((ROOT / f"static/{asset}").stat().st_size for asset in
                ("easter-bell.svg", "easter-paw.svg", "easter-tiger.svg")) <= 12288
     # Baseline stylesheet on c9fcced: 13,666 bytes; feature allowance: 6,144 bytes. The front-end polish (design
     # tokens, compact header, quiet footer) raised the allowance to 24,576 bytes; the home top (scoreboard, record
-    # bars with 101 width classes, jump list) to 32,768; later polish PRs state their own.
-    assert (ROOT / "static/styles.css").stat().st_size <= 32768
+    # bars with 101 width classes, jump list) to 32,768; later polish PRs state their own. The count is of the
+    # file as it ships (shipped_size), not of a Windows working copy with its longer line endings.
+    assert shipped_size((ROOT / "static/styles.css").read_bytes()) <= STYLESHEET_LIMIT
     # The one web font: a Latin subset of Barlow Condensed Bold, served from this site, license text beside it.
     assert (ROOT / "static/fonts/BarlowCondensed-Bold-latin.woff2").stat().st_size <= 16384
+
+
+def test_the_stylesheet_budget_counts_what_ships_whatever_the_working_copys_line_endings():
+    lf = b".a { margin: 0; }\n.b { padding: 0; }\n"
+    crlf = lf.replace(b"\n", b"\r\n")
+    assert len(crlf) == len(lf) + 2 and shipped_size(crlf) == shipped_size(lf) == len(lf)
+    assert shipped_size(b"a\rb") == 3 and shipped_size(b"a\n\rb") == 4 and shipped_size(b"") == 0   # only a CRLF pair
+    # at the limit itself: a file of exactly the allowed size passes with either line ending, one byte more does not
+    full = (b"x" * 63 + b"\n") * (STYLESHEET_LIMIT // 64)
+    assert shipped_size(full) == shipped_size(full.replace(b"\n", b"\r\n")) == STYLESHEET_LIMIT
+    assert shipped_size(full + b"x") > STYLESHEET_LIMIT
+    css = (ROOT / "static/styles.css").read_bytes()
+    assert shipped_size(css) == len(css) - css.count(b"\r\n") <= STYLESHEET_LIMIT
 
 
 def test_original_art_is_safe_well_formed_svg():
