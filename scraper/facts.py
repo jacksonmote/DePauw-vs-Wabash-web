@@ -19,42 +19,105 @@ SEPARATOR = "\u00a0· "
 BELL_START = 1932
 
 
+BELL_WINNERS = {"W": "DePauw", "L": "Wabash"}      # a game's result, from DePauw's side, to the school that won it
+# What a season is, in bell_seasons: its game was played, no game was played that year, or it is the season of
+# `this_year` and its game has no result yet.
+PLAYED, NO_GAME, NOT_YET = "played", "no game", "not yet played"
+
+
+def bell_seasons(games: list, this_year: int | None = None) -> list:
+    """The Monon Bell, season by season: the one place that works out who holds it. Everything the site says about
+    the Bell (the home page's strip and the football card's block through `bell`, the year-by-year page through
+    this list and `bell_summary`) is read from here, so the pages cannot disagree.
+
+    One entry per season from BELL_START through the year of the newest Bell game, or through `this_year` (the
+    Eastern year of the build) when that is later, oldest first:
+
+      year      the season (a football season is one calendar year)
+      status    PLAYED; NO_GAME for a past year without a game (the Bell stays where it was); NOT_YET for
+                `this_year` while it has no result
+      games     that year's games, oldest first (one, or none); `game` is the last of them and `result` its
+                result ("W" a DePauw win, "L" a Wabash win, "T" a tie), both None without a game
+      holder    "DePauw", "Wabash" or None: who had the Bell once the season was over. The winner takes it, a tie
+                leaves it where it was, and nobody has it until a game has been won (the first Bell game was a tie)
+      changed   True when the Bell went from one school to the other that season (the first win of all is not a
+                change of hands: nobody held the Bell before it)
+      since     the year the holder's unbroken hold began (the win that took the Bell), None with no holder
+      held      the games of that hold so far, from that win on: the holder's wins, and the ties that left it there
+
+    A game with no usable date would be placed by its placeholder year; no Bell game has one."""
+    by_year: dict = {}
+    for g in sorted((g for g in games if int(g["date"][:4]) >= BELL_START), key=lambda g: g["date"]):
+        by_year.setdefault(int(g["date"][:4]), []).append(g)
+    if not by_year:
+        return []
+    out, holder, since, held = [], None, None, []
+    for year in range(BELL_START, max(max(by_year), this_year or 0) + 1):
+        before, played = holder, by_year.get(year, [])
+        for g in played:
+            winner = BELL_WINNERS.get(g["result"])
+            if winner and winner != holder:
+                holder, since, held = winner, year, []
+            if holder:
+                held = held + [g]
+        out.append({"year": year, "games": played, "game": played[-1] if played else None,
+                    "result": played[-1]["result"] if played else None,
+                    "status": PLAYED if played else NOT_YET if year == this_year else NO_GAME,
+                    "holder": holder, "changed": before is not None and holder != before,
+                    "since": since, "held": held})
+    return out
+
+
 def bell(games: list) -> dict | None:
-    """The Monon Bell standings from the games played for it.
+    """The Monon Bell standings from the games played for it, read from `bell_seasons`.
 
     The holder is whoever won the most recent Bell game that was not a tie: a tie leaves the Bell where
     it is. "since" is the year of the holder's first win in the unbroken run of wins and ties that
     ends today, and "held_games" counts the games in that run, split into "held_wins" and "held_ties".
-    Returns None when there are no Bell games, or when none was ever decided.
+    Returns None when there are no Bell games; the holder is None when none was ever decided.
     """
-    played = sorted((g for g in games if int(g["date"][:4]) >= BELL_START), key=lambda g: g["date"])
-    if not played:
+    seasons = bell_seasons(games)
+    if not seasons:
         return None
-    out = {
+    played = [g for s in seasons for g in s["games"]]
+    last = seasons[-1]
+    ties = sum(1 for g in last["held"] if g["result"] == "T")
+    return {
         "depauw": sum(1 for g in played if g["result"] == "W"),
         "wabash": sum(1 for g in played if g["result"] == "L"),
         "ties": sum(1 for g in played if g["result"] == "T"),
         "games": len(played),
-        "holder": None, "since": None, "held_games": 0, "held_wins": 0, "held_ties": 0,
+        "holder": last["holder"], "since": last["since"], "held_games": len(last["held"]),
+        "held_wins": len(last["held"]) - ties, "held_ties": ties,
     }
-    decided = [g for g in played if g["result"] != "T"]
-    if not decided:
-        return out
-    holder_result = decided[-1]["result"]               # "W": DePauw holds it, "L": Wabash does
-    run_start = None
-    for i in range(len(played) - 1, -1, -1):
-        r = played[i]["result"]
-        if r == "T":
-            continue
-        if r != holder_result:
-            break
-        run_start = i
-    out["holder"] = "DePauw" if holder_result == "W" else "Wabash"
-    out["since"] = int(played[run_start]["date"][:4])
-    out["held_games"] = len(played) - run_start
-    out["held_ties"] = sum(1 for g in played[run_start:] if g["result"] == "T")
-    out["held_wins"] = out["held_games"] - out["held_ties"]
-    return out
+
+
+def bell_summary(seasons: list) -> dict:
+    """The year-by-year page's figures, counted from `bell_seasons`. A season that has not been played yet
+    (NOT_YET) is left out of all of them: nobody has ended it with the Bell.
+
+      seasons   {"DePauw": n, "Wabash": n, None: n}: the seasons each school ended holding the Bell, a year
+                without a game included (the holder kept it), and the seasons nobody held it
+      longest   {"DePauw": run, "Wabash": run}: each school's longest unbroken hold as {"seasons", "first",
+                "last", "times"} (how many holds reached that length; the years are the most recent one's), or
+                None for a school that never held it
+      changes   how many times the Bell went from one school to the other"""
+    done = [s for s in seasons if s["status"] != NOT_YET]
+    runs = []
+    for s in done:
+        if runs and runs[-1][0] == s["holder"]:
+            runs[-1][1].append(s["year"])
+        else:
+            runs.append((s["holder"], [s["year"]]))
+    longest = {}
+    for school in BELL_WINNERS.values():
+        own = [years for holder, years in runs if holder == school]
+        best = max((len(years) for years in own), default=0)
+        top = [years for years in own if len(years) == best]
+        longest[school] = ({"seasons": best, "first": top[-1][0], "last": top[-1][-1], "times": len(top)}
+                           if best else None)
+    return {"seasons": {who: sum(1 for s in done if s["holder"] == who) for who in (*BELL_WINNERS.values(), None)},
+            "longest": longest, "changes": sum(1 for s in done if s["changed"])}
 
 
 # --------------------------------------------------------------------------- #

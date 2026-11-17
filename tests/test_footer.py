@@ -46,6 +46,7 @@ PAGES = {
     "404.html": ("/", "how-it-works/", "neutral"),
     "bell-heist/index.html": ("../", "how-it-works/", "neutral"),
     "heist-details/index.html": ("../", "how-it-works/athletics/", "heists"),
+    "monon-bell/index.html": ("../", "how-it-works/athletics/", "athletics"),
     "privacy/index.html": ("../", "how-it-works/", "neutral"),
     "accessibility/index.html": ("../", "how-it-works/", "neutral"),
 }

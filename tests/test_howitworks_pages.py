@@ -254,7 +254,10 @@ def test_every_back_link_on_the_site_has_the_arrow_and_one_of_the_two_wordings(s
                 assert label.startswith("← Back to the ")
                 seen += 1
         assert not re.search(r">\s*Back to the ", text), page      # no back link without the arrow, wherever it sits
-    assert seen == 13         # includes both standard links on the unindexed Bell-heist page, one on the heist history, two each on the privacy and accessibility pages
+    # includes both standard links on the unindexed Bell-heist page, one on the heist history, two each on the
+    # privacy and accessibility pages, and the one at the top of the Monon Bell year-by-year page (the link at
+    # its foot has the same words but sits in the page's closing line, not in a back paragraph)
+    assert seen == 14
 
 
 def test_each_how_page_heading_matches_its_title_and_the_landing_link(site):

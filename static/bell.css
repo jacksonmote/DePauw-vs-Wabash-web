@@ -1,0 +1,39 @@
+/* The Monon Bell, year by year (/monon-bell/): the only page that loads this file. Every color is a token from
+   styles.css. A cell's tint is its school's accent mixed into the card's surface at the share below (a browser
+   without color-mix shows no tint: the letter and the edge still tell); tests/test_accessibility.py reads that
+   share and checks the letters, the marks and the focus ring on the tint. */
+.bell-page { display: block; max-width: 46rem; }   /* block flow, as on the heist history: no grid gap between paragraphs */
+.bell-page h2 { margin: 0.75rem 0 0.5rem; font-size: 1.75rem; }
+.bell-page p { margin: 0 0 0.75rem; }
+.bt-card { margin: 0 0 var(--space-4); padding: var(--space-4) var(--space-2); background: var(--color-surface); border: var(--border); border-radius: var(--radius); }
+.bt-card .facts { margin-top: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.bt-card .bell-now { margin-top: var(--space-2); }
+
+/* The grid: a row per decade, a column per year. Fixed layout, so all ten year columns are the same width. */
+.bt-grid { width: 100%; max-width: 38rem; margin-top: var(--space-2); border-collapse: separate; border-spacing: 2px; table-layout: fixed; }
+.bt-grid th { padding: 0; color: var(--color-text-muted); font-size: var(--text-xs); font-weight: 600; }
+.bt-grid thead th:first-child { width: 2.25rem; }
+.bt-grid tbody th { text-align: left; }
+.bt-grid td { height: 2.75rem; padding: 0.125rem 0 0; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--color-border); text-align: center; vertical-align: top; }
+.bt-l, .bt-key { font: 700 1.125rem/1.4 var(--font-display); }
+.bt-d, .bt-w, .bt-t { border-bottom: 4px solid var(--color-tie-accent); }
+.bt-d { color: var(--color-depauw-text); border-bottom-color: var(--color-depauw-accent); background: color-mix(in srgb, var(--color-depauw-accent) 10%, var(--color-surface)); }
+.bt-w { color: var(--color-wabash-text); border-bottom-color: var(--color-wabash-accent); background: color-mix(in srgb, var(--color-wabash-accent) 10%, var(--color-surface)); }
+.bt-next { color: var(--color-text-muted); }
+/* A heist story's dot: a link as wide as its cell and 24px tall, so it can be tapped */
+.bt-heist { display: block; min-height: 1.5rem; color: var(--color-text); line-height: 1.5rem; }
+.bt-dot { display: inline-block; border: 0.1875rem solid; border-radius: 50%; vertical-align: middle; }   /* drawn, so forced colors keep it */
+.bt-heist:hover .bt-dot { border-width: 0.25rem; }
+
+.bt-legend { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; gap: var(--space-1); font-size: var(--text-sm); }
+.bt-legend li { display: flex; align-items: center; gap: var(--space-2); }
+.bt-key { flex: none; width: 1.75rem; min-height: 1.75rem; border-radius: 4px; text-align: center; }
+.bt-empty { box-shadow: inset 0 0 0 1px var(--color-border); }
+.bt-notes { margin: var(--space-3) 0 0; padding-left: 1.25rem; color: var(--color-text-muted); font-size: var(--text-sm); }
+.bt-notes li { margin-block: var(--space-1); }
+.bell-page .bt-source { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+.bt-more a { padding-block: 0.75rem; }   /* padding on an inline link grows the tap area, not the line */
+@media (min-width: 40rem) { .bt-card { padding-inline: var(--gutter); } }
+/* Under 360px the grid takes the card's side padding too, so two heist dots in neighboring years are at least
+   24px apart, center to center */
+@media (max-width: 22.4375rem) { .bt-grid { width: calc(100% + 2 * var(--space-2)); margin-inline: calc(-1 * var(--space-2)); } }

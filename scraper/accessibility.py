@@ -7,7 +7,8 @@ The page describes what the site actually does, and tests/test_accessibility.py 
 every color pair, the page structure, text alternatives and link names. It says "aims to meet", never "conforms"
 or "certified": nobody outside the project has audited the site. A fix, a new limitation or a new round of
 testing means changing this text and UPDATED in the same pull request (REVIEWED too, when the pages are reviewed
-again).
+again). A page added after the last full review goes into ADDED_PAGES with the day it was checked, and the page
+says so, so "we reviewed every page" stays true; tests/test_accessibility.py fails for a page in neither list.
 
 UPDATED is a constant, not the build date: it moves only when the page's text changes (set it to the day the
 change merges). The sitemap's lastmod for the page comes from it. ACCESSIBILITY_EMAIL is the accessibility
@@ -21,10 +22,14 @@ from __future__ import annotations
 
 import html
 
+import belltimeline
 import privacy
 
-UPDATED = "2026-11-16"           # the day the page's text last changed
+UPDATED = "2026-11-17"           # the day the page's text last changed
 REVIEWED = "2026-11-15"          # the day of the last full review of every page
+# Pages added since that review: (path from the site root, the page's name, the day it was checked). Each was
+# checked the day it was added with the tools the sentence below names; the next full review empties this list.
+ADDED_PAGES = ((belltimeline.PATH, belltimeline.TITLE, "2026-11-17"),)
 PATH = "accessibility/"          # relative to the site root
 SOURCE_PATH = "scraper/accessibility.py"              # this file, in the repository
 ACCESSIBILITY_EMAIL = "accessibility@motetechnologygroup.com"   # the accessibility contact: this page only
@@ -86,6 +91,10 @@ def content(*, repo_url: str, suggestion_url: str) -> list:
         'charts, and link names.</li>',
         '</ul>',
         '<p>We fixed what we found, apart from the items under “Known limitations” below.</p>',
+        *[f'<p>On <time datetime="{esc(day)}">{esc(privacy.updated_text(day))}</time> we added a page, '
+          f'{_a("../" + path, name)}, and checked it with the same tools: axe-core, the contrast of its colors, '
+          f'a keyboard alone, zoom to {ZOOM_PERCENT}%, and wider text spacing.</p>'
+          for path, name, day in ADDED_PAGES],
         '<p>Some checks now run on every change to the site. A test works out the contrast of every color pair in '
         f'both modes, and nothing is published if one falls below the {wcag} level {WCAG_LEVEL} minimums '
         f'({TEXT_MIN}:1 for text, {NON_TEXT_MIN}:1 for bars, edges, and focus rings). Other tests check page '

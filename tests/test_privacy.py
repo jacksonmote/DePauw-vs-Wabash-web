@@ -115,7 +115,7 @@ def test_the_policy_makes_the_promises_the_other_tests_check(site):
 
 def test_every_footer_has_a_privacy_link_that_resolves_to_the_page_and_the_page_does_not_link_to_itself(site):
     target = site / "privacy" / "index.html"
-    assert target.exists() and len(pages(site)) == 10
+    assert target.exists() and len(pages(site)) == 11
     for page in pages(site):
         footer = soup(page).find("footer", class_="site-footer")
         links = [a for a in footer.find_all("a") if a.get_text() == "Privacy"]
