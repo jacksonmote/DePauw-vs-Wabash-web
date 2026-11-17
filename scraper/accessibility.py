@@ -23,7 +23,7 @@ import html
 
 import privacy
 
-UPDATED = "2026-11-15"           # the day the page's text last changed
+UPDATED = "2026-11-16"           # the day the page's text last changed
 REVIEWED = "2026-11-15"          # the day of the last full review of every page
 PATH = "accessibility/"          # relative to the site root
 SOURCE_PATH = "scraper/accessibility.py"              # this file, in the repository
@@ -102,8 +102,8 @@ def content(*, repo_url: str, suggestion_url: str) -> list:
         'it.</li>',
         '<li><strong>Screen readers.</strong> Each page has one main heading, headings in order, and header, '
         'navigation, main, and footer landmarks. Tables have captions and labelled rows and columns. Each chart '
-        'has a text description, and the full list of games is in a table on the same card. Decorative images are '
-        'hidden from assistive technology.</li>',
+        'has a text description, and the full list of games is on the same card, in one table per decade that you can '
+        'open and close. Decorative images are hidden from assistive technology.</li>',
         '<li><strong>Reduced motion.</strong> The site has almost no motion. If your device asks for reduced '
         'motion, the little there is gets switched off.</li>',
         '<li><strong>Light and dark mode.</strong> The site follows your device’s setting, and both modes are '
@@ -124,9 +124,11 @@ def content(*, repo_url: str, suggestion_url: str) -> list:
         f'<li><strong>The scoreboard with wider text spacing.</strong> On a screen {narrow} pixels wide, if you '
         'apply your own wider letter and word spacing, the large numbers on the home page’s scoreboard crowd '
         'together and a sliver of space at the edge is cut off. Every digit stays readable.</li>',
-        '<li><strong>Game lists on phones.</strong> On narrow screens each game is shown as a labelled block '
-        'instead of a table row. Each value keeps its label, but some screen readers may not announce the list as '
-        'a table.</li>',
+        '<li><strong>Game lists on phones.</strong> On narrow screens each game is shown as two short lines '
+        'instead of a table row, and the column names are hidden from view. Underneath it is still a table with '
+        'those column names, and the Chromium browser describes it as one, but we haven’t confirmed that every '
+        'screen reader announces it as a table at that size. Each result starts with W, L, or T (a DePauw win, '
+        'loss, or tie) and names the winner in words.</li>',
         '<li><strong>Charts.</strong> Each every-game chart is summed up in a text description, not read out bar '
         'by bar. The full results are in the list of all games on the same card.</li>',
         '</ul>',

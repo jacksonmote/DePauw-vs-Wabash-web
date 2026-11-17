@@ -202,14 +202,33 @@ def season_series(games: list) -> list:
         s = g.get("season") or g["date"][:4]
         rec = per_season.setdefault(s, {"W": 0, "L": 0, "T": 0})
         rec[g["result"]] += 1
-    rows = []
-    for season, r in per_season.items():
-        tail = f"-{r['T']}" if r["T"] else ""
-        if r["W"] > r["L"]:
-            text = f"DePauw {r['W']}-{r['L']}{tail}"
-        elif r["L"] > r["W"]:
-            text = f"Wabash {r['L']}-{r['W']}{tail}"
-        else:
-            text = f"Split {r['W']}-{r['L']}{tail}"
-        rows.append((season, text))
-    return list(reversed(rows))
+    return list(reversed([(season, record_words(r)) for season, r in per_season.items()]))
+
+
+def record_words(r: dict) -> str:
+    """A short record with its leader first, ties last when there are any: 'DePauw 4-1', 'Wabash 6-3-1',
+    'Split 2-2'. `r` counts results from DePauw's side: {"W": DePauw wins, "L": Wabash wins, "T": ties}."""
+    tail = f"-{r['T']}" if r["T"] else ""
+    if r["W"] > r["L"]:
+        return f"DePauw {r['W']}-{r['L']}{tail}"
+    if r["L"] > r["W"]:
+        return f"Wabash {r['L']}-{r['W']}{tail}"
+    return f"Split {r['W']}-{r['L']}{tail}"
+
+
+def tally(games: list) -> dict:
+    """{"W": DePauw wins, "L": Wabash wins, "T": ties} for any list of games."""
+    return {result: sum(1 for g in games if g["result"] == result) for result in "WLT"}
+
+
+def by_decade(games: list) -> list:
+    """The game list in groups for display: [(decade, games)], newest decade first and each group's games newest
+    first (a doubleheader's later game before its earlier one). `decade` is the first year of the decade the game
+    was played in (2020 for Jan 1, 2020 to Dec 31, 2029), taken from the game's date, never its season, so a
+    January game of the 1929-30 season is in the 1930s. Games with no recorded date carry a placeholder date that
+    must not be read, so they form one last group whose decade is None. A decade with no games has no group."""
+    groups: dict = {}
+    for g in reversed(chronological(games)):
+        groups.setdefault(int(g["date"][:3]) * 10 if is_dated(g) else None, []).append(g)
+    dated = sorted((d for d in groups if d is not None), reverse=True)
+    return [(d, groups[d]) for d in dated] + ([(None, groups[None])] if None in groups else [])

@@ -115,7 +115,8 @@ jobs:
         run: python -m pytest -q tests --fake-now="${{ matrix.now }}"
 
   # Accessibility: axe-core (WCAG 2.2 A and AA rules plus best practices) on every rendered page, in light and dark
-  # at 320, 375 and 1280 px, with every disclosure open, plus a check that no page scrolls sideways (axe/run.js).
+  # at 320, 375 and 1280 px, as each page loads and with every disclosure open (the home page also with its game
+  # lists open and their decades as shipped), plus a check that no page scrolls sideways (axe/run.js).
   # Separate from the `checks` job on purpose, and not a required status check for now: a headless browser on the
   # runner is a new moving part, so a failure here shows red on the pull request without blocking the merge. The
   # contrast and structure rules that need no browser are ordinary tests (tests/test_accessibility.py), and those

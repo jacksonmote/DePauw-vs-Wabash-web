@@ -123,14 +123,20 @@ def test_each_nonempty_history_gets_one_reward_and_empty_history_gets_none():
     histories = home.select("details.games")
     assert len(histories) == sum(bool(sport["games"]) for sport in data["sports"].values())
     for details in histories:
-        table = details.find("table")
-        result = table.find_next_sibling("p", class_="history-reward")
-        assert result and result.get_text(" ", strip=True) == reward
+        rewards = details.select("p.history-reward")
+        assert len(rewards) == 1 and rewards[0].get_text(" ", strip=True) == reward
+        # it waits at the very bottom: after the table of the last group (the oldest games), inside that group
+        last_group = details.find_all("details")[-1]
+        assert rewards[0].parent is last_group
+        assert rewards[0].find_previous_sibling("table") is last_group.find("table")
+        assert rewards[0].find_next_sibling() is None
         sport_key = details.find_parent("article", class_="sport")["id"]
-        expected_dates = [BeautifulSoup(render.date_html(g), "html.parser").get_text(" ", strip=True)
-                          for g in reversed(data["sports"][sport_key]["games"])]
-        actual_dates = [row.find("th", attrs={"data-label": "Date"}).get_text(" ", strip=True)
-                        for row in table.select("tbody tr")]
+        games = data["sports"][sport_key]["games"]
+        # every game is in the list exactly once: the dated ones newest first, then the ones with no recorded date
+        ordered = [g for g in reversed(games) if render.date_known(g)] + \
+                  [g for g in reversed(games) if not render.date_known(g)]
+        expected_dates = [BeautifulSoup(render.date_html(g), "html.parser").get_text(" ", strip=True) for g in ordered]
+        actual_dates = [row.find("th", scope="row").get_text(" ", strip=True) for row in details.select("tbody tr")]
         assert actual_dates == expected_dates
     assert "history-reward" not in render.games_table("football", [])
     assert len(home.select("details.tiger-note")) == 1
@@ -147,14 +153,23 @@ def test_history_reward_keeps_ties_undated_games_and_swimming_rows_intact():
     soup = BeautifulSoup(output, "html.parser")
     rows = soup.select("tbody tr")
     assert len(rows) == 3
+
+    def result_of(row):
+        """(letter, words) of a row's result cell: the phone layout's letter, then the result as every width shows it."""
+        cell = row.find_all("td")[render.GAME_COLUMNS.index("Result") - 1]
+        letter = cell.find("abbr").extract().get_text()
+        return letter, cell.get_text(" ", strip=True)
+
+    # newest first by decade (the swimming meet, then the 1954 tie), and the game with no date in the last group
     assert [r.find("th").get_text(" ", strip=True) for r in rows] == [
-        BeautifulSoup(render.date_html(g), "html.parser").get_text(" ", strip=True) for g in reversed(examples)]
-    assert rows[0].find(attrs={"data-label": "Result"}).get_text(" ", strip=True) == render.result_html(swim)
-    tie_row = next(row for row in rows if row.find(attrs={"data-label": "Result"}).get_text(" ", strip=True)
-                   == render.result_html(tie))
-    assert tie_row.find(attrs={"data-label": "Result"}) is not None
+        BeautifulSoup(render.date_html(g), "html.parser").get_text(" ", strip=True) for g in (swim, tie, undated)]
+    assert result_of(rows[0]) == (swim["result"], render.result_html(swim))
+    assert result_of(rows[1]) == ("T", render.result_html(tie))
     assert "date not recorded" in " ".join(cell.get_text(" ", strip=True) for cell in rows[-1].find_all(["th", "td"]))
-    assert soup.find("table").find_next_sibling("p", class_="history-reward") is not None
+    groups = soup.select("details.games details")
+    assert [g.find("summary").get_text().split(" ")[0] for g in groups][-1] == render.UNDATED_GROUP
+    assert groups[-1].find("table").find_next_sibling("p", class_="history-reward") is not None
+    assert len(soup.select("p.history-reward")) == 1
 
 
 def test_the_removed_side_taking_jokes_are_on_no_page(site):

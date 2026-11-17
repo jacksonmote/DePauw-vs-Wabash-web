@@ -113,7 +113,11 @@ def test_every_game_is_listed_newest_first_with_ties_ots_and_boxscores(tmp_path)
     assert page.count('<tr><th scope="row"') == 5
     assert page.index("2004-11-13") < page.index("2003-11-08") < page.index("1999-11-06")
     assert page.count(">Box score</a>") == 1
-    assert '<details class="games">' in page and "<details open" not in page
+    # the whole list stays closed until asked for; inside it only the newest decade is open
+    assert page.count('<details class="games">') == 1 and page.count("<details open>") == 1
+    games = page[page.index('<details class="games">'):]
+    assert (games.index("<details open>") < games.index("2004-11-13") < games.index("<details>")
+            < games.index("1999-11-06"))
 
 
 @pytest.mark.parametrize("code,words", [
@@ -338,7 +342,7 @@ def test_missing_site_is_filled_from_home_or_away_but_not_neutral(tmp_path):
     t = text_of(page)
     assert "Home · Greencastle, Ind." in t and "Away · Crawfordsville, Ind." in t
     assert "Home · Westfield, Ind." in t  # a site the source gives is never replaced (only its state is restyled)
-    neutral_cell = re.search(r'<td data-label="Site">(Neutral[^<]*)</td>', page).group(1)
+    neutral_cell = re.search(r'<td>(Neutral[^<]*)</td>', page).group(1)
     assert neutral_cell == "Neutral"
     # the data file itself is untouched
     assert s["games"][0]["site"] is None
@@ -349,7 +353,8 @@ def test_overtime_notes_are_tidied(tmp_path):
         game("1990-01-01", "W", 70, 68, note="(1ot)"), game("1991-01-01", "L", 60, 62, note="2OT"),
         game("1992-01-01", "W", 5, 4, note="(7 inn.)")])
     _, page = build(tmp_path, {"mens-basketball": s})
-    cells = re.findall(r'<td data-label="Notes">([^<]*)</td>', page)
+    rows = BeautifulSoup(page, "html.parser").select("details.games tbody tr")
+    cells = [row.find_all("td")[render.GAME_COLUMNS.index("Notes") - 1].get_text() for row in rows]
     assert sorted(cells) == ["1 OT", "2 OT", "7 inn."]
 
 

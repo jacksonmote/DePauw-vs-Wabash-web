@@ -198,9 +198,11 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .provenance { margin: 1rem 0 0; color: var(--color-text-muted); font-size: 0.9375rem; }
 .date-note, .game-flag { color: var(--color-text-muted); font-size: 0.875rem; font-weight: 400; }
 
-/* Game list */
+/* Game list: a disclosure per decade, a table in each */
 .games { margin-top: 1.25rem; border-top: 1px solid var(--color-border); padding-top: 0.75rem; }
 .games summary { cursor: pointer; font-weight: 600; padding: 0.5rem 0; }
+.games details { border-top: var(--border); }
+.games abbr, .wl { display: none; }   /* the result letter and its hint: the phone layout only */
 .hint { color: var(--color-text-muted); font-size: 0.875rem; margin: 0.25rem 0 0.75rem; }
 .games table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
 .games th, .games td { text-align: left; padding: 0.5rem 0.625rem; vertical-align: top; overflow-wrap: anywhere; }
@@ -211,17 +213,21 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .win-wabash { border-left: 4px solid var(--color-wabash-accent); }
 .tied { border-left: 4px solid var(--color-tie-accent); }
 
-/* Phones: each game becomes a stacked block */
+/* Phones: each game is two lines, the date and the result, then the site and the box score (notes go under them).
+   The cells are placed by their position in the row (GAME_COLUMNS in render.py). The column names and the
+   "date not recorded" note are clipped, not removed, so a screen reader still has them. */
 @media (max-width: 42rem) {
-  .games thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  .games table, .games tbody, .games tr, .games th, .games td { display: block; }
-  .games tbody tr { border: 1px solid var(--color-border); border-radius: var(--radius); margin-bottom: 0.625rem; padding: 0.25rem 0; }
-  .games tbody th, .games td { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 0.5rem; padding: 0.25rem 0.75rem; }
-  .games td::before, .games tbody th::before {
-    content: attr(data-label); color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 400;
-  }
-  .games td:empty { display: none; }
-  .games td.win-depauw, .games td.win-wabash, .games td.tied { border-left: 0; font-weight: 600; }
+  .games thead, .games .date-note { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .games table, .games tbody { display: block; }
+  .games tbody tr { display: grid; grid-template-columns: minmax(5.75rem, max-content) minmax(0, 1fr) auto; column-gap: 0.5rem; padding: 0.375rem; }
+  .games tbody th, .games td { padding: 0; }
+  .games td:nth-child(2) { grid-area: 2 / 1 / auto / 3; }
+  .games td:nth-child(3) { grid-area: 1 / 2 / auto / -1; padding-left: 0.375rem; font-weight: 600; }
+  .games td:nth-child(4) { grid-area: 3 / 1 / auto / -1; }
+  .games td:nth-child(5) { grid-area: 2 / 3; }
+  .games td:nth-child(2n) { color: var(--color-text-muted); font-size: 0.875rem; }
+  .games td a { padding-block: 0.25rem; }
+  .games abbr, .wl { display: inline; }
 }
 
 @media (min-width: 40rem) {
@@ -234,6 +240,13 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 
 @media (min-width: 64rem) {
   .facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* the same columns in every decade's table: date, site (the rest), result, notes, box score */
+  .games table { table-layout: fixed; }
+  .games tbody th { white-space: normal; }
+  .games thead th:first-child { width: 8rem; }
+  .games thead th:nth-child(3) { width: 25%; }
+  .games thead th:nth-child(4) { width: 24%; }
+  .games thead th:last-child { width: 6rem; }
 }
 
 /* Footer */
