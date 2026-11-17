@@ -23,8 +23,8 @@ SCRIPT_PAGES = {"index.html": "easter-eggs.js", "alumni/index.html": "../easter-
 PAGES = (
     "index.html", "alumni/index.html", "how-it-works/index.html",
     "how-it-works/athletics/index.html", "how-it-works/alumni/index.html",
-    "404.html", "bell-heist/index.html", "heist-details/index.html", "privacy/index.html",
-    "accessibility/index.html",
+    "404.html", "bell-heist/index.html", "heist-details/index.html", "monon-bell/index.html",
+    "privacy/index.html", "accessibility/index.html",
 )
 
 
@@ -43,7 +43,7 @@ def csp(source):
     return html.unescape(re.search(r'http-equiv="Content-Security-Policy" content="([^"]+)"', source).group(1))
 
 
-def test_ten_page_inventory_and_script_csp_are_exact(site):
+def test_the_page_inventory_and_script_csp_are_exact(site):
     assert {p.relative_to(site).as_posix() for p in site.rglob("*.html")} == set(PAGES)
     for name in PAGES:
         source = page(site, name)

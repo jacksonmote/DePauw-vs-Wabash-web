@@ -10,10 +10,13 @@ data/overrides.json, for the counts on the how-it-works page), and writes a fini
   how-it-works/index.html         landing page; how-it-works/athletics/ and how-it-works/alumni/ (howitworks.py)
   bell-heist/index.html           public, unindexed fictional story, with two sections from the real heist stories (heists.py)
   heist-details/index.html        the sourced Monon Bell heist history (heists.py)
+  monon-bell/index.html           the Monon Bell holder after every season since 1932 (belltimeline.py; the one
+                                  page that loads bell.css)
   privacy/index.html              the privacy policy (privacy.py; no script, base CSP)
   accessibility/index.html        the accessibility page (accessibility.py; no script, base CSP)
   404.html                       root-relative URLs, noindex
-  styles.css, the icons, easter-eggs.js (home and alumni only), three original easter-egg SVGs,
+  styles.css, bell.css (the year-by-year page only), the icons, easter-eggs.js (home and alumni only), three
+  original easter-egg SVGs,
   fonts/ (the Barlow Condensed woff2 subset and OFL.txt),
   og-image.png and alumni-og-image.png (drawn by images.py), site.webmanifest,
   games.csv, data/series.json, data/alumni.json, data/endowment.json, data/bell-heists.json, robots.txt, sitemap.xml, .nojekyll, .well-known/security.txt
@@ -46,6 +49,7 @@ from urllib.parse import quote, urlparse
 
 import accessibility
 import bars
+import belltimeline
 import chart
 import databranch
 import facts
@@ -547,8 +551,10 @@ def render_manifest() -> str:
 
 
 def head(title: str, description: str, *, prefix: str, canonical: str | None, noindex: bool = False,
-         preview: dict | None = None, easter_eggs: bool = False) -> str:
-    """preview is the share-card image and alt text; easter_eggs opts in to the title script (home and alumni pages) and its CSP rule."""
+         preview: dict | None = None, easter_eggs: bool = False, styles: tuple = ()) -> str:
+    """preview is the share-card image and alt text; easter_eggs opts in to the title script (home and alumni pages)
+    and its CSP rule; styles names a page's own stylesheets (same origin, so the base policy's style-src 'self'
+    already allows them), loaded after the shared one."""
     policy = CSP + "; script-src 'self'" if easter_eggs else CSP
     lines = [
         '<!DOCTYPE html>',
@@ -597,6 +603,7 @@ def head(title: str, description: str, *, prefix: str, canonical: str | None, no
         f'<link rel="manifest" href="{esc(prefix)}site.webmanifest">',
         f'<link rel="preload" href="{esc(prefix)}{WEB_FONT}" as="font" type="font/woff2" crossorigin>',
         f'<link rel="stylesheet" href="{esc(prefix)}styles.css">',
+        *[f'<link rel="stylesheet" href="{esc(prefix + name)}">' for name in styles],
         *([f'<script src="{esc(prefix)}easter-eggs.js" defer></script>'] if easter_eggs else []),
         '</head>',
     ]
@@ -1050,9 +1057,16 @@ def board_html(depauw: int, wabash: int, ties: int, css_class: str = "") -> str:
             f'{record_bar(depauw, ties, wabash, "rbar-board")}</div>')
 
 
+def bell_now_html(b: dict) -> str:
+    """"DePauw holds the Bell" with "since 2022 · 5 straight wins" under it: the holder line of the home page's
+    Bell strip and of the year-by-year page, from one place so the two always read the same."""
+    return (f'<p class="bell-now"><strong>{esc(b["holder"])} holds the Bell</strong>'
+            f'<span class="bell-since">since {b["since"]} · {esc(bell_held_text(b))}</span></p>')
+
+
 def bell_strip(games: list) -> str:
     """The Monon Bell holder near the top of the home page. The full block stays on the football card
-    (it keeps the id monon-bell, which this strip links to)."""
+    (it keeps the id monon-bell, which this strip links to); the year-by-year page is linked beside it."""
     b = facts.bell(games)
     if b is None or not b["holder"]:
         return ""
@@ -1060,9 +1074,9 @@ def bell_strip(games: list) -> str:
     return "\n".join([
         '<section class="bell-strip" id="bell-strip" aria-label="Current Monon Bell holder">',
         '<h2 id="bell-strip-h">The Monon Bell</h2>',
-        f'<p class="bell-now"><strong>{esc(b["holder"])} holds the Bell</strong>'
-        f'<span class="bell-since">since {b["since"]} · {esc(bell_held_text(b))}</span></p>',
-        f'<p class="bell-rec">Bell record since {facts.BELL_START}: {record} · <a href="#monon-bell">The Bell’s story</a></p>',
+        bell_now_html(b),
+        f'<p class="bell-rec">Bell record since {facts.BELL_START}: {record} · <a href="#monon-bell">The Bell’s story</a>'
+        f' · <a href="{esc(belltimeline.PATH)}">{esc(belltimeline.HOME_LINK)}</a></p>',
         '</section>',
     ])
 
@@ -1490,7 +1504,9 @@ def render_heist_details(data: dict, heists_data: dict, now: dt.datetime | None 
     counts = heists_page.tally(heists_data)
     description = f"{heists_page.tally_text(counts)}. A sourced timeline of the attempts on the Monon Bell."
     back = f'<p class="back"><a href="../">{esc(BACK_ATHLETICS)}</a></p>'
-    main = heists_page.render_main(heists_data, football, back_html=back, game_href="../#football")
+    timeline = f'<a href="../{esc(belltimeline.PATH)}">{esc(belltimeline.HOME_LINK)}</a>'
+    main = heists_page.render_main(heists_data, football, back_html=back, game_href="../#football",
+                                   timeline_html=timeline)
     return "\n".join([
         head(f"{heists_page.TITLE} | DePauw vs. Wabash", description, prefix="../",
              canonical=SITE_URL + HEIST_PATH, preview=athletics_preview(data, now, upcoming or {})),
@@ -1500,6 +1516,40 @@ def render_heist_details(data: dict, heists_data: dict, now: dt.datetime | None 
         *main,
         '</main>',
         *site_footer(now, prefix="../", heists=heists_data),
+        '</body>',
+        '</html>',
+        '',
+    ])
+
+
+def render_monon_bell(data: dict, heists_data: dict | None = None, checked: str | None = None,
+                      now: dt.datetime | None = None, upcoming: dict | None = None) -> str:
+    """/monon-bell/: who held the Monon Bell after every season since it became the trophy, as a decade-by-year
+    grid with a summary above it (belltimeline.py). One folder down, athletics side (the nav marks Athletics, the
+    footer is the athletics one), base CSP and no script; it alone loads bell.css. The seasons come from
+    facts.bell_seasons, the list the home page's Bell strip and block read through facts.bell, and the holder line
+    and the record are the home page's own (bell_now_html, bell_record_text). The season of the Eastern year of the
+    build reads "not yet played" until its result is in."""
+    now = now or dt.datetime.now(dt.timezone.utc)
+    upcoming = upcoming or {}
+    football = data["sports"].get("football", {}).get("games", [])
+    seasons = facts.bell_seasons(football, to_eastern(now)[0].year)
+    b = facts.bell(football)
+    back = f'<a href="../">{esc(BACK_ATHLETICS)}</a>'
+    main = belltimeline.render_main(
+        seasons, heists_data, back_html=f'<p class="back">{back}</p>', back_link=back, heist_href=f"../{HEIST_PATH}",
+        holder_html=bell_now_html(b) if b and b["holder"] else "", record_html=bell_record_text(b) if b else "",
+        overtime_start=OVERTIME_START)
+    return "\n".join([
+        head(f"{belltimeline.TITLE} | DePauw vs. Wabash", belltimeline.description(seasons, b), prefix="../",
+             canonical=SITE_URL + belltimeline.PATH, preview=athletics_preview(data, now, upcoming),
+             styles=(belltimeline.STYLESHEET,)),
+        '<body>',
+        site_header("../", "athletics", SUBTITLE),
+        '<main class="wrap bell-page" id="main">',
+        *[line for line in main if line],
+        '</main>',
+        *site_footer(now, prefix="../", data=data, checked=checked, upcoming=upcoming),
         '</body>',
         '</html>',
         '',
@@ -1565,6 +1615,7 @@ def render_sitemap(data: dict, checked: str | None = None, alumni_verified: str 
             f'  <url><loc>{esc(SITE_URL)}</loc><lastmod>{lastmod}</lastmod></url>\n'
             f'  <url><loc>{esc(SITE_URL + HOW_PATH)}</loc><lastmod>{lastmod}</lastmod></url>\n'
             f'  <url><loc>{esc(SITE_URL + HOW_ATHLETICS_PATH)}</loc><lastmod>{lastmod}</lastmod></url>\n'
+            f'  <url><loc>{esc(SITE_URL + belltimeline.PATH)}</loc><lastmod>{lastmod}</lastmod></url>\n'
             + (f'  <url><loc>{esc(SITE_URL + ALUMNI_PATH)}</loc><lastmod>{esc(alumni_verified)}</lastmod></url>\n'
                f'  <url><loc>{esc(SITE_URL + HOW_ALUMNI_PATH)}</loc><lastmod>{esc(alumni_verified)}</lastmod></url>\n'
                if alumni_verified else '') +
@@ -1650,6 +1701,7 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
         "404.html": render_404(now),
         "bell-heist/index.html": render_bell_heist(now, heists_data),
         HEIST_PATH + "index.html": render_heist_details(data, heists_data, now, upcoming),
+        belltimeline.PATH + "index.html": render_monon_bell(data, heists_data, checked_at, now, upcoming),
         privacy.PATH + "index.html": render_privacy(data, now, upcoming),
         accessibility.PATH + "index.html": render_accessibility(data, now, upcoming),
         "games.csv": render_csv(data),
@@ -1666,7 +1718,7 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
     for name, text in pages.items():
         (out / name).parent.mkdir(parents=True, exist_ok=True)
         (out / name).write_text(curly_html(text) if name.endswith(".html") else text, encoding="utf-8", newline="\n")
-    for asset in ("styles.css", "favicon.svg", "easter-eggs.js", "easter-bell.svg", "easter-paw.svg", "easter-tiger.svg",
+    for asset in ("styles.css", belltimeline.STYLESHEET, "favicon.svg", "easter-eggs.js", "easter-bell.svg", "easter-paw.svg", "easter-tiger.svg",
                   WEB_FONT, FONT_LICENSE):
         (out / asset).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(STATIC / asset, out / asset)

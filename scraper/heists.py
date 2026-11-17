@@ -353,9 +353,10 @@ def _card(incident: dict, football_games: list, game_href: str) -> str:
 
 
 def render_main(data: dict, football_games: list, *, back_html: str, game_href: str,
-                repo_url: str = REPO_URL) -> list:
+                repo_url: str = REPO_URL, timeline_html: str = "") -> list:
     """The page's <main> content as lines of HTML. `back_html` is the shared back link, `game_href` points at
-    the football card."""
+    the football card, and `timeline_html` is the link to the year-by-year page (/monon-bell/), which gets one
+    line above the timeline."""
     counts = tally(data)
     timeline = []
     undated_started = False
@@ -373,6 +374,7 @@ def render_main(data: dict, football_games: list, *, back_html: str, game_href: 
         _ratings_html(),
         '<section class="heist-method" aria-label="About these stories">'
         + "".join(f"<p>{_esc(p)}</p>" for p in data["method"]) + '</section>',
+        *([f'<p class="heist-yearly">Who had the Bell each year: {timeline_html}</p>'] if timeline_html else []),
         '<div class="heist-timeline">',
         '<h2 class="heist-era" id="timeline-h">The timeline, oldest first</h2>',
         *timeline,

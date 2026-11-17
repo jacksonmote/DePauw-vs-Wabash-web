@@ -141,6 +141,64 @@ def test_the_share_image_text_meets_4_5_to_1():
     assert ratio(images.BG, images.GOLD) >= TEXT_MIN
 
 
+# --- the Monon Bell year-by-year grid (static/bell.css, loaded by /monon-bell/ only) -----------------------------
+# The grid sits on a surface-colored card. A played season's cell is tinted: its school's accent mixed into that
+# surface at a low share (color-mix in sRGB, which is the accent drawn at that opacity over the surface). The tint
+# is not a token, so the colors read on it are checked here from the share bell.css states: the holder's letter (and the tie mark, in the same color), a heist story's dot, that dot's focus
+# ring, and the cell's accent edge against the tint above it. Everything else on the page is a pair already listed
+# above (muted text, borders and the three accents on the surface). The tint is a plain background, so axe can
+# measure the same pairs in the browser (through an overlay it could only report them as "needs a person").
+BELL_CSS = (ROOT / "static" / "bell.css").read_text(encoding="utf-8")
+BELL_TOKENS = {"surface", "border", "text", "text-muted", "depauw-text", "wabash-text",
+               "depauw-accent", "wabash-accent", "tie-accent"}
+
+
+def bell_tint_opacity() -> float:
+    """The share of the accent in a cell's tint, as an opacity: one number, the same for both schools."""
+    found = re.findall(r"\.bt-([dw]) \{[^}]*background: color-mix\(in srgb, var\(--color-(depauw|wabash)-accent\) "
+                       r"([0-9.]+)%, var\(--color-surface\)\); \}", BELL_CSS)
+    assert [(cell, school) for cell, school, _ in found] == [("d", "depauw"), ("w", "wabash")]
+    assert found[0][2] == found[1][2] and BELL_CSS.count("color-mix(") == 2          # no other tint anywhere
+    assert not re.search(r"\bopacity\s*:", BELL_CSS) and "::before" not in BELL_CSS    # and nothing drawn over a cell
+    return float(found[0][2]) / 100
+
+
+def over(top: str, ground: str, alpha: float) -> tuple:
+    """The color seen when `top` is drawn at `alpha` opacity over `ground`."""
+    rgb = lambda color: [int(color[i:i + 2], 16) for i in (1, 3, 5)]             # noqa: E731
+    return tuple(round(a * alpha + b * (1 - alpha)) for a, b in zip(rgb(top), rgb(ground)))
+
+
+def test_the_bell_grid_uses_only_tokens_that_are_checked_and_tints_only_over_the_surface():
+    assert set(re.findall(r"var\(--color-([a-z0-9-]+)\)", BELL_CSS)) == BELL_TOKENS    # a new one fails until checked
+    assert re.search(r"\.bt-card \{[^}]*background: var\(--color-surface\)", BELL_CSS)
+    assert re.search(r"\.bt-d \{ color: var\(--color-depauw-text\);", BELL_CSS)         # gold as text is the text token
+    assert re.search(r"\.bt-w \{ color: var\(--color-wabash-text\);", BELL_CSS)
+    assert 0 < bell_tint_opacity() < 1
+
+
+@pytest.mark.parametrize("mode", [0, 1], ids=MODES)
+def test_the_letters_marks_focus_ring_and_edge_keep_their_contrast_on_a_tinted_bell_cell(mode):
+    t = tokens()[mode]
+    low = []
+    for school in ("depauw", "wabash"):
+        tint = over(t[f"{school}-accent"], t["surface"], bell_tint_opacity())
+        for color, least in ((f"{school}-text", TEXT_MIN),             # the holder's letter and the tie mark
+                             ("text", TEXT_MIN),                        # a heist story's dot
+                             ("focus", NON_TEXT_MIN),                   # the focus ring around that dot
+                             (f"{school}-accent", NON_TEXT_MIN)):       # the cell's bottom edge, against the tint
+            if ratio(t[color], tint) < least:
+                low.append((school, color, round(ratio(t[color], tint), 2)))
+    assert low == []
+
+
+def test_a_stronger_tint_would_fail_so_the_check_is_real():
+    """The dark-mode scarlet letter is the tightest pair: at twice the share it drops under 4.5:1."""
+    dark = tokens()[1]
+    strong = over(dark["wabash-accent"], dark["surface"], min(1.0, bell_tint_opacity() * 2))
+    assert ratio(dark["wabash-text"], strong) < TEXT_MIN
+
+
 # --- the pages ----------------------------------------------------------------------------------------------------
 
 @pytest.fixture(scope="module")
@@ -162,7 +220,7 @@ PAGES = {   # every page of the site -> the prefix from it to the site root
     "index.html": "", "alumni/index.html": "../", "how-it-works/index.html": "../",
     "how-it-works/athletics/index.html": "../../", "how-it-works/alumni/index.html": "../../",
     "404.html": "/", "bell-heist/index.html": "../", "heist-details/index.html": "../",
-    "privacy/index.html": "../", "accessibility/index.html": "../",
+    "monon-bell/index.html": "../", "privacy/index.html": "../", "accessibility/index.html": "../",
 }
 TARGET = "accessibility/index.html"
 
@@ -275,7 +333,8 @@ def test_every_table_has_a_caption_named_after_the_sport_and_scoped_headers(site
     home = soup(site, "index.html")
     tables = [t for name, page in each_page(site) for t in page.find_all("table")]
     groups = home.select("details.games details")                                 # a table per decade of each game list
-    assert len(tables) == len(groups) + 1 and len(groups) > len(home.select("article.sport"))   # and the scoreboard
+    # and the alumni scoreboard, and the year-by-year grid of the Monon Bell page
+    assert len(tables) == len(groups) + 2 and len(groups) > len(home.select("article.sport"))
     for table in tables:
         assert table.caption is not None and table.caption.get_text(strip=True)
         assert all(th.get("scope") in ("col", "row") for th in table.find_all("th"))
