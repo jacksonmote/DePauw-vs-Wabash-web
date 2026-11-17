@@ -230,6 +230,17 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
   .games abbr, .wl { display: inline; }
 }
 
+/* Every wider screen: the same columns in every decade's table. Date, result, notes and box score get a width
+   and the site takes the rest; a fixed column cannot grow, so the date may wrap. */
+@media (min-width: 42.0625rem) {
+  .games table { table-layout: fixed; }
+  .games tbody th { white-space: normal; }
+  .games thead th:first-child { width: 7.5rem; }
+  .games thead th:nth-child(3) { width: 22%; }
+  .games thead th:nth-child(4) { width: 26%; }
+  .games thead th:last-child { width: 5.5rem; }
+}
+
 @media (min-width: 40rem) {
   :root { --gutter: 1.5rem; }
   .tiles { gap: 0.75rem; }
@@ -240,13 +251,6 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 
 @media (min-width: 64rem) {
   .facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  /* the same columns in every decade's table: date, site (the rest), result, notes, box score */
-  .games table { table-layout: fixed; }
-  .games tbody th { white-space: normal; }
-  .games thead th:first-child { width: 8rem; }
-  .games thead th:nth-child(3) { width: 25%; }
-  .games thead th:nth-child(4) { width: 24%; }
-  .games thead th:last-child { width: 6rem; }
 }
 
 /* Footer */

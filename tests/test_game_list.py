@@ -24,7 +24,8 @@ NOW = dt.datetime(2026, 10, 30, 12, tzinfo=dt.timezone.utc)
 FROZEN = ROOT / "tests" / "fixtures" / "series-frozen-2026-10-30.json"
 CSS = (ROOT / "static" / "styles.css").read_text(encoding="utf-8").replace("\r\n", "\n")
 SEP = "\u00a0· "                              # a no-break space, then the dot: a line never starts with the dot
-PHONE_MAX = "42rem"                                # the widest screen that gets the two-line layout
+PHONE_MAX = "42rem"                                # the widest screen that gets the two-line layout (672 px)
+TABLE_MIN = "42.0625rem"                           # the next pixel up: where the table with fixed columns starts
 # the hint above every list; a list with undated games adds one sentence about them
 HINT = "Newest first, by decade. Home and away, W (win), L (loss), and T (tie) are from DePauw’s point of view."
 
@@ -379,8 +380,15 @@ def test_the_phone_layout_places_every_column_and_no_other():
 
 def test_on_wide_screens_every_decades_table_has_the_same_columns():
     """Each decade is a table of its own, so left to themselves the columns would sit in different places from
-    one decade to the next. From 64rem the layout is fixed: four columns get a width and the site takes the rest."""
-    block = re.search(r"@media \(min-width: 64rem\) \{\n(.*?)\n\}", CSS, flags=re.S).group(1)
+    one decade to the next (and on a tablet the header words broke and "Box score" wrapped). So wherever the list
+    is drawn as a table the layout is fixed: four columns get a width and the site takes the rest. That starts at
+    the first pixel above the phone layout, so no width is left without one of the two layouts."""
+    blocks = re.findall(r"@media \(min-width: ([\d.]+rem)\) \{\n(.*?)\n\}", CSS, flags=re.S)
+    fixed = [(width, body) for width, body in blocks if ".games" in body]
+    assert len(fixed) == 1 and CSS.count("table-layout") == 1         # one block, and no second set of widths
+    width, block = fixed[0]
+    assert phone_block()[0] == PHONE_MAX == "42rem" and width == TABLE_MIN == "42.0625rem"
+    assert float(TABLE_MIN[:-3]) - float(PHONE_MAX[:-3]) == 1 / 16    # one pixel apart at the 16 px root size
     assert ".games table { table-layout: fixed; }" in block
     # a fixed column cannot grow, so the date may wrap there: "1956 (date not recorded)" must never run over the site
     assert ".games tbody th { white-space: normal; }" in block
