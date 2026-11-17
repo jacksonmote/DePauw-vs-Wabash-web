@@ -8,6 +8,19 @@
           "wabash": {"date": "1891-11-02", "score": "1-0"},
           "reason": "Both schools list one 1-0 DePauw win in 1891 and each page has 131 games; only the date differs."
         }
+      ],
+      "found": [
+        {
+          "school": "depauw",
+          "row": {"date": "1915-11-20", "score": "0-34"},
+          "location": "neutral",
+          "site": "Indianapolis, IN",
+          "reason": "Played at Indianapolis, like the games of 1916 to 1922. DePauw’s yearbook says “at Indianapolis”, and a newspaper of that day lists “At Indianapolis, Wabash vs. Depauw”. Wabash’s page lists a neutral site; DePauw’s lists an away game.",
+          "sources": [
+            {"label": "DePauw University, Mirage yearbook, 1916 (Internet Archive)", "url": "https://archive.org/details/mirage16depa"},
+            {"label": "Grand Forks Daily Herald, Nov 20, 1915, p. 6 (Library of Congress)", "url": "https://www.loc.gov/resource/sn89074405/1915-11-20/ed-1/?sp=6"}
+          ]
+        }
       ]
     },
     "mens-basketball": {
@@ -51,13 +64,36 @@
           "depauw": {"date": "1978-01-07", "score": "82-73"},
           "wabash": {"date": "1978-01-17", "score": "82-73"},
           "reason": "Confirmed same game: same score, one digit of the day differs."
-        }
-      ],
-      "different_games": [
+        },
         {
           "depauw": {"date": "1928-02-14", "score": "23-22"},
           "wabash": {"date": "1928-02-29", "score": "32-30"},
-          "reason": "Confirmed different games: neither the date nor the score agrees."
+          "reason": "One game, played Feb 14, 1928 at Greencastle: DePauw 23, Wabash 22. Newspapers previewed it and printed its box score, and DePauw’s yearbook counts two wins over Wabash that winter (Jan 10 and this one). On Feb 29 Wabash played Notre Dame at Crawfordsville, its last game of the season, so the Feb 29 row on Wabash’s page is this game with another date and score.",
+          "sources": [
+            {"label": "The Indianapolis Times, Feb 15, 1928, p. 12 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015313/1928-02-15/ed-1/?sp=12"},
+            {"label": "South Bend News-Times, Feb 28, 1928, p. 14 (Library of Congress)", "url": "https://www.loc.gov/resource/sn87055779/1928-02-28/ed-1/?sp=14"},
+            {"label": "South Bend News-Times, Mar 1, 1928, p. 16 (Library of Congress)", "url": "https://www.loc.gov/resource/sn87055779/1928-03-01/ed-1/?sp=16"}
+          ]
+        }
+      ],
+      "set_aside": [
+        {
+          "school": "wabash",
+          "row": {"date": "1944-01-06", "score": "69-49"},
+          "reason": "Not a game against DePauw’s team. Wabash’s opponent was the Navy V-5 flight school team stationed at DePauw: the score was printed at the time as “DePauw V-5, 69; Wabash, 49”, and DePauw’s own schedule for that season lists Navy V-5 as a separate opponent and has no game on this date.",
+          "sources": [
+            {"label": "The Evening Star (Washington, D.C.), Jan 6, 1944, p. 14 (Library of Congress)", "url": "https://www.loc.gov/resource/sn83045462/1944-01-06/ed-1/?sp=14"},
+            {"label": "DePauw Athletics, 1943-44 men’s basketball schedule", "url": "https://depauwtigers.com/sports/mens-basketball/schedule/1943-44"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1944-02-05", "score": "28-19"},
+          "reason": "Not a game against DePauw’s team. Wabash’s opponent was the Navy V-5 flight school team stationed at DePauw: the score was printed at the time as “De Pauw V-5, 28; Wabash, 19”, and DePauw’s own schedule for that season lists Navy V-5 as a separate opponent and has DePauw at Kentucky the night before.",
+          "sources": [
+            {"label": "The Evening Star (Washington, D.C.), Feb 7, 1944, p. 8 (Library of Congress)", "url": "https://www.loc.gov/resource/sn83045462/1944-02-07/ed-1/?sp=8"},
+            {"label": "DePauw Athletics, 1943-44 men’s basketball schedule", "url": "https://depauwtigers.com/sports/mens-basketball/schedule/1943-44"}
+          ]
         }
       ]
     },
@@ -78,6 +114,217 @@
           "wabash": {"date": "1990-04-04", "score": "8-7"},
           "reason": "Confirmed same game: same score, one digit of the day differs."
         }
+      ],
+      "found": [
+        {
+          "school": "wabash",
+          "row": {"date": "1888-01-03", "score": "7-6"},
+          "date": "1888-05-19",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "reason": "A report dated Crawfordsville, May 19, says the two teams “played a game here to-day”, 7 to 6 for DePauw.",
+          "sources": [
+            {"label": "The Indianapolis Journal, May 20, 1888, p. 9 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015679/1888-05-20/ed-1/?sp=9"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1894-01-01", "score": "4-7"},
+          "date": "1894-05-26",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "A report from Greencastle has “DePauw 4 and Wabash 7”, played there “to-day”, May 26.",
+          "sources": [
+            {"label": "The Indianapolis Journal, May 27, 1894, p. 3 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015679/1894-05-27/ed-1/?sp=3"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1899-01-01", "score": "17-7"},
+          "date": "1899-05-01",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "A report dated Greencastle, May 1, says DePauw “defeated Wabash to-day”, 17 to 7.",
+          "sources": [
+            {"label": "The Indianapolis Journal, May 2, 1899, p. 6 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015679/1899-05-02/ed-1/?sp=6"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1900-01-01", "score": "10-11"},
+          "date": "1900-05-07",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "A report dated Greencastle, May 7, says Wabash won “here to-day”, 11 to 10.",
+          "sources": [
+            {"label": "The Indianapolis Journal, May 8, 1900, p. 6 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015679/1900-05-08/ed-1/?sp=6"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1907-01-01", "score": "5-7"},
+          "date": "1907-04-26",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "reason": "The next day’s paper says DePauw lost at Crawfordsville “yesterday afternoon”, 7 to 5.",
+          "sources": [
+            {"label": "The Lake County Times, Apr 27, 1907, p. 7 (Library of Congress)", "url": "https://www.loc.gov/resource/sn86058242/1907-04-27/ed-1/?sp=7"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1913-01-01", "score": "6-3"},
+          "date": "1913-04-22",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "A report dated Greencastle in the next day’s paper says DePauw won “here yesterday”, 6 to 3, “in the first game of a series of four”.",
+          "sources": [
+            {"label": "The Lake County Times, Apr 23, 1913, p. 3 (Library of Congress)", "url": "https://www.loc.gov/resource/sn86058242/1913-04-23/ed-1/?sp=3"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1913-01-01", "score": "7-1"},
+          "date": "1913-05-19",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "A report dated Greencastle in the next day’s paper says DePauw won “yesterday afternoon, 7 to 1, in the third game”.",
+          "sources": [
+            {"label": "The Lake County Times, May 20, 1913, p. 3 (Library of Congress)", "url": "https://www.loc.gov/resource/sn86058242/1913-05-20/ed-1/?sp=3"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1915-01-01", "score": "6-3"},
+          "date": "1915-05-07",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "DePauw’s yearbook lists “May 7 — DePauw 6; Wabash 3, at Greencastle”.",
+          "sources": [
+            {"label": "DePauw University, Mirage yearbook, 1916 (Internet Archive)", "url": "https://archive.org/details/mirage16depa"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1915-01-01", "score": "5-6"},
+          "date": "1915-05-14",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "reason": "DePauw’s yearbook lists “May 14 — DePauw 4; Wabash 5, at Crawfordsville”. Wabash’s page has the score as 6-5; the winner is the same, and the score shown stays the one on Wabash’s page.",
+          "sources": [
+            {"label": "DePauw University, Mirage yearbook, 1916 (Internet Archive)", "url": "https://archive.org/details/mirage16depa"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1918-01-01", "score": "9-6"},
+          "date": "1918-05-08",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "reason": "The next day’s paper says DePauw “took the second game of the series” at Crawfordsville on “Wednesday, 9 to 6”.",
+          "sources": [
+            {"label": "The Richmond Palladium, May 9, 1918, p. 9 (Library of Congress)", "url": "https://www.loc.gov/resource/sn86058226/1918-05-09/ed-1/?sp=9"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1919-01-01", "score": "6-1"},
+          "date": "1919-04-11",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "reason": "A report dated Crawfordsville says Wabash “opened its season Friday” with a 6 to 1 loss to DePauw.",
+          "sources": [
+            {"label": "The Richmond Palladium, Apr 14, 1919, p. 8 (Library of Congress)", "url": "https://www.loc.gov/resource/sn86058226/1919-04-14/ed-1/?sp=8"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1919-01-01", "score": "4-5"},
+          "date": "1919-04-18",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "The next day’s paper says Wabash beat DePauw “Friday afternoon” at Greencastle, 5 to 4.",
+          "sources": [
+            {"label": "The Richmond Palladium, Apr 19, 1919, p. 11 (Library of Congress)", "url": "https://www.loc.gov/resource/sn86058226/1919-04-19/ed-1/?sp=11"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1920-01-01", "score": "7-7"},
+          "date": "1920-04-27",
+          "reason": "The next day’s list of results has “Wabash, 7; DePauw, 7 (nine innings; rain)”. It does not say where the game was played.",
+          "sources": [
+            {"label": "Indiana Daily Times, Apr 28, 1920, p. 8 (Library of Congress)", "url": "https://www.loc.gov/resource/sn85047611/1920-04-28/ed-1/?sp=8"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1920-01-01", "score": "5-8"},
+          "date": "1920-05-04",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "reason": "Two papers of the next day report Wabash’s 8 to 5 win at Crawfordsville “yesterday”.",
+          "sources": [
+            {"label": "Indiana Daily Times, May 5, 1920, p. 8 (Library of Congress)", "url": "https://www.loc.gov/resource/sn85047611/1920-05-05/ed-1/?sp=8"},
+            {"label": "The Richmond Palladium, May 5, 1920, p. 9 (Library of Congress)", "url": "https://www.loc.gov/resource/sn86058226/1920-05-05/ed-1/?sp=9"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1920-01-01", "score": "7-2"},
+          "date": "1920-05-11",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "Two papers of the next day report “DePauw, 7; Wabash, 2”, played at Greencastle.",
+          "sources": [
+            {"label": "Indiana Daily Times, May 12, 1920, p. 8 (Library of Congress)", "url": "https://www.loc.gov/resource/sn85047611/1920-05-12/ed-1/?sp=8"},
+            {"label": "The Richmond Palladium, May 12, 1920, p. 11 (Library of Congress)", "url": "https://www.loc.gov/resource/sn86058226/1920-05-12/ed-1/?sp=11"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1920-01-01", "score": "5-4"},
+          "date": "1920-05-18",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "reason": "The next day’s paper reports DePauw’s “5 to-4 victory” at Crawfordsville “yesterday”.",
+          "sources": [
+            {"label": "Indiana Daily Times, May 19, 1920, p. 8 (Library of Congress)", "url": "https://www.loc.gov/resource/sn85047611/1920-05-19/ed-1/?sp=8"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1920-01-01", "score": "4-7"},
+          "date": "1920-06-04",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "The next day’s paper says Wabash won 7 to 4 at Greencastle on “Friday afternoon”.",
+          "sources": [
+            {"label": "Indiana Daily Times, Jun 5, 1920, p. 8 (Library of Congress)", "url": "https://www.loc.gov/resource/sn85047611/1920-06-05/ed-1/?sp=8"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1921-01-01", "score": "0-9"},
+          "date": "1921-05-03",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "reason": "A report dated Crawfordsville says Wabash students celebrated “the baseball victory over De Pauw yesterday”, and the list of results has “Wabash, 9; De Pauw, 0”.",
+          "sources": [
+            {"label": "Indiana Daily Times, May 4, 1921, p. 6 (Library of Congress)", "url": "https://www.loc.gov/resource/sn85047611/1921-05-04/ed-1/?sp=6"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1921-01-01", "score": "8-11"},
+          "date": "1921-05-10",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "The next day’s paper says DePauw lost “Tuesday afternoon” at Greencastle, “11 to 8 in Wabash’s favor”.",
+          "sources": [
+            {"label": "Indiana Daily Times, May 11, 1921, p. 8 (Library of Congress)", "url": "https://www.loc.gov/resource/sn85047611/1921-05-11/ed-1/?sp=8"}
+          ]
+        }
       ]
     },
     "mens-soccer": {
@@ -97,6 +344,76 @@
           "wabash": {"date": "1968-11-16", "score": "3-0"},
           "reason": "Confirmed same game: same score, the year is off by one."
         }
+      ],
+      "note": [
+        {
+          "school": "depauw",
+          "row": {"date": "1966-10-29", "score": "1-2"},
+          "note": "Wabash’s side was a student club team; soccer became a varsity sport at Wabash in 1967, so Wabash’s record does not list this game.",
+          "reason": "The game is kept because DePauw’s record lists it. Wabash’s yearbook says soccer “started at Wabash last year” as a student club and was “added to the roster of varsity sports for the year 1967”.",
+          "sources": [
+            {"label": "Wabash College, The Wabash yearbook, 1967 (Internet Archive)", "url": "https://archive.org/details/wabashwabash1967"}
+          ]
+        }
+      ]
+    },
+    "mens-tennis": {
+      "set_aside": [
+        {
+          "school": "wabash",
+          "row": {"date": "2008-04-16", "score": "9-0", "season": "2008"},
+          "reason": "A repeat, not a second match. Wabash’s site keeps two records of this season, and each holds the one match, so Wabash’s history page lists it twice. DePauw’s recap of the day describes one 9-0 match. The other row for this date is counted.",
+          "sources": [
+            {"label": "Wabash Athletics, 2008 tennis schedule", "url": "https://sports.wabash.edu/sports/tennis/schedule/2008"},
+            {"label": "Wabash Athletics, 2007-2008 tennis schedule", "url": "https://sports.wabash.edu/sports/tennis/schedule/2007-2008"},
+            {"label": "DePauw Athletics, recap of Apr 16, 2008", "url": "https://depauwtigers.com/news/2008/4/16/4_16_2008_4085.aspx"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "2009-04-15", "score": "9-0", "season": "2009"},
+          "reason": "A repeat, not a second match. Wabash’s site keeps two records of this season, and each holds the one match, so Wabash’s history page lists it twice. DePauw’s recap of the day describes one 9-0 match. The other row for this date is counted.",
+          "sources": [
+            {"label": "Wabash Athletics, 2009 tennis schedule", "url": "https://sports.wabash.edu/sports/tennis/schedule/2009"},
+            {"label": "Wabash Athletics, 2008-2009 tennis schedule", "url": "https://sports.wabash.edu/sports/tennis/schedule/2008-2009"},
+            {"label": "DePauw Athletics, recap of Apr 15, 2009", "url": "https://depauwtigers.com/news/2009/4/15/4_15_2009_4109.aspx"}
+          ]
+        }
+      ],
+      "found": [
+        {
+          "school": "wabash",
+          "row": {"date": "1915-01-01", "score": "0-3"},
+          "date": "1915-05-01",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "DePauw’s yearbook describes “the single meet held at Greencastle, May 1, 1915”, which Wabash won.",
+          "sources": [
+            {"label": "DePauw University, Mirage yearbook, 1916 (Internet Archive)", "url": "https://archive.org/details/mirage16depa"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1929-01-01", "score": "7-0"},
+          "date": "1929-04-26",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "Wabash’s yearbook says “On April 26, DePauw ... smothered Wabash”, and its printed schedule has “April 26: Wabash at DePauw”.",
+          "sources": [
+            {"label": "Wabash College, The Wabash yearbook, 1929 (Internet Archive)", "url": "https://archive.org/details/wabash1929waba"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1937-01-01", "score": "9-0"},
+          "date": "1937-05-05",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "reason": "DePauw’s yearbook says DePauw played Earlham on May 1 “and four days later Wabash was handed a 9 to 0 shutout on their own courts”. The date is counted from that sentence.",
+          "sources": [
+            {"label": "DePauw University, Mirage yearbook, 1938 (Internet Archive)", "url": "https://archive.org/details/mirage1938depa"}
+          ]
+        }
       ]
     },
     "mens-swimming-and-diving": {
@@ -105,6 +422,33 @@
           "depauw": {"date": "1998-02-04", "score": "154-89"},
           "wabash": {"date": "1998-02-01", "score": "154-89"},
           "reason": "Confirmed same meet: the only 154-89 DePauw win in the 1997-98 season, listed once by each school, and only the date differs (three days apart, beyond the 2-day window)."
+        }
+      ],
+      "score": [
+        {
+          "depauw": {"date": "2011-11-09", "score": "205-80"},
+          "wabash": {"date": "2011-11-09", "score": "205-89"},
+          "use": "wabash",
+          "reason": "DePauw’s history page lists 205-80, but DePauw’s own recap of the meet is headed “DePauw Improves to 3-0 with 205-89 Win over Wabash” and repeats that score, which is also the score on Wabash’s page.",
+          "sources": [
+            {"label": "DePauw Athletics, “DePauw Improves to 3-0 with 205-89 Win over Wabash,” Nov 9, 2011", "url": "https://depauwtigers.com/news/2011/11/9/11_9_2011_3749.aspx"}
+          ]
+        }
+      ],
+      "note": [
+        {
+          "school": "wabash",
+          "row": {"date": "1934-01-05", "score": null},
+          "note": "No source other than Wabash’s page has been found for this meet.",
+          "reason": "Kept as Wabash’s page lists it. No yearbook for 1934 or 1935 is online, and no newspaper report of the meet was found.",
+          "sources": []
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1934-02-12", "score": null},
+          "note": "No source other than Wabash’s page has been found for this meet.",
+          "reason": "Kept as Wabash’s page lists it. No yearbook for 1934 or 1935 is online, and no newspaper report of the meet was found.",
+          "sources": []
         }
       ],
       "session_of": [

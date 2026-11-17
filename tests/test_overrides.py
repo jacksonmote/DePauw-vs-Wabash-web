@@ -34,10 +34,14 @@ def same(depauw, wabash, reason="checked the box score"):
 
 def test_the_committed_file_is_valid_and_every_ruling_has_a_reason():
     rules = merge.load_overrides(ROOT / "data" / "overrides.json")
-    assert {k: (len(v["same_game"]), len(v["different_games"])) for k, v in rules.items()} == {
-        "football": (1, 0), "mens-basketball": (8, 1), "baseball": (3, 0), "mens-soccer": (3, 0),
-        "mens-swimming-and-diving": (1, 0)}
-    assert [len(v["session_of"]) for v in rules.values()] == [0, 0, 0, 0, 1]
+    assert {k: {kind: len(found) for kind, found in v.items() if found} for k, v in rules.items()} == {
+        "football": {"same_game": 1, "found": 1},
+        "mens-basketball": {"same_game": 9, "set_aside": 2},
+        "baseball": {"same_game": 3, "found": 19},
+        "mens-soccer": {"same_game": 3, "note": 1},
+        "mens-tennis": {"set_aside": 2, "found": 3},
+        "mens-swimming-and-diving": {"same_game": 1, "session_of": 1, "score": 1, "note": 2}}
+    assert all(set(v) == set(merge.RULING_KINDS) for v in rules.values())
     assert all(r["reason"] for v in rules.values() for kind in v.values() for r in kind)
 
 
@@ -251,8 +255,8 @@ def committed(key):
 
 
 EXPECTED = {   # sport: (games, DePauw wins, Wabash wins, ties)
-    "football": (131, 59, 63, 9), "mens-basketball": (234, 133, 100, 1), "baseball": (314, 155, 156, 3),
-    "mens-soccer": (65, 41, 18, 6), "mens-lacrosse": (12, 12, 0, 0), "mens-tennis": (123, 115, 7, 1)}
+    "football": (131, 59, 63, 9), "mens-basketball": (231, 130, 100, 1), "baseball": (314, 155, 156, 3),
+    "mens-soccer": (65, 41, 18, 6), "mens-lacrosse": (12, 12, 0, 0), "mens-tennis": (121, 113, 7, 1)}
 
 
 @pytest.mark.parametrize("key", EXPECTED)
@@ -261,14 +265,14 @@ def test_with_the_committed_rulings_each_sport_has_its_expected_record(key):
     assert (len(r.games), *merge.tally(r.games)) == EXPECTED[key]
 
 
-def test_the_committed_rulings_give_879_games_and_a_515_344_20_total():
+def test_the_committed_rulings_give_874_games_and_a_510_344_20_total():
     games = wins = losses = ties = 0
     for key in EXPECTED:
         r = committed(key)[2]
         games += len(r.games)
         w_, l_, t_ = merge.tally(r.games)
         wins, losses, ties = wins + w_, losses + l_, ties + t_
-    assert (games, wins, losses, ties) == (879, 515, 344, 20)
+    assert (games, wins, losses, ties) == (874, 510, 344, 20)
 
 
 def test_the_committed_rulings_make_football_and_baseball_equal_the_wabash_page_or_both():
@@ -279,7 +283,7 @@ def test_the_committed_rulings_make_football_and_baseball_equal_the_wabash_page_
     assert baseball.stats["depauw_only"] == 0 and baseball.stats["wabash_only"] == 173
 
 
-def test_the_committed_rulings_pin_all_eight_matches_beyond_the_two_day_window():
+def test_the_committed_rulings_pin_every_match_beyond_the_two_day_window():
     pinned = set()
     for key in ("mens-basketball", "baseball", "mens-soccer"):
         for m in merge.beyond_window(committed(key)[2]):
@@ -291,16 +295,26 @@ def test_the_committed_rulings_pin_all_eight_matches_beyond_the_two_day_window()
                       ("mens-basketball", "1962-12-10"), ("mens-basketball", "1978-01-07"),
                       ("mens-basketball", "1906-01-29"), ("mens-basketball", "1906-02-13"),
                       ("mens-basketball", "1907-02-05"), ("mens-basketball", "1907-02-27"),
+                      ("mens-basketball", "1928-02-14"),
                       ("baseball", "1990-04-07"), ("baseball", "1986-03-19"), ("baseball", "1986-03-19"),
                       ("mens-soccer", "1969-10-12"), ("mens-soccer", "1969-10-15"), ("mens-soccer", "1969-11-16")}
 
 
-def test_the_1928_basketball_games_stay_two_games_by_ruling():
+def test_the_1928_basketball_rows_are_one_game_by_ruling_with_wabashs_version_shown():
+    # Wabash played Notre Dame on Feb 29, 1928; its Feb 29 row is the Feb 14 game with another date and score.
     d, w, r = committed("mens-basketball")
-    assert [(x["date"], x["source"], x["depauw"], x["wabash"]) for x in r.games if x["date"].startswith("1928-02-")
-            and x["date"] in ("1928-02-14", "1928-02-29")] == [("1928-02-14", "depauw", 23, 22),
-                                                               ("1928-02-29", "wabash", 32, 30)]
+    [game] = [x for x in r.games if x["date"].startswith("1928-02-")]
+    assert (game["date"], game["source"], game["depauw"], game["wabash"], game["result"]) == \
+        ("1928-02-14", "both", 23, 22, "W")
+    assert game["disputed"] and game["wabash_version"] == {"result": "W", "depauw": 32, "wabash": 30}
+    assert game["date_differs"] and game["wabash_date"] == "1928-02-29"
     assert merge.near_misses(r) == []                  # no leftover pair is left to look like the same game
+
+
+def test_with_the_committed_rulings_basketball_equals_depauws_own_page():
+    d, w, r = committed("mens-basketball")
+    assert merge.tally(r.games) == merge.tally(d) == (130, 100, 1) and len(r.games) == len(d) == 231
+    assert (r.stats["both"], r.stats["depauw_only"], r.stats["wabash_only"]) == (231, 0, 0)
 
 
 def test_the_1986_doubleheader_is_two_games_with_the_dates_shown():

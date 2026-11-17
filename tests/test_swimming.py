@@ -110,19 +110,29 @@ def test_the_merged_series_is_39_meets_26_13(pages):
     assert payload["games_played"] == 39
     assert payload["record"] == {"depauw_wins": 26, "wabash_wins": 13, "ties": 0}
     src = payload["sources"]
-    assert (src["both"], src["depauw_only"], src["wabash_only"], src["disputed"], src["date_differs"]) == (30, 0, 9, 3, 1)
+    assert (src["both"], src["depauw_only"], src["wabash_only"], src["disputed"], src["date_differs"]) == (30, 0, 9, 2, 1)
     assert src["session_rows"] == 2
-    assert payload["points"] == {"depauw": 4957, "wabash": 4369}            # whole totals stay whole numbers
+    assert payload["points"] == {"depauw": 4957, "wabash": 4378}            # whole totals stay whole numbers
     assert (payload["first_game"], payload["last_game"], payload["current_streak"]) == ("1927-02-08", "2025-12-05", "W1")
 
 
-def test_three_disputes_none_changes_a_winner(pages):
+def test_two_disputes_none_changes_a_winner(pages):
     payload, _ = merged(pages)
     disputed = {g["date"]: (g["depauw"], g["wabash"], g["wabash_version"]["depauw"], g["wabash_version"]["wabash"])
                 for g in payload["games"] if g.get("disputed")}
-    assert disputed == {"1999-01-27": (109, 135, 108, 135), "2008-01-25": (150, 141, 159, 141),
-                        "2011-11-09": (205, 80, 205, 89)}
+    assert disputed == {"1999-01-27": (109, 135, 108, 135), "2008-01-25": (150, 141, 159, 141)}
     assert all(g["wabash_version"]["result"] == g["result"] for g in payload["games"] if g.get("disputed"))
+
+
+def test_the_2011_meet_counts_205_89_by_ruling_and_keeps_the_score_on_depauws_page(pages):
+    # DePauw's history page lists 205-80; DePauw's own recap and Wabash's page say 205-89 (a score ruling).
+    payload, _ = merged(pages)
+    g = next(g for g in payload["games"] if g["date"] == "2011-11-09")
+    assert (g["depauw"], g["wabash"], g["result"], g["source"]) == (205, 89, "W", "both")
+    assert "disputed" not in g and "wabash_version" not in g
+    [ruled] = g["ruled"]
+    assert (ruled["kind"], ruled["school"], ruled["listed"]) == ("score", "DePauw", {"depauw": 205, "wabash": 80})
+    assert ruled["sources"][0]["url"].startswith("https://depauwtigers.com/news/2011/11/9/")
 
 
 def test_the_reversed_row_matches_depauws_game_and_is_not_a_dispute(pages):
@@ -297,7 +307,8 @@ def test_the_csv_leaves_scores_blank_for_unscored_meets_and_keeps_halves(site):
     by_date = {r[1]: r for r in rows}
     assert by_date["1934-01-05"][5:8] == ["", "", "DePauw win"] and by_date["1934-02-12"][5:7] == ["", ""]
     assert by_date["2006-11-03"][5:8] == ["127.5", "172.5", "Wabash win"]
-    assert by_date["2011-11-09"][-2:] == ["205-80", "205-89"]
+    # the frozen copy is from before the score ruling for this meet (tests/test_rulings.py covers the ruling)
+    assert by_date["2011-11-09"][-3:] == ["205-80", "205-89", ""]
     assert "127.50" not in (site / "games.csv").read_text(encoding="utf-8")
 
 

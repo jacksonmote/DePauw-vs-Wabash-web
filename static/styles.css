@@ -415,7 +415,7 @@ main { padding-block: var(--space-5) var(--space-6); display: grid; gap: var(--s
 .heist-school-wabash .heist-who { color: var(--color-wabash-text); }
 .heist-game { font-size: 0.9375rem; }
 .heist-details { margin: 0.5rem 0; }
-.heist-details summary { cursor: pointer; font-weight: 600; min-height: 44px; padding: 0.4rem 0; }
+.heist-details summary, .rulings summary { cursor: pointer; font-weight: 600; min-height: 44px; padding: 0.4rem 0; }
 .heist-consequences, .heist-sources { color: var(--color-text-muted); font-size: 0.9375rem; }
 .heist-guarding { margin-top: 2rem; }
 

@@ -176,12 +176,17 @@ def rejected(school: str, c: dict, rules: list) -> dict | None:
 
 
 def touches_ruling(c: dict, school: str, rules: dict | None) -> bool:
-    """Does the change edit a row that a same_game, different_games or session_of ruling names? Approving it
-    would make that ruling stale, and the sport's merge then fails loudly until the ruling is fixed."""
+    """Does the change edit a row that a ruling names (same_game, different_games, score, session_of, set_aside,
+    found or note)? Approving it would make that ruling stale, and the sport's merge then fails loudly until
+    the ruling is fixed."""
     named = set()
-    for kind in ("same_game", "different_games"):
+    for kind in ("same_game", "different_games", "score"):
         for r in (rules or {}).get(kind, []):
             named.add((r[school]["date"], r[school]["score"]))
+    for kind in merge.ROW_KINDS:
+        for r in (rules or {}).get(kind, []):
+            if r["school"] == school:
+                named.add((r["row"]["date"], r["row"]["score"]))
     for r in (rules or {}).get("session_of", []):
         if r["school"] == school:
             named.update((x["date"], x["score"]) for x in [r["meet"], *r["sessions"]])
