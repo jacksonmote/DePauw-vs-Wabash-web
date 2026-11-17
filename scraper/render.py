@@ -788,7 +788,9 @@ UNDATED_HINT = "with no recorded date are in the last group and aren’t include
 # always named in the words after it, so the letter is never the only cue.
 RESULT_LETTERS = {"W": "win", "L": "loss", "T": "tie"}
 RESULT_CLASSES = {"W": "win-depauw", "L": "win-wabash", "T": "tied"}
-HISTORY_REWARD = "You’ve reached the bottom. Wabash jokes practically write themselves."
+# The closing line under each list's oldest games. {unit} is what the sport plays ("game", or "match" for tennis and
+# "meet" for swimming and diving, from game_words), so a card never calls a match or a meet a game.
+HISTORY_REWARD = "You’ve reached the first {unit}. Every rivalry starts somewhere."
 
 
 def game_row(key: str, g: dict, merged: bool = False) -> str:
@@ -841,8 +843,9 @@ def games_table(key: str, games: list, words: tuple = ("game", "games"), merged:
             f'<caption class="sr-only">Every {esc(captioned)} {esc(words[0])} {which}, newest first</caption>\n'
             f'<thead><tr>{columns}</tr></thead>\n'
             '<tbody>\n' + "\n".join(game_row(key, g, merged) for g in group) + '\n</tbody>\n</table>\n'
-            # the joke waits at the very bottom: under the oldest games, inside the last group
-            + (f'<p class="history-reward">{HISTORY_REWARD}</p>\n' if i == len(groups) - 1 else '')
+            # the closing line waits at the very bottom: under the oldest games, inside the last group
+            + (f'<p class="history-reward">{HISTORY_REWARD.format(unit=esc(words[0]))}</p>\n'
+               if i == len(groups) - 1 else '')
             + '</details>\n')
     letters = join_and([f"{letter} ({word})" for letter, word in RESULT_LETTERS.items()])
     undated = f" {esc(words[1].capitalize())} {UNDATED_HINT}" if groups and groups[-1][0] is None else ""
@@ -1299,7 +1302,6 @@ def site_footer(now: dt.datetime, *, prefix: str = "", data: dict | None = None,
     return [
         '<footer class="site-footer">', '<div class="wrap">',
         *block,
-        '<!-- Both schools supplied the records. Only one supplied the developers. -->',
         '<p class="footer-links">' + (f'<a href="{esc(prefix + how)}">How the numbers work</a> · ' if link_how else "") +
         own_or_link("Privacy", privacy.PATH, privacy_self) + ' · ' +
         own_or_link("Accessibility", accessibility.PATH, accessibility_self) + ' · ' +

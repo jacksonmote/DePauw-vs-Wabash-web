@@ -1,4 +1,5 @@
-"""The seven requested rivalry jokes, page-scoped script policy, and asset budgets."""
+"""The easter eggs (the Bell story, each game list's closing line, the tiger, the title entrance), the jokes that
+were removed and must stay gone, page-scoped script policy, and asset budgets."""
 
 import copy
 import datetime as dt
@@ -119,12 +120,17 @@ def test_the_bell_heist_page_uses_block_flow_so_paragraph_margins_do_not_stack_o
 def test_each_nonempty_history_gets_one_reward_and_empty_history_gets_none():
     data = render.load(ROOT / "data" / "series.json")
     home = BeautifulSoup(render.render_index(data, now=NOW, upcoming={}), "html.parser")
-    reward = "You’ve reached the bottom. Wabash jokes practically write themselves."
+    assert render.HISTORY_REWARD == "You’ve reached the first {unit}. Every rivalry starts somewhere."
     histories = home.select("details.games")
     assert len(histories) == sum(bool(sport["games"]) for sport in data["sports"].values())
+    seen = set()
     for details in histories:
+        sport = data["sports"][details.find_parent("article", class_="sport")["id"]]
+        unit = render.game_words(sport)[0]           # "game", or the sport's own word: a match, a meet
+        seen.add(unit)
         rewards = details.select("p.history-reward")
-        assert len(rewards) == 1 and rewards[0].get_text(" ", strip=True) == reward
+        assert len(rewards) == 1
+        assert rewards[0].get_text(" ", strip=True) == f"You’ve reached the first {unit}. Every rivalry starts somewhere."
         # it waits at the very bottom: after the table of the last group (the oldest games), inside that group
         last_group = details.find_all("details")[-1]
         assert rewards[0].parent is last_group
@@ -138,6 +144,7 @@ def test_each_nonempty_history_gets_one_reward_and_empty_history_gets_none():
         expected_dates = [BeautifulSoup(render.date_html(g), "html.parser").get_text(" ", strip=True) for g in ordered]
         actual_dates = [row.find("th", scope="row").get_text(" ", strip=True) for row in details.select("tbody tr")]
         assert actual_dates == expected_dates
+    assert seen == {"game", "match", "meet"}
     assert "history-reward" not in render.games_table("football", [])
     assert len(home.select("details.tiger-note")) == 1
     assert len(home.select("img[src='easter-paw.svg']")) == min(3, len(data["sports"]))
@@ -169,7 +176,8 @@ def test_history_reward_keeps_ties_undated_games_and_swimming_rows_intact():
     groups = soup.select("details.games details")
     assert [g.find("summary").get_text().split(" ")[0] for g in groups][-1] == render.UNDATED_GROUP
     assert groups[-1].find("table").find_next_sibling("p", class_="history-reward") is not None
-    assert len(soup.select("p.history-reward")) == 1
+    assert [p.get_text() for p in soup.select("p.history-reward")] == [
+        "You’ve reached the first meet. Every rivalry starts somewhere."]
 
 
 def test_the_removed_side_taking_jokes_are_on_no_page(site):
@@ -183,6 +191,30 @@ def test_the_removed_side_taking_jokes_are_on_no_page(site):
     assert ".impartiality" not in css and ".admissions-note" not in css
 
 
+# Three more lines read as digs at Wabash and were replaced or removed: the game lists' old closing line, the title
+# entrance's old message and the footer's HTML comment. None may come back, in any letter case.
+REMOVED_JOKES = ("Wabash jokes", "jokes practically write themselves", "education has been verified",
+                 "Only one supplied the developers", "Both schools supplied the records")
+TEXT_SUFFIXES = {".html", ".js", ".css", ".json", ".csv", ".xml", ".txt", ".webmanifest", ".svg", ".py", ".md", ".yml"}
+
+
+def test_the_removed_wabash_jokes_are_in_no_built_file_and_no_source_file(site):
+    """Fails if "Wabash jokes" or "education has been verified" (or the footer comment) comes back: every text file
+    of the built site, HTML comments included, and the files they are built from."""
+    built = [p for p in site.rglob("*") if p.is_file() and p.suffix in TEXT_SUFFIXES]
+    sources = [p for folder in ("scraper", "static", "data", ".github") for p in (ROOT / folder).rglob("*")
+               if p.is_file() and p.suffix in TEXT_SUFFIXES]
+    sources += [ROOT / "README.md", ROOT / "AGENTS.md"]
+    assert {p.name for p in built} >= {"index.html", "easter-eggs.js", "games.csv", "series.json"}
+    assert {p.name for p in sources} >= {"render.py", "easter-eggs.js", "README.md"}
+    for path in built + sources:
+        text = path.read_text(encoding="utf-8").lower()
+        for gone in REMOVED_JOKES:
+            assert gone.lower() not in text, (path.name, gone)
+    script =(site / "easter-eggs.js").read_text(encoding="utf-8")
+    assert script.count("status.textContent") == 1                  # the entrance has one message, the new one
+
+
 def test_title_entrance_is_progressive_and_uses_one_native_click_handler(site):
     home = page(site, "index.html")
     script = (site / "easter-eggs.js").read_text(encoding="utf-8")
@@ -192,7 +224,7 @@ def test_title_entrance_is_progressive_and_uses_one_native_click_handler(site):
     assert '<span id="entrance-hint" class="sr-only" hidden>' in home and "five times" in home   # only a description
     assert script.count('addEventListener("click"') == 1
     assert 'activations === 5' in script and 'activations = Math.min(5, activations + 1)' in script
-    assert 'status.textContent = "Your education has been verified."' in script
+    assert 'status.textContent = "The Tiger appreciates your persistence."' in script
     assert "innerHTML" not in script and "keydown" not in script and "touchstart" not in script
     css = (ROOT / "static/styles.css").read_text(encoding="utf-8")
     assert "@media (prefers-reduced-motion: reduce)" in css
@@ -229,15 +261,15 @@ def test_title_button_focus_outline_contrasts_with_header_in_light_and_dark_mode
         assert (max(outline, background) + 0.05) / (min(outline, background) + 0.05) >= 3
 
 
-def test_shared_footer_comment_is_exactly_once_and_no_impartiality_note_on_all_nine_pages(site):
+def test_no_page_has_the_footer_comment_or_the_impartiality_note(site):
+    """The shared footer once carried a "source confession" in an HTML comment; it was removed with the other
+    jokes that took a side."""
     for name in PAGES:
         source = page(site, name)
-        assert source.count("<!-- Both schools supplied the records. Only one supplied the developers. -->") == 1
+        assert "supplied the records" not in source and "supplied the developers" not in source
         assert "A note on impartiality" not in source and "The developers were educated correctly." not in source
-        assert source.index("<!-- Both schools supplied") < source.index('<p class="footer-links">')
+        assert source.count('<p class="footer-links">') == 1
         assert source.index("Unofficial fan site") < source.index('class="copyright"')
-        without_comments = re.sub(r"<!--.*?-->", "", source, flags=re.S)
-        assert "Only one supplied the developers." not in without_comments
     for export in ("games.csv", "data/series.json", "data/alumni.json", "data/endowment.json", "site.webmanifest"):
         assert "Only one supplied the developers." not in (site / export).read_text(encoding="utf-8")
 

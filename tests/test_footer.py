@@ -92,9 +92,9 @@ def test_every_page_has_the_shared_lines_in_order_and_links_to_its_own_how_page(
     assert f'<a href="{render.REPO_URL}">Built in the open: code and data on GitHub</a>' in f
     assert f.index("Built in the open") < f.index(render.DISCLAIMER) < f.index("© 2026")
     assert "impartiality" not in f and "The developers were educated correctly." not in f
-    assert f.count("<!-- Both schools supplied the records. Only one supplied the developers. -->") == 1
+    assert "supplied the records" not in f and "supplied the developers" not in f   # the old footer comment is gone
     if how:
-        assert (f.index("<!-- Both schools supplied") < f.index("How the numbers work") < f.index(">Privacy<")
+        assert (f.index("How the numbers work") < f.index(">Privacy<")
                 < f.index(">Accessibility<") < f.index("Built in the open"))
     assert policy_links(name) + f'<a href="{render.REPO_URL}">Built in the open' in f
     assert f.count(">Privacy<") == 1 and f.count(">Accessibility<") == 1
@@ -149,7 +149,7 @@ def test_the_alumni_footer_has_the_alumni_data_block_and_nothing_athletics_only(
 def test_the_neutral_footer_is_only_the_shared_lines(site, name):
     f = footer(site, name)
     how_link = ("" if PAGES[name][1] is None else f'<a href="{PAGES[name][0]}how-it-works/">How the numbers work</a> · ') + policy_links(name)
-    assert f == ('<footer class="site-footer">\n<div class="wrap">\n' + SITE_FEEDBACK + '<!-- Both schools supplied the records. Only one supplied the developers. -->\n<p class="footer-links">' + how_link +
+    assert f == ('<footer class="site-footer">\n<div class="wrap">\n' + SITE_FEEDBACK + '<p class="footer-links">' + how_link +
                  f'<a href="{render.REPO_URL}">Built in the open: code and data on GitHub</a></p>\n'
                  f'<p>{render.DISCLAIMER}</p>\n<p class="copyright">© 2026 Jackson Mote and Joe Haynes</p>\n'
                  '</div>\n</footer>\n</body>\n</html>\n')

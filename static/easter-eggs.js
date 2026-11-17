@@ -10,7 +10,7 @@
     activations = Math.min(5, activations + 1);
     if (activations === 5) {
       unlocked = true;
-      status.textContent = "Your education has been verified.";
+      status.textContent = "The Tiger appreciates your persistence.";
       wrapper.classList.add("entrance-unlocked");
     }
   });
