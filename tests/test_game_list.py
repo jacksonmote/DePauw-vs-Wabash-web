@@ -242,9 +242,11 @@ BELL_GAME = {"football": {"schedule_url": "https://depauwtigers.com/sports/footb
 def test_no_link_lands_inside_a_closed_group_so_every_link_target_is_in_view(tmp_path, now, upcoming, banner):
     """Every link to a place on the home page (the jump list, the headings' own links, the Bell strip, the game-day
     banner's final score, "That year's Bell game" on the heist history, the joke page's Bell link) goes to a card or
-    a section, never to something inside a disclosure. A closed <details> hides what is in it, and not every browser
-    opens it for a link, so a link to a game would need the script to open its decade: this test fails the day such
-    a link or such an id is added, before it can land on something hidden."""
+    a section, never to something inside a disclosure, in each state of the game-day banner. A closed <details>
+    hides what is in it. Current engines open it themselves for a link to something inside (Chrome 157, Firefox
+    157 and Playwright's WebKit 27.2 did, from a fresh load and from a link within the page, with JavaScript on
+    and off, on a test copy on Nov 16, 2026); older browsers were not tested. So the rule stays: no id and no link
+    inside a game list without a maintainer decision, and this test fails the day one is added."""
     out, up = tmp_path / "site", tmp_path / "upcoming.json"                           # no file: nothing scheduled
     if upcoming:
         up.write_text(json.dumps({"schema_version": 1, "sports": upcoming}), encoding="utf-8")
@@ -272,7 +274,7 @@ def test_no_link_lands_inside_a_closed_group_so_every_link_target_is_in_view(tmp
     assert page.find("svg").find_all("a") == []                                         # the charts link nowhere
 
 
-def test_the_script_is_unchanged_because_no_link_needs_a_decade_opened():
+def test_the_script_does_nothing_for_links_because_none_goes_into_a_game_list():
     script = (ROOT / "static" / "easter-eggs.js").read_text(encoding="utf-8")
     assert "hashchange" not in script and "location.hash" not in script
 
