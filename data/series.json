@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
-  "updated_at": "2026-11-14T21:25:16+00:00",
+  "updated_at": "2026-11-18T03:17:20+00:00",
   "perspective": "DePauw",
   "totals": {
-    "depauw_wins": 542,
+    "depauw_wins": 537,
     "wabash_wins": 357,
     "ties": 20,
-    "games_played": 919
+    "games_played": 914
   },
   "sports": {
     "football": {
@@ -301,14 +301,37 @@
         {
           "date": "1915-11-20",
           "season": "1915",
-          "location": "away",
+          "location": "neutral",
           "site": "Indianapolis, IN",
           "result": "L",
           "depauw": 0,
           "wabash": 34,
           "note": null,
           "boxscore": null,
-          "source": "both"
+          "source": "both",
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "DePauw",
+              "what": [
+                "place"
+              ],
+              "listed": {
+                "location": "away",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "DePauw University, Mirage yearbook, 1916 (Internet Archive)",
+                  "url": "https://archive.org/details/mirage16depa"
+                },
+                {
+                  "label": "Grand Forks Daily Herald, Nov 20, 1915, p. 6 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn89074405/1915-11-20/ed-1/?sp=6"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1916-11-11",
@@ -1646,26 +1669,27 @@
       "source_url": "https://depauwtigers.com/sports/mens-basketball/opponent-history/wabash/215",
       "wabash_source_url": "https://sports.wabash.edu/sports/mens-basketball/opponent-history/depauw-university/4",
       "record": {
-        "depauw_wins": 133,
+        "depauw_wins": 130,
         "wabash_wins": 100,
         "ties": 1
       },
-      "games_played": 234,
+      "games_played": 231,
       "first_game": "1903-03-03",
       "last_game": "2026-01-28",
       "current_streak": "L1",
       "points": {
-        "depauw": 13304,
-        "wabash": 13139
+        "depauw": 13175,
+        "wabash": 13041
       },
       "total_label": "points",
       "sources": {
-        "both": 230,
-        "depauw_only": 1,
-        "wabash_only": 3,
-        "disputed": 7,
-        "date_differs": 17,
-        "dates_not_recorded": 0
+        "both": 231,
+        "depauw_only": 0,
+        "wabash_only": 0,
+        "disputed": 8,
+        "date_differs": 18,
+        "dates_not_recorded": 0,
+        "rows_set_aside": 2
       },
       "games": [
         {
@@ -2184,25 +2208,21 @@
           "date": "1928-02-14",
           "season": "1927-28",
           "location": "home",
-          "site": null,
+          "site": "Crawfordsville, IN",
           "result": "W",
           "depauw": 23,
           "wabash": 22,
           "note": null,
           "boxscore": null,
-          "source": "depauw"
-        },
-        {
-          "date": "1928-02-29",
-          "season": "1927-28",
-          "location": "away",
-          "site": "Crawfordsville, IN",
-          "result": "W",
-          "depauw": 32,
-          "wabash": 30,
-          "note": null,
-          "boxscore": null,
-          "source": "wabash"
+          "source": "both",
+          "date_differs": true,
+          "wabash_date": "1928-02-29",
+          "disputed": true,
+          "wabash_version": {
+            "result": "W",
+            "depauw": 32,
+            "wabash": 30
+          }
         },
         {
           "date": "1929-01-15",
@@ -2583,18 +2603,6 @@
           "wabash_date": "1943-02-23"
         },
         {
-          "date": "1944-01-06",
-          "season": "1943-44",
-          "location": "home",
-          "site": "Greencastle, IN",
-          "result": "W",
-          "depauw": 69,
-          "wabash": 49,
-          "note": null,
-          "boxscore": null,
-          "source": "wabash"
-        },
-        {
           "date": "1944-01-11",
           "season": "1943-44",
           "location": "away",
@@ -2605,18 +2613,6 @@
           "note": null,
           "boxscore": null,
           "source": "both"
-        },
-        {
-          "date": "1944-02-05",
-          "season": "1943-44",
-          "location": "away",
-          "site": "Crawfordsville, IN",
-          "result": "W",
-          "depauw": 28,
-          "wabash": 19,
-          "note": null,
-          "boxscore": null,
-          "source": "wabash"
         },
         {
           "date": "1944-02-17",
@@ -4565,7 +4561,7 @@
         "ties": 3
       },
       "games_played": 314,
-      "first_game": "1888-01-03",
+      "first_game": "1888-05-19",
       "last_game": "2026-04-28",
       "current_streak": "L1",
       "points": {
@@ -4579,21 +4575,41 @@
         "wabash_only": 173,
         "disputed": 2,
         "date_differs": 16,
-        "dates_not_recorded": 64
+        "dates_not_recorded": 45
       },
       "games": [
         {
-          "date": "1888-01-03",
+          "date": "1888-05-19",
           "season": "1887-88",
-          "location": "neutral",
-          "site": null,
+          "location": "away",
+          "site": "Crawfordsville, IN",
           "result": "W",
           "depauw": 7,
           "wabash": 6,
           "note": null,
           "boxscore": null,
           "source": "wabash",
-          "date_known": false
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "The Indianapolis Journal, May 20, 1888, p. 9 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn82015679/1888-05-20/ed-1/?sp=9"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1889-01-05",
@@ -4700,17 +4716,37 @@
           "date_known": false
         },
         {
-          "date": "1894-01-01",
+          "date": "1894-05-26",
           "season": "1894",
-          "location": "neutral",
-          "site": null,
+          "location": "home",
+          "site": "Greencastle, IN",
           "result": "L",
           "depauw": 4,
           "wabash": 7,
           "note": null,
           "boxscore": null,
           "source": "wabash",
-          "date_known": false
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "The Indianapolis Journal, May 27, 1894, p. 3 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn82015679/1894-05-27/ed-1/?sp=3"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1895-01-01",
@@ -4766,30 +4802,70 @@
           "date_known": false
         },
         {
-          "date": "1899-01-01",
+          "date": "1899-05-01",
           "season": "1899",
-          "location": "neutral",
-          "site": null,
+          "location": "home",
+          "site": "Greencastle, IN",
           "result": "W",
           "depauw": 17,
           "wabash": 7,
           "note": null,
           "boxscore": null,
           "source": "wabash",
-          "date_known": false
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "The Indianapolis Journal, May 2, 1899, p. 6 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn82015679/1899-05-02/ed-1/?sp=6"
+                }
+              ]
+            }
+          ]
         },
         {
-          "date": "1900-01-01",
+          "date": "1900-05-07",
           "season": "1900",
-          "location": "neutral",
-          "site": null,
+          "location": "home",
+          "site": "Greencastle, IN",
           "result": "L",
           "depauw": 10,
           "wabash": 11,
           "note": null,
           "boxscore": null,
           "source": "wabash",
-          "date_known": false
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "The Indianapolis Journal, May 8, 1900, p. 6 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn82015679/1900-05-08/ed-1/?sp=6"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1901-01-01",
@@ -4882,17 +4958,37 @@
           "date_known": false
         },
         {
-          "date": "1907-01-01",
+          "date": "1907-04-26",
           "season": "1907",
-          "location": "neutral",
-          "site": null,
+          "location": "away",
+          "site": "Crawfordsville, IN",
           "result": "L",
           "depauw": 5,
           "wabash": 7,
           "note": null,
           "boxscore": null,
           "source": "wabash",
-          "date_known": false
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "The Lake County Times, Apr 27, 1907, p. 7 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn86058242/1907-04-27/ed-1/?sp=7"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1909-01-01",
@@ -5055,19 +5151,6 @@
           "season": "1913",
           "location": "neutral",
           "site": null,
-          "result": "W",
-          "depauw": 7,
-          "wabash": 1,
-          "note": null,
-          "boxscore": null,
-          "source": "wabash",
-          "date_known": false
-        },
-        {
-          "date": "1913-01-01",
-          "season": "1913",
-          "location": "neutral",
-          "site": null,
           "result": "L",
           "depauw": 1,
           "wabash": 4,
@@ -5077,17 +5160,70 @@
           "date_known": false
         },
         {
-          "date": "1913-01-01",
+          "date": "1913-04-22",
           "season": "1913",
-          "location": "neutral",
-          "site": null,
+          "location": "home",
+          "site": "Greencastle, IN",
           "result": "W",
           "depauw": 6,
           "wabash": 3,
           "note": null,
           "boxscore": null,
           "source": "wabash",
-          "date_known": false
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "The Lake County Times, Apr 23, 1913, p. 3 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn86058242/1913-04-23/ed-1/?sp=3"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "date": "1913-05-19",
+          "season": "1913",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "result": "W",
+          "depauw": 7,
+          "wabash": 1,
+          "note": null,
+          "boxscore": null,
+          "source": "wabash",
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "The Lake County Times, May 20, 1913, p. 3 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn86058242/1913-05-20/ed-1/?sp=3"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1914-01-01",
@@ -5129,30 +5265,70 @@
           "date_known": false
         },
         {
-          "date": "1915-01-01",
+          "date": "1915-05-07",
           "season": "1915",
-          "location": "neutral",
-          "site": null,
-          "result": "L",
-          "depauw": 5,
-          "wabash": 6,
-          "note": null,
-          "boxscore": null,
-          "source": "wabash",
-          "date_known": false
-        },
-        {
-          "date": "1915-01-01",
-          "season": "1915",
-          "location": "neutral",
-          "site": null,
+          "location": "home",
+          "site": "Greencastle, IN",
           "result": "W",
           "depauw": 6,
           "wabash": 3,
           "note": null,
           "boxscore": null,
           "source": "wabash",
-          "date_known": false
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "DePauw University, Mirage yearbook, 1916 (Internet Archive)",
+                  "url": "https://archive.org/details/mirage16depa"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "date": "1915-05-14",
+          "season": "1915",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "result": "L",
+          "depauw": 5,
+          "wabash": 6,
+          "note": null,
+          "boxscore": null,
+          "source": "wabash",
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "DePauw University, Mirage yearbook, 1916 (Internet Archive)",
+                  "url": "https://archive.org/details/mirage16depa"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1916-01-01",
@@ -5212,25 +5388,45 @@
           "location": "neutral",
           "site": null,
           "result": "W",
-          "depauw": 9,
-          "wabash": 6,
-          "note": null,
-          "boxscore": null,
-          "source": "wabash",
-          "date_known": false
-        },
-        {
-          "date": "1918-01-01",
-          "season": "1918",
-          "location": "neutral",
-          "site": null,
-          "result": "W",
           "depauw": 3,
           "wabash": 1,
           "note": null,
           "boxscore": null,
           "source": "wabash",
           "date_known": false
+        },
+        {
+          "date": "1918-05-08",
+          "season": "1918",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "result": "W",
+          "depauw": 9,
+          "wabash": 6,
+          "note": null,
+          "boxscore": null,
+          "source": "wabash",
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "The Richmond Palladium, May 9, 1918, p. 9 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn86058226/1918-05-09/ed-1/?sp=9"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1919-01-01",
@@ -5272,30 +5468,70 @@
           "date_known": false
         },
         {
-          "date": "1919-01-01",
+          "date": "1919-04-11",
           "season": "1919",
-          "location": "neutral",
-          "site": null,
-          "result": "L",
-          "depauw": 4,
-          "wabash": 5,
-          "note": null,
-          "boxscore": null,
-          "source": "wabash",
-          "date_known": false
-        },
-        {
-          "date": "1919-01-01",
-          "season": "1919",
-          "location": "neutral",
-          "site": null,
+          "location": "away",
+          "site": "Crawfordsville, IN",
           "result": "W",
           "depauw": 6,
           "wabash": 1,
           "note": null,
           "boxscore": null,
           "source": "wabash",
-          "date_known": false
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "The Richmond Palladium, Apr 14, 1919, p. 8 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn86058226/1919-04-14/ed-1/?sp=8"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "date": "1919-04-18",
+          "season": "1919",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "result": "L",
+          "depauw": 4,
+          "wabash": 5,
+          "note": null,
+          "boxscore": null,
+          "source": "wabash",
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "The Richmond Palladium, Apr 19, 1919, p. 11 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn86058226/1919-04-19/ed-1/?sp=11"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1920-01-01",
@@ -5324,59 +5560,7 @@
           "date_known": false
         },
         {
-          "date": "1920-01-01",
-          "season": "1920",
-          "location": "neutral",
-          "site": null,
-          "result": "L",
-          "depauw": 4,
-          "wabash": 7,
-          "note": null,
-          "boxscore": null,
-          "source": "wabash",
-          "date_known": false
-        },
-        {
-          "date": "1920-01-01",
-          "season": "1920",
-          "location": "neutral",
-          "site": null,
-          "result": "W",
-          "depauw": 5,
-          "wabash": 4,
-          "note": null,
-          "boxscore": null,
-          "source": "wabash",
-          "date_known": false
-        },
-        {
-          "date": "1920-01-01",
-          "season": "1920",
-          "location": "neutral",
-          "site": null,
-          "result": "W",
-          "depauw": 7,
-          "wabash": 2,
-          "note": null,
-          "boxscore": null,
-          "source": "wabash",
-          "date_known": false
-        },
-        {
-          "date": "1920-01-01",
-          "season": "1920",
-          "location": "neutral",
-          "site": null,
-          "result": "L",
-          "depauw": 5,
-          "wabash": 8,
-          "note": null,
-          "boxscore": null,
-          "source": "wabash",
-          "date_known": false
-        },
-        {
-          "date": "1920-01-01",
+          "date": "1920-04-27",
           "season": "1920",
           "location": "neutral",
           "site": null,
@@ -5386,7 +5570,164 @@
           "note": null,
           "boxscore": null,
           "source": "wabash",
-          "date_known": false
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date"
+              ],
+              "listed": {
+                "date": null
+              },
+              "sources": [
+                {
+                  "label": "Indiana Daily Times, Apr 28, 1920, p. 8 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn85047611/1920-04-28/ed-1/?sp=8"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "date": "1920-05-04",
+          "season": "1920",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "result": "L",
+          "depauw": 5,
+          "wabash": 8,
+          "note": null,
+          "boxscore": null,
+          "source": "wabash",
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "Indiana Daily Times, May 5, 1920, p. 8 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn85047611/1920-05-05/ed-1/?sp=8"
+                },
+                {
+                  "label": "The Richmond Palladium, May 5, 1920, p. 9 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn86058226/1920-05-05/ed-1/?sp=9"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "date": "1920-05-11",
+          "season": "1920",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "result": "W",
+          "depauw": 7,
+          "wabash": 2,
+          "note": null,
+          "boxscore": null,
+          "source": "wabash",
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "Indiana Daily Times, May 12, 1920, p. 8 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn85047611/1920-05-12/ed-1/?sp=8"
+                },
+                {
+                  "label": "The Richmond Palladium, May 12, 1920, p. 11 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn86058226/1920-05-12/ed-1/?sp=11"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "date": "1920-05-18",
+          "season": "1920",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "result": "W",
+          "depauw": 5,
+          "wabash": 4,
+          "note": null,
+          "boxscore": null,
+          "source": "wabash",
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "Indiana Daily Times, May 19, 1920, p. 8 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn85047611/1920-05-19/ed-1/?sp=8"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "date": "1920-06-04",
+          "season": "1920",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "result": "L",
+          "depauw": 4,
+          "wabash": 7,
+          "note": null,
+          "boxscore": null,
+          "source": "wabash",
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "Indiana Daily Times, Jun 5, 1920, p. 8 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn85047611/1920-06-05/ed-1/?sp=8"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1921-01-01",
@@ -5418,30 +5759,70 @@
           "date_known": false
         },
         {
-          "date": "1921-01-01",
+          "date": "1921-05-03",
           "season": "1921",
-          "location": "neutral",
-          "site": null,
-          "result": "L",
-          "depauw": 8,
-          "wabash": 11,
-          "note": null,
-          "boxscore": null,
-          "source": "wabash",
-          "date_known": false
-        },
-        {
-          "date": "1921-01-01",
-          "season": "1921",
-          "location": "neutral",
-          "site": null,
+          "location": "away",
+          "site": "Crawfordsville, IN",
           "result": "L",
           "depauw": 0,
           "wabash": 9,
           "note": null,
           "boxscore": null,
           "source": "wabash",
-          "date_known": false
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "Indiana Daily Times, May 4, 1921, p. 6 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn85047611/1921-05-04/ed-1/?sp=6"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "date": "1921-05-10",
+          "season": "1921",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "result": "L",
+          "depauw": 8,
+          "wabash": 11,
+          "note": null,
+          "boxscore": null,
+          "source": "wabash",
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "Indiana Daily Times, May 11, 1921, p. 8 (Library of Congress)",
+                  "url": "https://www.loc.gov/resource/sn85047611/1921-05-11/ed-1/?sp=8"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1922-05-16",
@@ -8507,7 +8888,19 @@
           "wabash": 2,
           "note": null,
           "boxscore": null,
-          "source": "depauw"
+          "source": "depauw",
+          "ruled": [
+            {
+              "kind": "note",
+              "note": "Wabash\u2019s side was not yet a varsity team; soccer became a varsity sport at Wabash in 1967, so Wabash\u2019s record does not list this game. Wabash\u2019s yearbook gives the score as 3-1.",
+              "sources": [
+                {
+                  "label": "Wabash College, The Wabash yearbook, 1967 (Internet Archive)",
+                  "url": "https://archive.org/details/wabashwabash1967"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1967-11-11",
@@ -9469,16 +9862,16 @@
       "source_url": "https://depauwtigers.com/sports/mens-tennis/opponent-history/wabash/215",
       "wabash_source_url": "https://sports.wabash.edu/sports/tennis/opponent-history/depauw-university/4",
       "record": {
-        "depauw_wins": 115,
+        "depauw_wins": 113,
         "wabash_wins": 7,
         "ties": 1
       },
-      "games_played": 123,
-      "first_game": "1915-01-01",
+      "games_played": 121,
+      "first_game": "1915-05-01",
       "last_game": "2026-04-24",
-      "current_streak": "W61",
+      "current_streak": "W59",
       "points": {
-        "depauw": 839,
+        "depauw": 821,
         "wabash": 127
       },
       "total_label": "individual matches",
@@ -9489,24 +9882,45 @@
       "sources": {
         "both": 33,
         "depauw_only": 0,
-        "wabash_only": 90,
+        "wabash_only": 88,
         "disputed": 1,
         "date_differs": 0,
-        "dates_not_recorded": 88
+        "dates_not_recorded": 85,
+        "rows_set_aside": 2
       },
       "games": [
         {
-          "date": "1915-01-01",
+          "date": "1915-05-01",
           "season": "1915",
-          "location": "neutral",
-          "site": null,
+          "location": "home",
+          "site": "Greencastle, IN",
           "result": "L",
           "depauw": 0,
           "wabash": 3,
           "note": null,
           "boxscore": null,
           "source": "wabash",
-          "date_known": false
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "DePauw University, Mirage yearbook, 1916 (Internet Archive)",
+                  "url": "https://archive.org/details/mirage16depa"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1918-01-01",
@@ -9639,17 +10053,37 @@
           "date_known": false
         },
         {
-          "date": "1929-01-01",
+          "date": "1929-04-26",
           "season": "1929",
-          "location": "neutral",
-          "site": null,
+          "location": "home",
+          "site": "Greencastle, IN",
           "result": "W",
           "depauw": 7,
           "wabash": 0,
           "note": null,
           "boxscore": null,
           "source": "wabash",
-          "date_known": false
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "Wabash College, The Wabash yearbook, 1929 (Internet Archive)",
+                  "url": "https://archive.org/details/wabash1929waba"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1930-01-01",
@@ -9811,10 +10245,10 @@
           "date_known": false
         },
         {
-          "date": "1937-01-01",
+          "date": "1937-05-05",
           "season": "1937",
-          "location": "neutral",
-          "site": null,
+          "location": "away",
+          "site": "Crawfordsville, IN",
           "result": "W",
           "depauw": 9,
           "wabash": 0,
@@ -9824,7 +10258,27 @@
           "score_order_reversed": [
             "Wabash"
           ],
-          "date_known": false
+          "ruled": [
+            {
+              "kind": "found",
+              "school": "Wabash",
+              "what": [
+                "date",
+                "place"
+              ],
+              "listed": {
+                "date": null,
+                "location": "neutral",
+                "site": null
+              },
+              "sources": [
+                {
+                  "label": "DePauw University, Mirage yearbook, 1938 (Internet Archive)",
+                  "url": "https://archive.org/details/mirage1938depa"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "1938-01-01",
@@ -10796,18 +11250,6 @@
           "source": "both"
         },
         {
-          "date": "2008-04-16",
-          "season": "2008",
-          "location": "neutral",
-          "site": null,
-          "result": "W",
-          "depauw": 9,
-          "wabash": 0,
-          "note": null,
-          "boxscore": null,
-          "source": "wabash"
-        },
-        {
           "date": "2009-04-15",
           "season": "2008-09",
           "location": "away",
@@ -10818,18 +11260,6 @@
           "note": null,
           "boxscore": null,
           "source": "both"
-        },
-        {
-          "date": "2009-04-15",
-          "season": "2008-09",
-          "location": "away",
-          "site": "Crawfordsville, IN",
-          "result": "W",
-          "depauw": 9,
-          "wabash": 0,
-          "note": null,
-          "boxscore": null,
-          "source": "wabash"
         },
         {
           "date": "2010-04-14",
@@ -11107,7 +11537,7 @@
       "current_streak": "W1",
       "points": {
         "depauw": 4957,
-        "wabash": 4369
+        "wabash": 4378
       },
       "total_label": "points",
       "unit": [
@@ -11118,7 +11548,7 @@
         "both": 30,
         "depauw_only": 0,
         "wabash_only": 9,
-        "disputed": 3,
+        "disputed": 2,
         "date_differs": 1,
         "dates_not_recorded": 0,
         "session_rows": 2
@@ -11183,7 +11613,14 @@
           "note": null,
           "boxscore": null,
           "source": "wabash",
-          "score_known": false
+          "score_known": false,
+          "ruled": [
+            {
+              "kind": "note",
+              "note": "No source other than Wabash\u2019s page has been found for this meet.",
+              "sources": []
+            }
+          ]
         },
         {
           "date": "1934-02-12",
@@ -11196,7 +11633,14 @@
           "note": null,
           "boxscore": null,
           "source": "wabash",
-          "score_known": false
+          "score_known": false,
+          "ruled": [
+            {
+              "kind": "note",
+              "note": "No source other than Wabash\u2019s page has been found for this meet.",
+              "sources": []
+            }
+          ]
         },
         {
           "date": "1937-01-08",
@@ -11438,16 +11882,26 @@
           "site": "Greencastle, IN",
           "result": "W",
           "depauw": 205,
-          "wabash": 80,
+          "wabash": 89,
           "note": null,
           "boxscore": null,
           "source": "both",
-          "disputed": true,
-          "wabash_version": {
-            "result": "W",
-            "depauw": 205,
-            "wabash": 89
-          }
+          "ruled": [
+            {
+              "kind": "score",
+              "school": "DePauw",
+              "listed": {
+                "depauw": 205,
+                "wabash": 80
+              },
+              "sources": [
+                {
+                  "label": "DePauw Athletics, \u201cDePauw Improves to 3-0 with 205-89 Win over Wabash,\u201d Nov 9, 2011",
+                  "url": "https://depauwtigers.com/news/2011/11/9/11_9_2011_3749.aspx"
+                }
+              ]
+            }
+          ]
         },
         {
           "date": "2012-11-07",
