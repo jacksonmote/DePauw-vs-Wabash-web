@@ -142,7 +142,8 @@ def test_the_alumni_how_page_takes_every_number_from_the_data_files(site):
         assert f"{name}: {' '.join(alumni.arithmetic_parts(item, per[key]))}" in page
         assert f"{item['note']} of {name}’s" in page
     assert "rounded to the nearest $1,000" in page and "no overall alumni score" in page.lower()
-    assert "Nov 13, 2026" in page and "Jun 30, 2025" in page and "fall 2024" in page
+    verified = alumni.fmt_date(max(a["verified_at"], e["verified_at"]))      # the later of the two files' dates
+    assert f"last verified {verified}" in page and "Jun 30, 2025" in page and "fall 2024" in page
     for item in e["schools"].values():
         assert f'href="{item["enrollment"]["source_url"]}"' in read(site, ALUMNI)
 

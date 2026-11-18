@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "verified_at": "2026-11-12",
+  "verified_at": "2026-11-17",
   "methodology": "Named earned-degree holders found by reviewing each school’s notable-alumni material and the relevant official award or office records. Count a person once per school and category. Include all genders and historical school names; exclude honorary-only degrees, attendance without an earned degree, nominees, finalists, members of a winning team or film without an individual award, and executives without the qualifying CEO title and year overlap. The one team exception is a Pulitzer Prize awarded to a newsroom’s staff: a graduate a source names as part of that staff counts. A degree type such as B.A. is shown only where a cited source states it; otherwise the entry gives the class year. These are verified named graduates in the reviewed sources, not a claim of complete all-time coverage.",
   "categories": [
     {
@@ -84,6 +84,10 @@
             {
               "label": "U.S. Senate, former senators",
               "url": "https://www.senate.gov/senators/former_senators.htm"
+            },
+            {
+              "label": "Alumnal Record, DePauw University (1915), Internet Archive",
+              "url": "https://archive.org/details/alumnalrecordde00weikgoog"
             }
           ]
         },
@@ -117,11 +121,15 @@
             {
               "label": "U.S. House History, Art & Archives biographies",
               "url": "https://history.house.gov/People/"
+            },
+            {
+              "label": "Alumnal Record, DePauw University (1915), Internet Archive",
+              "url": "https://archive.org/details/alumnalrecordde00weikgoog"
             }
           ]
         },
         "wabash": {
-          "notes": "Reviewed Wabash graduates against the official Congressional Biographical Directory and U.S. House History, Art & Archives biographies for federal House terms. Individual sources document earned degrees and service; state representatives and senators alone are excluded.",
+          "notes": "Reviewed Wabash graduates against the official Congressional Biographical Directory and U.S. House History, Art & Archives biographies for federal House terms. Individual sources document earned degrees and service; state representatives and senators alone are excluded. John C. Black (Illinois, 1893 to 1895) is excluded: the Directory says he attended Wabash and “was not graduated until after the close of the Civil War”, and no Wabash record of an earned degree was found.",
           "sources": [
             {
               "label": "Official U.S. Congressional Biographical Directory entries, with individual page links in each record",
@@ -141,7 +149,7 @@
       "definition": "People who served as governor of a U.S. state; territorial governors and lieutenant governors do not qualify.",
       "review": {
         "depauw": {
-          "notes": "Reviewed DePauw graduate records and National Governors Association biographies. Verified degree holders include Henry A. Buchtel, Samuel H. Elrod (1882), Newton Booth, and Albert G. Porter. James P. Goodrich and Andrew H. Burke attended but did not earn degrees; lieutenant governors and territorial governors are excluded.",
+          "notes": "Reviewed DePauw graduate records and National Governors Association biographies. Verified degree holders include Henry A. Buchtel, Samuel H. Elrod (1882), Newton Booth, and Albert G. Porter; the University’s 1915 Alumnal Record lists each as A.B. James P. Goodrich and Andrew H. Burke attended but did not earn degrees; lieutenant governors and territorial governors are excluded.",
           "sources": [
             {
               "label": "National Park Service historic record for DePauw alumni",
@@ -150,6 +158,10 @@
             {
               "label": "National Governors Association former governors",
               "url": "https://www.nga.org/former-governors/"
+            },
+            {
+              "label": "Alumnal Record, DePauw University (1915), Internet Archive",
+              "url": "https://archive.org/details/alumnalrecordde00weikgoog"
             }
           ]
         },
@@ -174,7 +186,7 @@
       "definition": "People who served as chief executive officer of a company on the U.S. Fortune 500 during an overlapping ranking year; subsidiaries and chair-only roles do not qualify.",
       "review": {
         "depauw": {
-          "notes": "Reviewed named DePauw business leaders in College records against company leadership biographies, SEC filings, and dated U.S. Fortune 500 lists. Each displayed graduate has a sourced CEO tenure and at least one matching Fortune ranking year; chair-only roles are excluded. Richard D. Wood earned his degree at Purdue, Judson Green led a Disney division rather than the company, and Robert R. Frederick (RCA, 1985 to 1986) is not shown because no dated Fortune ranking for RCA could be checked.",
+          "notes": "Reviewed named DePauw business leaders in College records against company leadership biographies, SEC filings, and dated U.S. Fortune 500 lists (for 1996, 1997, 2000 and 2008 the full lists as CNN Money published them, in Internet Archive copies). Each displayed graduate has a sourced CEO tenure and at least one matching Fortune ranking year; chair-only roles are excluded. Richard D. Wood earned his degree at Purdue, Judson Green led a Disney division rather than the company, and Robert R. Frederick (RCA, 1985 to 1986) is not shown because no dated Fortune ranking for RCA could be checked.",
           "sources": [
             {
               "label": "DePauw Board of Trustees roster",
@@ -187,7 +199,7 @@
           ]
         },
         "wabash": {
-          "notes": "Reviewed named Wabash business leaders against school class records, company biographies, SEC filings, historical U.S. Fortune 500 lists, and the Congressional Research Service 1983 executive directory. Robert E. Allen, W. Paul Tippett, and Walter Y. Elisha have sourced degree evidence, CEO service, and an overlapping rank. James L. Keyes is excluded: he is not the Johnson Controls CEO James H. Keyes. John Bachmann is excluded: Jones Financial is on none of the Fortune 500 lists reviewed for his years as managing partner.",
+          "notes": "Reviewed named Wabash business leaders against school class records, company biographies, SEC filings, historical U.S. Fortune 500 lists, and the Congressional Research Service 1983 executive directory. Robert E. Allen, W. Paul Tippett, and Walter Y. Elisha have sourced CEO service and an overlapping rank; Allen’s tenure ends in 1997, when AT&T’s proxy statement says his successor became CEO. James L. Keyes is excluded: he is not the Johnson Controls CEO James H. Keyes. John Bachmann is excluded: Jones Financial is on none of the Fortune 500 lists reviewed for his years as managing partner.",
           "sources": [
             {
               "label": "Wabash political science alumni: Robert E. Allen ’57",
@@ -240,7 +252,7 @@
       "definition": "Named Rhodes Scholarship awardees who earned a degree from either college; finalists do not qualify.",
       "review": {
         "depauw": {
-          "notes": "Reviewed the official Rhodes House award records returned for DePauw and traced earned-degree evidence for the named graduates. Three degree-holders are supported in the reviewed sources: Douglas Hallward-Driemeier (1989), John McNaughton (1948 award; DePauw 1942), and Robert Montgomery Stephenson (1916 award; A.B. 1913). This count does not assert an exhaustive historical roster.",
+          "notes": "Reviewed the official Rhodes House award records returned for DePauw and traced earned-degree evidence for the named graduates. Three degree-holders are supported in the reviewed sources: Douglas Hallward-Driemeier (1989), John McNaughton (1948 award; DePauw 1942), and Robert Montgomery Stephenson (1916 award; A.B. 1913). The Rhodes Trust’s table of winners by institution also counts three for DePauw. Carlton Long (class of 1983) transferred and won his scholarship at Columbia, so he is not counted.",
           "sources": [
             {
               "label": "Rhodes House official scholar database",
@@ -249,11 +261,15 @@
             {
               "label": "Harvard Crimson, 1916 degree list for Robert Stephenson",
               "url": "https://www.thecrimson.com/article/1916/3/6/mid-year-degrees-awarded-pthe-degrees-conferred/"
+            },
+            {
+              "label": "Rhodes Trust: Number of Winners by Institution, U.S. Rhodes Scholars 1904–2026 (PDF)",
+              "url": "https://www.rhodeshouse.ox.ac.uk/media2/xyinm2ry/2026-rs-number-of-winners-by-institution.pdf"
             }
           ]
         },
         "wabash": {
-          "notes": "Reviewed College records of Rhodes graduates and individual alumni biographies. The College identifies nine graduates through Jacob Burnett '15; Chase Breaux '24 is explicitly a finalist and excluded.",
+          "notes": "Reviewed College records of Rhodes graduates and individual alumni biographies. The College identifies nine graduates through Jacob Burnett '15; Chase Breaux '24 is explicitly a finalist and excluded. The Rhodes Trust’s table of winners by institution also counts nine for Wabash. For five of the nine (Pifer, Osborne, Littell, Barnett and Burnett) the cited page gives a class year only; no page that states the degree has been found yet.",
           "sources": [
             {
               "label": "Wabash Rhodes Scholar news",
@@ -266,6 +282,10 @@
             {
               "label": "Rhodes Scholar Directory",
               "url": "https://www.rhodeshouse.ox.ac.uk/scholar-network/rhodes-scholar-database/"
+            },
+            {
+              "label": "Rhodes Trust: Number of Winners by Institution, U.S. Rhodes Scholars 1904–2026 (PDF)",
+              "url": "https://www.rhodeshouse.ox.ac.uk/media2/xyinm2ry/2026-rs-number-of-winners-by-institution.pdf"
             }
           ]
         }
@@ -343,15 +363,15 @@
       "id": "albert-porter",
       "name": "Albert Gallatin Porter",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1843,
       "categories": [
         "governors",
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: Albert Gallatin Porter (PDF p. 1759)",
-        "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1759"
+        "label": "Alumnal Record, DePauw University (1915), p. 49: Albert G. Porter, A.B., class of 1843 (Internet Archive)",
+        "url": "https://archive.org/details/alumnalrecordde00weikgoog/page/n57/mode/1up"
       },
       "qualifications": {
         "governors": {
@@ -361,7 +381,7 @@
             1885
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Albert Gallatin Porter (PDF p. 1759)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Albert Gallatin Porter (PDF p. 1759)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1759"
           }
         },
@@ -372,7 +392,7 @@
             1863
           ],
           "source": {
-            "label": "Official Congressional Biographical Directory: Albert Gallatin Porter (PDF p. 1759)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Albert Gallatin Porter (PDF p. 1759)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1759"
           }
         }
@@ -389,8 +409,8 @@
         "pulitzer"
       ],
       "school_source": {
-        "label": "Official Congressional Biographical Directory: Albert J. Beveridge (PDF p. 658)",
-        "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=658"
+        "label": "Biographical Directory of the United States Congress, 1774–2005: Albert J. Beveridge (PDF p. 657)",
+        "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=657"
       },
       "qualifications": {
         "senators": {
@@ -400,8 +420,8 @@
             1911
           ],
           "source": {
-            "label": "Official Congressional Biographical Directory: Albert J. Beveridge (PDF p. 658)",
-            "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=658"
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Albert J. Beveridge (PDF p. 657)",
+            "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=657"
           }
         },
         "pulitzer": {
@@ -410,7 +430,7 @@
             1920
           ],
           "source": {
-            "label": "Pulitzer Prize biography",
+            "label": "The Pulitzer Prizes: winner page for Albert J. Beveridge",
             "url": "https://www.pulitzer.org/winners/albert-j-beveridge"
           }
         }
@@ -426,8 +446,8 @@
         "pulitzer"
       ],
       "school_source": {
-        "label": "DePauw 100 CLAS Alumni",
-        "url": "https://www.depauw.edu/alumni/alumni-e-news/100-clas-alumni-you-should-know/"
+        "label": "DePauw University Archives: Barbara Ellen Kingsolver collection (graduated from DePauw in 1977)",
+        "url": "https://depauw.libraryhost.com/repositories/2/resources/2743"
       },
       "qualifications": {
         "pulitzer": {
@@ -436,7 +456,7 @@
             2023
           ],
           "source": {
-            "label": "Pulitzer Prize biography",
+            "label": "The Pulitzer Prizes: winner page for Barbara Kingsolver",
             "url": "https://www.pulitzer.org/winners/barbara-kingsolver"
           }
         }
@@ -473,14 +493,14 @@
       "id": "courtland-matson",
       "name": "Courtland Cushing Matson",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1862,
       "categories": [
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: Courtland Cushing Matson (PDF p. 1524)",
-        "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1524"
+        "label": "Alumnal Record, DePauw University (1915), p. 75: Courtland Cushing Matson, A.B., class of 1862 (Internet Archive)",
+        "url": "https://archive.org/details/alumnalrecordde00weikgoog/page/n83/mode/1up"
       },
       "qualifications": {
         "representatives": {
@@ -490,7 +510,7 @@
             1889
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Courtland Cushing Matson (PDF p. 1524)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Courtland Cushing Matson (PDF p. 1524)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1524"
           }
         }
@@ -508,7 +528,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "Official Congressional Biographical Directory: Dan Quayle (PDF p. 1781)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: Dan Quayle (PDF p. 1781)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1781"
       },
       "qualifications": {
@@ -519,7 +539,7 @@
             1993
           ],
           "source": {
-            "label": "U.S. House biography",
+            "label": "U.S. House History, Art & Archives biography: Dan Quayle",
             "url": "https://history.house.gov/People/Detail/20050"
           }
         },
@@ -530,7 +550,7 @@
             1989
           ],
           "source": {
-            "label": "U.S. House biography",
+            "label": "U.S. House History, Art & Archives biography: Dan Quayle",
             "url": "https://history.house.gov/People/Detail/20050"
           }
         },
@@ -541,7 +561,7 @@
             1981
           ],
           "source": {
-            "label": "U.S. House biography",
+            "label": "U.S. House History, Art & Archives biography: Dan Quayle",
             "url": "https://history.house.gov/People/Detail/20050"
           }
         }
@@ -551,15 +571,15 @@
       "id": "daniel-voorhees",
       "name": "Daniel W. Voorhees",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1849,
       "categories": [
         "senators",
         "representatives"
       ],
       "school_source": {
-        "label": "Official Congressional Biographical Directory: Daniel W. Voorhees (PDF p. 2102)",
-        "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2102"
+        "label": "Alumnal Record, DePauw University (1915), p. 57: Daniel Wolsey Voorhees, A.B., class of 1849 (Internet Archive)",
+        "url": "https://archive.org/details/alumnalrecordde00weikgoog/page/n65/mode/1up"
       },
       "qualifications": {
         "senators": {
@@ -569,7 +589,7 @@
             1897
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Daniel Voorhees (PDF p. 2102)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Daniel Voorhees (PDF p. 2102)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2102"
           }
         },
@@ -582,7 +602,7 @@
             1873
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Daniel Voorhees (PDF p. 2102)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Daniel Voorhees (PDF p. 2102)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2102"
           }
         }
@@ -598,8 +618,8 @@
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "DePauw story: Douglas Hallward-Driemeier ’89, Rhodes Scholar",
-        "url": "https://www.depauw.edu/stories/details/rectors-changing-lives-changing-an-institution-changing-the-world/"
+        "label": "DePauw news, Dec 6, 2001 (archived copy): Doug Driemeier, a 1989 DePauw graduate and Rhodes Scholar",
+        "url": "https://web.archive.org/web/20250430162537/https://www.depauw.edu/news-media/latest-news/details/11809/"
       },
       "qualifications": {
         "rhodes-scholars": {
@@ -624,8 +644,8 @@
         "nobel"
       ],
       "school_source": {
-        "label": "DePauw biography identifying Ferid Murad as a 1958 graduate",
-        "url": "https://www.depauw.edu/stories/details/rectors-changing-lives-changing-an-institution-changing-the-world/"
+        "label": "NobelPrize.org: Ferid Murad, biographical (at DePauw from 1954 to 1958, to graduation)",
+        "url": "https://www.nobelprize.org/prizes/medicine/1998/murad/biographical/"
       },
       "qualifications": {
         "nobel": {
@@ -634,7 +654,7 @@
             1998
           ],
           "source": {
-            "label": "Nobel Prize biography",
+            "label": "NobelPrize.org: Ferid Murad, facts",
             "url": "https://www.nobelprize.org/prizes/medicine/1998/murad/facts/"
           }
         }
@@ -650,7 +670,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: Frank Trimble O’Hair (PDF p. 1681)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: Frank Trimble O’Hair (PDF p. 1681)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1681"
       },
       "qualifications": {
@@ -661,7 +681,7 @@
             1915
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Frank Trimble O’Hair (PDF p. 1681)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Frank Trimble O’Hair (PDF p. 1681)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1681"
           }
         }
@@ -677,7 +697,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: George Washington Faris (PDF p. 1043)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: George Washington Faris (PDF p. 1043)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1043"
       },
       "qualifications": {
@@ -688,7 +708,7 @@
             1901
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: George Washington Faris (PDF p. 1043)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: George Washington Faris (PDF p. 1043)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1043"
           }
         }
@@ -698,14 +718,14 @@
       "id": "henry-buchtel",
       "name": "Henry Augustus Buchtel",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1872,
       "categories": [
         "governors"
       ],
       "school_source": {
-        "label": "DePauw history: Henry Augustus Buchtel, 1872 graduate",
-        "url": "https://library.depauw.edu/library/archives/ehistory/chapter1/index11.htm"
+        "label": "Alumnal Record, DePauw University (1915), p. 97: Henry Augustus Buchtel, A.B., class of 1872 (Internet Archive)",
+        "url": "https://archive.org/details/alumnalrecordde00weikgoog/page/n105/mode/1up"
       },
       "qualifications": {
         "governors": {
@@ -715,7 +735,7 @@
             1909
           ],
           "source": {
-            "label": "National Governors Association",
+            "label": "National Governors Association: Henry Augustus Buchtel, Governor of Colorado 1907–1909",
             "url": "https://www.nga.org/governor/henry-augustus-buchtel/"
           }
         }
@@ -731,8 +751,8 @@
         "fortune-500-ceos"
       ],
       "school_source": {
-        "label": "DePauw Library record: Ian Rolland, class of 1955",
-        "url": "https://libguides.depauw.edu/c.php?g=1126193&p=9871004"
+        "label": "DePauw news, Sept 1, 2011 (archived copy): Ian M. Rolland, 1955 graduate of DePauw University",
+        "url": "https://web.archive.org/web/20240727114106/https://www.depauw.edu/news-media/latest-news/details/27495/"
       },
       "qualifications": {
         "fortune-500-ceos": {
@@ -749,8 +769,8 @@
           "rank_year": 1996,
           "rank": 199,
           "ranking_source": {
-            "label": "Fortune U.S. Fortune 500 ranking, 1996",
-            "url": "https://fortune.com/ranking/fortune500/1996/"
+            "label": "Fortune 500, 1996, ranks 101–200 (CNN Money, archived copy): Lincoln National #199",
+            "url": "https://web.archive.org/web/20120904024232/money.cnn.com/magazines/fortune/fortune500_archive/full/1996/101.html"
           }
         }
       }
@@ -759,14 +779,14 @@
       "id": "isaac-clements",
       "name": "Isaac Clements",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1859,
       "categories": [
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: Isaac Clements (PDF p. 844)",
-        "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=844"
+        "label": "Alumnal Record, DePauw University (1915), p. 70: Isaac Clements, A.B., class of 1859 (Internet Archive)",
+        "url": "https://archive.org/details/alumnalrecordde00weikgoog/page/n78/mode/1up"
       },
       "qualifications": {
         "representatives": {
@@ -776,7 +796,7 @@
             1875
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Isaac Clements (PDF p. 844)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Isaac Clements (PDF p. 844)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=844"
           }
         }
@@ -792,8 +812,8 @@
         "pulitzer"
       ],
       "school_source": {
-        "label": "DePauw alumni profile",
-        "url": "https://www.depauw.edu/stories/details/1973-depauw-alumnus-james-b-stewart-publishes-ldquounscriptedrdquo/"
+        "label": "DePauw news, Apr 1, 1988 (archived copy): James B. Stewart, a 1973 graduate of DePauw University",
+        "url": "https://web.archive.org/web/20190916081955/https://www.depauw.edu/news-media/latest-news/details/19909/"
       },
       "qualifications": {
         "pulitzer": {
@@ -802,7 +822,7 @@
             1988
           ],
           "source": {
-            "label": "Pulitzer 1988 winners",
+            "label": "The Pulitzer Prizes: 1988 prize winners",
             "url": "https://www.pulitzer.org/prize-winners-by-year/1988"
           }
         }
@@ -812,15 +832,15 @@
       "id": "james-watson",
       "name": "James E. Watson",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1886,
       "categories": [
         "senators",
         "representatives"
       ],
       "school_source": {
-        "label": "Official Congressional Biographical Directory: James E. Watson (PDF p. 2133)",
-        "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2133"
+        "label": "Alumnal Record, DePauw University (1915), p. 160: James E. Watson, A.B., class of 1886 (Internet Archive)",
+        "url": "https://archive.org/details/alumnalrecordde00weikgoog/page/n168/mode/1up"
       },
       "qualifications": {
         "senators": {
@@ -830,7 +850,7 @@
             1933
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: James Watson (PDF p. 2133)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: James Watson (PDF p. 2133)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2133"
           }
         },
@@ -843,7 +863,7 @@
             1909
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: James Watson (PDF p. 2133)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: James Watson (PDF p. 2133)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2133"
           }
         }
@@ -853,14 +873,14 @@
       "id": "james-harlan",
       "name": "James Harlan",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1845,
       "categories": [
         "senators"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: James Harlan (PDF p. 1204)",
-        "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1204"
+        "label": "Alumnal Record, DePauw University (1915), p. 51: James Harlan, A.B., class of 1845 (Internet Archive)",
+        "url": "https://archive.org/details/alumnalrecordde00weikgoog/page/n59/mode/1up"
       },
       "qualifications": {
         "senators": {
@@ -872,7 +892,7 @@
             1873
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: James Harlan (PDF p. 1204)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: James Harlan (PDF p. 1204)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1204"
           }
         }
@@ -888,8 +908,8 @@
         "fortune-500-ceos"
       ],
       "school_source": {
-        "label": "DePauw alumni roundup identifying Jeffrey Mezger ’77",
-        "url": "https://www.depauw.edu/stories/details/alumni-news-roundup--aug-15-2022/"
+        "label": "DePauw news, May 14, 2009 (archived copy): Jeffrey T. Mezger, 1977 graduate of DePauw University",
+        "url": "https://web.archive.org/web/20240622031950/https://www.depauw.edu/news-media/latest-news/details/23557/"
       },
       "qualifications": {
         "fortune-500-ceos": {
@@ -906,8 +926,8 @@
           "rank_year": 2008,
           "rank": 340,
           "ranking_source": {
-            "label": "Fortune U.S. Fortune 500 ranking, 2008",
-            "url": "https://fortune.com/ranking/fortune500/2008/"
+            "label": "Fortune 500, 2008, ranks 301–400 (CNN Money, archived copy): KB Home #340",
+            "url": "https://web.archive.org/web/20130303124119/money.cnn.com/magazines/fortune/fortune500/2008/full_list/301_400.html"
           }
         }
       }
@@ -916,13 +936,17 @@
       "id": "jim-rechtin",
       "name": "Jim Rechtin",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "B.A.",
       "degree_year": 1993,
       "categories": [
         "fortune-500-ceos"
       ],
       "school_source": {
-        "label": "DePauw profile: Jim Rechtin ’93",
+        "label": "Business Roundtable: Jim Rechtin, Bachelor of Arts from DePauw University",
+        "url": "https://www.businessroundtable.org/members/jim-rechtin"
+      },
+      "class_year_source": {
+        "label": "DePauw story: Jim Rechtin ’93 Featured in Fortune Magazine",
         "url": "https://www.depauw.edu/stories/details/jim-rechtin-93-featured-in-fortune-magazine/"
       },
       "qualifications": {
@@ -951,14 +975,14 @@
       "id": "john-hanna",
       "name": "John Hanna",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1850,
       "categories": [
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: John Hanna (PDF p. 1196)",
-        "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1196"
+        "label": "Alumnal Record, DePauw University (1915), p. 57: John Hanna, A.B., class of 1850 (Internet Archive)",
+        "url": "https://archive.org/details/alumnalrecordde00weikgoog/page/n65/mode/1up"
       },
       "qualifications": {
         "representatives": {
@@ -968,7 +992,7 @@
             1879
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: John Hanna (PDF p. 1196)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: John Hanna (PDF p. 1196)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1196"
           }
         }
@@ -984,8 +1008,8 @@
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "DePauw 1942 graduate record",
-        "url": "https://digital.palni.edu/digital/api/collection/p15705coll77/id/16336/download"
+        "label": "DePauw news, Dec 6, 2001 (archived copy): John McNaughton, a 1942 graduate of DePauw and Rhodes Scholar",
+        "url": "https://web.archive.org/web/20250430162537/https://www.depauw.edu/news-media/latest-news/details/11809/"
       },
       "qualifications": {
         "rhodes-scholars": {
@@ -1011,7 +1035,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "Official Congressional Biographical Directory: John William Elmer Thomas (PDF p. 2041)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: John William Elmer Thomas (PDF p. 2041)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2041"
       },
       "qualifications": {
@@ -1022,7 +1046,7 @@
             1951
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Elmer Thomas (PDF p. 2041)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Elmer Thomas (PDF p. 2041)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2041"
           }
         },
@@ -1033,7 +1057,7 @@
             1927
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Elmer Thomas (PDF p. 2041)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Elmer Thomas (PDF p. 2041)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2041"
           }
         }
@@ -1043,15 +1067,15 @@
       "id": "joseph-mcdonald",
       "name": "Joseph Ewing McDonald",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1840,
       "categories": [
         "senators",
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: Joseph Ewing McDonald (PDF p. 1547)",
-        "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1547"
+        "label": "Alumnal Record, DePauw University (1915), p. 47: Joseph Ewing McDonald, A.B., class of 1840 (Internet Archive)",
+        "url": "https://archive.org/details/alumnalrecordde00weikgoog/page/n55/mode/1up"
       },
       "qualifications": {
         "senators": {
@@ -1061,7 +1085,7 @@
             1881
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Joseph Ewing McDonald (PDF p. 1547)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Joseph Ewing McDonald (PDF p. 1547)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1547"
           }
         },
@@ -1072,7 +1096,7 @@
             1851
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Joseph Ewing McDonald (PDF p. 1547)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Joseph Ewing McDonald (PDF p. 1547)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1547"
           }
         }
@@ -1115,7 +1139,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: Joseph Walker Barr (PDF p. 620)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: Joseph Walker Barr (PDF p. 620)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=620"
       },
       "qualifications": {
@@ -1126,7 +1150,7 @@
             1961
           ],
           "source": {
-            "label": "Official Congressional Biographical Directory: Joseph Walker Barr (PDF p. 620)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Joseph Walker Barr (PDF p. 620)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=620"
           }
         }
@@ -1163,14 +1187,14 @@
       "id": "mark-demotte",
       "name": "Mark Lindsey DeMotte",
       "school": "depauw",
-      "degree": "Literary department (1853), law department (1855)",
+      "degree": "A.B. (1853), law department (1855)",
       "degree_year": 1855,
       "categories": [
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: Mark Lindsey DeMotte (PDF p. 951)",
-        "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=951"
+        "label": "Alumnal Record, DePauw University (1915), p. 60: Mark Lindsey DeMotte, A.B., class of 1853 (Internet Archive)",
+        "url": "https://archive.org/details/alumnalrecordde00weikgoog/page/n68/mode/1up"
       },
       "qualifications": {
         "representatives": {
@@ -1180,7 +1204,7 @@
             1883
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Mark Lindsey DeMotte (PDF p. 951)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Mark Lindsey DeMotte (PDF p. 951)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=951"
           }
         }
@@ -1190,14 +1214,14 @@
       "id": "milton-durham",
       "name": "Milton Jameson Durham",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1844,
       "categories": [
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: Milton Jameson Durham (PDF p. 999)",
-        "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=999"
+        "label": "Alumnal Record, DePauw University (1915), p. 50: Milton J. Durham, A.B., class of 1844 (Internet Archive)",
+        "url": "https://archive.org/details/alumnalrecordde00weikgoog/page/n58/mode/1up"
       },
       "qualifications": {
         "representatives": {
@@ -1207,7 +1231,7 @@
             1879
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Milton Jameson Durham (PDF p. 999)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Milton Jameson Durham (PDF p. 999)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=999"
           }
         }
@@ -1217,15 +1241,15 @@
       "id": "newton-booth",
       "name": "Newton Booth",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1846,
       "categories": [
         "senators",
         "governors"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: Newton Booth (PDF p. 686)",
-        "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=686"
+        "label": "Alumnal Record, DePauw University (1915), p. 52: Newton Booth, A.B., class of 1846 (Internet Archive)",
+        "url": "https://archive.org/details/alumnalrecordde00weikgoog/page/n60/mode/1up"
       },
       "qualifications": {
         "senators": {
@@ -1235,7 +1259,7 @@
             1881
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Newton Booth (PDF p. 686)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Newton Booth (PDF p. 686)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=686"
           }
         },
@@ -1280,8 +1304,8 @@
           "rank_year": 2008,
           "rank": 336,
           "ranking_source": {
-            "label": "Fortune U.S. Fortune 500 ranking, 2008",
-            "url": "https://fortune.com/ranking/fortune500/2008/"
+            "label": "Fortune 500, 2008, ranks 301–400 (CNN Money, archived copy): Ball #336",
+            "url": "https://web.archive.org/web/20130303124119/money.cnn.com/magazines/fortune/fortune500/2008/full_list/301_400.html"
           }
         }
       }
@@ -1296,7 +1320,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: Ralph Waldo Gwinn (PDF p. 1175)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: Ralph Waldo Gwinn (PDF p. 1175)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1175"
       },
       "qualifications": {
@@ -1307,7 +1331,7 @@
             1959
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Ralph Waldo Gwinn (PDF p. 1175)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Ralph Waldo Gwinn (PDF p. 1175)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1175"
           }
         }
@@ -1333,7 +1357,7 @@
             1916
           ],
           "source": {
-            "label": "Rhodes House scholar record, 1916",
+            "label": "Rhodes Trust Scholar API record: Robert Stephenson, Indiana & Balliol 1916",
             "url": "https://www.rhodeshouse.ox.ac.uk/umbraco/api/ScholarApi/Scholars?year=1916&lastname=Stephenson"
           }
         }
@@ -1343,14 +1367,14 @@
       "id": "samuel-elrod",
       "name": "Samuel H. Elrod",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1882,
       "categories": [
         "governors"
       ],
       "school_source": {
-        "label": "National Governors Association biography: Samuel H. Elrod, DePauw graduate 1882",
-        "url": "https://www.nga.org/governor/samuel-harrison-elrod/"
+        "label": "Alumnal Record, DePauw University (1915), p. 138: Samuel Harrison Elrod, A.B., class of 1882 (Internet Archive)",
+        "url": "https://archive.org/details/alumnalrecordde00weikgoog/page/n146/mode/1up"
       },
       "qualifications": {
         "governors": {
@@ -1376,8 +1400,8 @@
         "fortune-500-ceos"
       ],
       "school_source": {
-        "label": "DePauw Board of Trustees roster, Stephen W. Sanger ’68",
-        "url": "https://www.depauw.edu/about/president/leadership/board-of-trustees/"
+        "label": "DePauw news, June 7, 2018 (archived copy): 1968 DePauw graduates Steve and Karen Sanger",
+        "url": "https://web.archive.org/web/20190917101550/https://www.depauw.edu/news-media/latest-news/details/33724/"
       },
       "qualifications": {
         "fortune-500-ceos": {
@@ -1387,15 +1411,15 @@
             2007
           ],
           "source": {
-            "label": "SEC proxy identifying Sanger as General Mills CEO from 1995",
+            "label": "Wells Fargo 2016 SEC proxy: Sanger, CEO of General Mills from May 1995 to September 2007",
             "url": "https://www.sec.gov/Archives/edgar/data/72971/000119312516506771/d897049ddef14a1.pdf"
           },
           "company": "General Mills",
           "rank_year": 1996,
           "rank": 156,
           "ranking_source": {
-            "label": "Fortune U.S. Fortune 500 ranking, 1996",
-            "url": "https://fortune.com/ranking/fortune500/1996/"
+            "label": "Fortune 500, 1996, ranks 101–200 (CNN Money, archived copy): General Mills #156",
+            "url": "https://web.archive.org/web/20120904024232/money.cnn.com/magazines/fortune/fortune500_archive/full/1996/101.html"
           }
         }
       }
@@ -1439,7 +1463,7 @@
           "rank_year": 1989,
           "rank": 388,
           "ranking_source": {
-            "label": "Los Angeles Times, reproducing Fortune 500 ranking from 1988 sales (Danaher #388)",
+            "label": "Los Angeles Times, Apr 5, 1989, reproducing the Fortune 500 for 1988 sales (Danaher #388)",
             "url": "https://www.latimes.com/archives/la-xpm-1989-04-05-fi-1026-story.html"
           }
         }
@@ -1473,8 +1497,8 @@
           "rank_year": 2000,
           "rank": 262,
           "ranking_source": {
-            "label": "Fortune U.S. Fortune 500 ranking, 2000",
-            "url": "https://fortune.com/ranking/fortune500/2000/"
+            "label": "Fortune 500, 2000, ranks 201–300 (CNN Money, archived copy): Cummins #262",
+            "url": "https://web.archive.org/web/20130528102250/money.cnn.com/magazines/fortune/fortune500_archive/full/2000/201.html"
           }
         }
       }
@@ -1489,7 +1513,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: Winfield Kirkpatrick Denton (PDF p. 956)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: Winfield Kirkpatrick Denton (PDF p. 956)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=956"
       },
       "qualifications": {
@@ -1502,7 +1526,7 @@
             1966
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Winfield Kirkpatrick Denton (PDF p. 956)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Winfield Kirkpatrick Denton (PDF p. 956)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=956"
           }
         }
@@ -1518,7 +1542,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: Andrew Holman Hamilton (PDF p. 1189)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: Andrew Holman Hamilton (PDF p. 1189)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1189"
       },
       "qualifications": {
@@ -1529,7 +1553,7 @@
             1879
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Andrew Holman Hamilton (PDF p. 1189)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Andrew Holman Hamilton (PDF p. 1189)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1189"
           }
         }
@@ -1597,7 +1621,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: Charles Beary Landis (PDF p. 1420)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: Charles Beary Landis (PDF p. 1420)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1420"
       },
       "qualifications": {
@@ -1608,7 +1632,7 @@
             1909
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Charles Beary Landis (PDF p. 1420)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Charles Beary Landis (PDF p. 1420)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1420"
           }
         }
@@ -1624,7 +1648,7 @@
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "Wabash Rhodes Scholar record",
+        "label": "Wabash College News, Nov 21, 2005: the College archivist’s list of Rhodes Scholars, Claude A. Pifer ’07",
         "url": "https://www.wabash.edu/news/story/3014"
       },
       "qualifications": {
@@ -1676,7 +1700,7 @@
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "Wabash Rhodes Scholar record",
+        "label": "Wabash College News, Nov 21, 2005: the College archivist’s list of Rhodes Scholars, Frank R. Barnett ’43",
         "url": "https://www.wabash.edu/news/story/3014"
       },
       "qualifications": {
@@ -1702,7 +1726,7 @@
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "Wabash Rhodes Scholar record",
+        "label": "Wabash College News, Nov 21, 2005: the College archivist’s list of Rhodes Scholars, J. Insley Osborne ’06",
         "url": "https://www.wabash.edu/news/story/3014"
       },
       "qualifications": {
@@ -1728,7 +1752,7 @@
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "Wabash graduate and scholar profile",
+        "label": "Wabash College News, July 29, 2015: Jacob Burnett ’15, the College’s ninth Rhodes Scholar",
         "url": "https://www.wabash.edu/news/story/10589"
       },
       "qualifications": {
@@ -1754,7 +1778,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: James Wilson (PDF p. 2186)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: James Wilson (PDF p. 2186)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2186"
       },
       "qualifications": {
@@ -1765,7 +1789,7 @@
             1861
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: James Wilson (PDF p. 2186)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: James Wilson (PDF p. 2186)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2186"
           }
         }
@@ -1781,7 +1805,7 @@
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "Wabash graduate and scholar profile",
+        "label": "Wabash College News, Nov 21, 2005: Jeremy Robinson, summa cum laude graduate and Rhodes Scholar",
         "url": "https://www.wabash.edu/news/story/3014"
       },
       "qualifications": {
@@ -1807,7 +1831,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "Official Congressional Biographical Directory: John Coburn (PDF p. 851)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: John Coburn (PDF p. 851)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=851"
       },
       "qualifications": {
@@ -1818,7 +1842,7 @@
             1875
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: John Coburn (PDF p. 851)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: John Coburn (PDF p. 851)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=851"
           }
         }
@@ -1835,7 +1859,7 @@
         "senators"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: John Lockwood Wilson (PDF p. 2188)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: John Lockwood Wilson (PDF p. 2188)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2188"
       },
       "qualifications": {
@@ -1846,7 +1870,7 @@
             1895
           ],
           "source": {
-            "label": "Official Congressional Biographical Directory: John Lockwood Wilson (PDF p. 2188)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: John Lockwood Wilson (PDF p. 2188)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2188"
           }
         },
@@ -1857,7 +1881,7 @@
             1899
           ],
           "source": {
-            "label": "Official Congressional Biographical Directory: John Lockwood Wilson (PDF p. 2188)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: John Lockwood Wilson (PDF p. 2188)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2188"
           }
         }
@@ -1873,7 +1897,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: John Valentine Beamer (PDF p. 635)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: John Valentine Beamer (PDF p. 635)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=635"
       },
       "qualifications": {
@@ -1884,7 +1908,7 @@
             1959
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: John Valentine Beamer (PDF p. 635)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: John Valentine Beamer (PDF p. 635)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=635"
           }
         }
@@ -1912,7 +1936,7 @@
             2025
           ],
           "source": {
-            "label": "Congressional Directory biography",
+            "label": "Congressional Directory, 2022: Senator Mike Braun of Indiana",
             "url": "https://www.govinfo.gov/content/pkg/CDIR-2022-10-26/html/CDIR-2022-10-26-IN-S-2.htm"
           }
         },
@@ -1939,7 +1963,7 @@
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "Wabash Rhodes Scholar record",
+        "label": "Wabash College News, Nov 21, 2005: the College archivist’s list of Rhodes Scholars, Norman Littell ’21",
         "url": "https://www.wabash.edu/news/story/3014"
       },
       "qualifications": {
@@ -1965,7 +1989,7 @@
         "senators"
       ],
       "school_source": {
-        "label": "Official Congressional Biographical Directory: Raymond E. Willis (PDF p. 2182)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: Raymond E. Willis (PDF p. 2182)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2182"
       },
       "qualifications": {
@@ -1976,7 +2000,7 @@
             1947
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Raymond E. Willis (PDF p. 2182)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Raymond E. Willis (PDF p. 2182)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=2182"
           }
         }
@@ -1992,7 +2016,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: Robert Bruce Fraser Peirce (PDF p. 1724)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: Robert Bruce Fraser Peirce (PDF p. 1724)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1724"
       },
       "qualifications": {
@@ -2003,7 +2027,7 @@
             1883
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: Robert Bruce Fraser Peirce (PDF p. 1724)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: Robert Bruce Fraser Peirce (PDF p. 1724)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1724"
           }
         }
@@ -2019,25 +2043,25 @@
         "fortune-500-ceos"
       ],
       "school_source": {
-        "label": "Wabash political science alumni record, Robert E. Allen ’57",
-        "url": "https://www.wabash.edu/academics/political_science/alumni"
+        "label": "Wabash College News, Sept 11, 2016: Robert E. Allen ’57 joined Indiana Bell after graduation; AT&T chairman and CEO from 1988",
+        "url": "https://www.wabash.edu/news/story/10880"
       },
       "qualifications": {
         "fortune-500-ceos": {
           "achievement": "CEO of AT&T Corporation",
           "years": [
             1988,
-            1998
+            1997
           ],
           "source": {
-            "label": "Wabash obituary: elected AT&T chairman and CEO in 1988; held the post until 1998",
-            "url": "https://www.wabash.edu/news/story/10880"
+            "label": "AT&T 1998 SEC proxy: Allen was CEO for part of 1997; his successor has been CEO since November 1997",
+            "url": "https://www.sec.gov/Archives/edgar/data/5907/0001029869-98-000408.txt"
           },
           "company": "AT&T",
           "rank_year": 1997,
           "rank": 7,
           "ranking_source": {
-            "label": "Fortune U.S. Fortune 500 ranking, 1997",
+            "label": "Fortune 500, 1997 (fortune.com): AT&T #7",
             "url": "https://fortune.com/ranking/fortune500/1997/"
           }
         }
@@ -2053,7 +2077,11 @@
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "Wabash Rhodes Scholar record",
+        "label": "University of Iowa Department of Internal Medicine, May 5, 2026: Robert Ashman earned a degree in zoology from Wabash College",
+        "url": "https://internalmedicineiowa.org/2026/05/05/robert-ashman-1938-2026/"
+      },
+      "class_year_source": {
+        "label": "Wabash College News, Nov 21, 2005: the College archivist’s list of Rhodes Scholars, Robert F. Ashman ’60",
         "url": "https://www.wabash.edu/news/story/3014"
       },
       "qualifications": {
@@ -2080,8 +2108,8 @@
         "governors"
       ],
       "school_source": {
-        "label": "Wabash profile identifying Thomas R. Marshall, class of 1873",
-        "url": "https://www.wabash.edu/magazine/1999/winter/features/vicepresident.htm"
+        "label": "Biographical Directory of the United States Congress, 1774–2005: Thomas Riley Marshall (PDF p. 1513)",
+        "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1513"
       },
       "qualifications": {
         "vice-presidents": {
@@ -2091,7 +2119,7 @@
             1921
           ],
           "source": {
-            "label": "U.S. Senate vice presidents",
+            "label": "U.S. Senate: Vice Presidents of the United States",
             "url": "https://www.senate.gov/about/officers-staff/vice-presidents.htm"
           }
         },
@@ -2102,7 +2130,7 @@
             1913
           ],
           "source": {
-            "label": "Indiana governor history",
+            "label": "Indiana Governor History (in.gov): Thomas Riley Marshall, Governor 1909–1913",
             "url": "https://www.in.gov/governorhistory/by-year/thomas-riley-marshall"
           }
         }
@@ -2129,7 +2157,7 @@
             2019
           ],
           "source": {
-            "label": "U.S. House biography",
+            "label": "U.S. House History, Art & Archives biography: House service 2011–2019",
             "url": "https://history.house.gov/People/Detail/20822"
           }
         }
@@ -2145,7 +2173,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: William Alvin Pittenger (PDF p. 1749)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: William Alvin Pittenger (PDF p. 1749)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1749"
       },
       "qualifications": {
@@ -2160,7 +2188,7 @@
             1947
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: William Alvin Pittenger (PDF p. 1749)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: William Alvin Pittenger (PDF p. 1749)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1749"
           }
         }
@@ -2176,7 +2204,7 @@
         "representatives"
       ],
       "school_source": {
-        "label": "U.S. Congressional Biographical Directory: William Ewart Humphrey (PDF p. 1307)",
+        "label": "Biographical Directory of the United States Congress, 1774–2005: William Ewart Humphrey (PDF p. 1307)",
         "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1307"
       },
       "qualifications": {
@@ -2187,7 +2215,7 @@
             1917
           ],
           "source": {
-            "label": "U.S. Congressional Biographical Directory: William Ewart Humphrey (PDF p. 1307)",
+            "label": "Biographical Directory of the United States Congress, 1774–2005: William Ewart Humphrey (PDF p. 1307)",
             "url": "https://www.govinfo.gov/content/pkg/GPO-CDOC-108hdoc222/pdf/GPO-CDOC-108hdoc222.pdf#page=1307"
           }
         }
@@ -2224,13 +2252,13 @@
       "id": "jeff-harmening",
       "name": "Jeffrey L. Harmening",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "B.A.",
       "degree_year": 1989,
       "categories": [
         "fortune-500-ceos"
       ],
       "school_source": {
-        "label": "DePauw Management Fellows alumni biography: Jeff Harmening ’89",
+        "label": "DePauw Management Fellows alumni biography: Jeff Harmening ’89, B.A. in economics, 1989",
         "url": "https://www.depauw.edu/academics/honors-fellows-programs/management-fellows/alumni/jeff-harmening-89/"
       },
       "qualifications": {
@@ -2298,7 +2326,7 @@
         "fortune-500-ceos"
       ],
       "school_source": {
-        "label": "Wabash College alumni record identifying Walter Y. Elisha, class of 1954",
+        "label": "Wabash College Alumni Brick Terrace: Walter Y. Elisha, Class of 1954",
         "url": "https://www.wabash.edu/Alumni/terrace.cfm?brick=10&quadrant=9"
       },
       "qualifications": {
@@ -2316,7 +2344,7 @@
           "rank_year": 1989,
           "rank": 222,
           "ranking_source": {
-            "label": "Fortune 500 list for 1988 sales, Springs Industries #222",
+            "label": "Los Angeles Times, Apr 5, 1989, reproducing the Fortune 500 for 1988 sales (Springs Industries #222)",
             "url": "https://www.latimes.com/archives/la-xpm-1989-04-05-fi-1026-story.html"
           }
         }
@@ -2359,7 +2387,7 @@
         "fortune-500-ceos"
       ],
       "school_source": {
-        "label": "DePauw news, Oct 11, 2014 (archived): Weddle, 1975 graduate of DePauw University",
+        "label": "DePauw news, Oct 11, 2014 (archived copy): Weddle, 1975 graduate of DePauw University",
         "url": "https://web.archive.org/web/20251118201323/https://www.depauw.edu/news-media/latest-news/details/31252/"
       },
       "qualifications": {
@@ -2387,14 +2415,14 @@
       "id": "robert-darnall",
       "name": "Robert J. Darnall",
       "school": "depauw",
-      "degree": "Graduate",
+      "degree": "B.A.",
       "degree_year": 1960,
       "categories": [
         "fortune-500-ceos"
       ],
       "school_source": {
-        "label": "DePauw University Archives: Robert Joseph Darnall, class of 1960",
-        "url": "https://depauw.libraryhost.com/agents/people/2446"
+        "label": "Cummins 2009 SEC proxy (PDF p. 7): graduated from DePauw University in 1960 with a B.A.",
+        "url": "https://investor.cummins.com/sec-filings/all-sec-filings/content/0001047469-09-003649/0001047469-09-003649.pdf#page=7"
       },
       "qualifications": {
         "fortune-500-ceos": {
@@ -2411,8 +2439,8 @@
           "rank_year": 1997,
           "rank": 307,
           "ranking_source": {
-            "label": "Fortune U.S. Fortune 500 ranking, 1997",
-            "url": "https://fortune.com/ranking/fortune500/1997/"
+            "label": "Fortune 500, 1997, ranks 301–400 (CNN Money, archived copy): #307, printed in this copy as Ryerson Tull",
+            "url": "https://web.archive.org/web/20120904024312/money.cnn.com/magazines/fortune/fortune500_archive/full/1997/301.html"
           }
         }
       }
@@ -2427,7 +2455,7 @@
         "pulitzer"
       ],
       "school_source": {
-        "label": "DePauw news, Apr 20, 2015 (archived): Solomon, 2010 graduate of DePauw University",
+        "label": "DePauw news, Apr 20, 2015 (archived copy): Solomon, 2010 graduate of DePauw University",
         "url": "https://web.archive.org/web/20240917193906/https://www.depauw.edu/news-media/latest-news/details/31618/"
       },
       "qualifications": {
@@ -2437,7 +2465,7 @@
             2015
           ],
           "source": {
-            "label": "DePauw news, Apr 20, 2015 (archived): Times staff prize for Ebola coverage",
+            "label": "DePauw news, Apr 20, 2015 (archived copy): Times staff prize for Ebola coverage",
             "url": "https://web.archive.org/web/20240917193906/https://www.depauw.edu/news-media/latest-news/details/31618/"
           }
         }
