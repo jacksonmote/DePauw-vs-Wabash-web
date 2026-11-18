@@ -145,6 +145,16 @@ def ruling_lists(sports: dict, rules: dict) -> list:
     return out
 
 
+def replaced_places(sports: dict) -> list:
+    """'Football, Nov 20, 1915' for each game whose place comes from a found ruling although DePauw's page lists
+    one: with a score ruling, the only cases where something other than DePauw's version counts. Read from the
+    merged games ("ruled"), so the page says it only of games the ruling really changed."""
+    return [f'{s["name"]}, {fmt_date(g["date"])}'
+            for s in sports.values() for g in s["games"] for r in g.get("ruled", [])
+            if r["kind"] == "found" and r["school"] == merge.SCHOOL_NAMES["depauw"] and "place" in r["what"]
+            and r["listed"].get("location") in merge.LOCATIONS]
+
+
 SWIMMING = "mens-swimming-and-diving"
 
 
@@ -221,6 +231,7 @@ def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_includ
                   else ", ".join(names[:-1]) + f", and {names[-1]}")
     both_listed = n["both"]
     one_school = n["depauw_only"] + n["wabash_only"]
+    replaced = replaced_places(sports)
     overrides_url = f"{repo_url}/blob/main/data/overrides.json"
     out = [
         '<section class="prose" aria-labelledby="how-h">',
@@ -281,10 +292,13 @@ def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_includ
         + f'. They are public: '
         f'<a href="{esc(overrides_url)}">data/overrides.json</a> on GitHub.</p>',
         '<p>A ruling can also set aside a row that is not a game between the two teams, or that repeats another '
-        'row, and it can record a date or a place that a newspaper or yearbook of the time gives when the '
-        'school’s page has none. In one kind of case a ruling chooses the score: when DePauw’s own records '
-        'contradict its history page. Each of these rulings names its sources, and none changes who won a '
-        'game.</p>',
+        'row. It can record a date that a newspaper or yearbook of the time gives when the school’s page has '
+        'none, and a place when the page has none or the source shows another one. Two kinds of ruling are '
+        'exceptions to “DePauw’s version counts”: one chooses the score, when DePauw’s own records contradict '
+        'its history page, and one replaces the place DePauw’s page lists, when a source of the time shows '
+        f'where the game was played ({plural(len(replaced), "game")} so far'
+        + (f': {esc("; ".join(replaced))}' if replaced else '')
+        + '). Each of these rulings names its sources, and none changes who won a game.</p>',
         *ruling_lists(sports, rules),
 
         '<h3>How often it updates</h3>',

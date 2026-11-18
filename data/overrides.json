@@ -68,11 +68,13 @@
         {
           "depauw": {"date": "1928-02-14", "score": "23-22"},
           "wabash": {"date": "1928-02-29", "score": "32-30"},
-          "reason": "One game, played Feb 14, 1928 at Greencastle: DePauw 23, Wabash 22. Newspapers previewed it and printed its box score, and DePauw’s yearbook counts two wins over Wabash that winter (Jan 10 and this one). On Feb 29 Wabash played Notre Dame at Crawfordsville, its last game of the season, so the Feb 29 row on Wabash’s page is this game with another date and score.",
+          "reason": "One game, played Feb 14, 1928 at Greencastle: DePauw 23, Wabash 22. Newspapers previewed it and printed its box score, and DePauw’s yearbook counts two wins over Wabash that winter (“The double defeat of Wabash”). On Feb 29 Wabash played Notre Dame at Crawfordsville, its last game of the season, so the Feb 29 row on Wabash’s page is this game with another date and score.",
           "sources": [
             {"label": "The Indianapolis Times, Feb 15, 1928, p. 12 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015313/1928-02-15/ed-1/?sp=12"},
             {"label": "South Bend News-Times, Feb 28, 1928, p. 14 (Library of Congress)", "url": "https://www.loc.gov/resource/sn87055779/1928-02-28/ed-1/?sp=14"},
-            {"label": "South Bend News-Times, Mar 1, 1928, p. 16 (Library of Congress)", "url": "https://www.loc.gov/resource/sn87055779/1928-03-01/ed-1/?sp=16"}
+            {"label": "South Bend News-Times, Mar 1, 1928, p. 16 (Library of Congress)", "url": "https://www.loc.gov/resource/sn87055779/1928-03-01/ed-1/?sp=16"},
+            {"label": "The Indianapolis Times, Mar 1, 1928, p. 10 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015313/1928-03-01/ed-1/?sp=10"},
+            {"label": "DePauw University, Mirage yearbook, 1928 (Internet Archive)", "url": "https://archive.org/details/mirage1928depa"}
           ]
         }
       ],
@@ -80,7 +82,7 @@
         {
           "school": "wabash",
           "row": {"date": "1944-01-06", "score": "69-49"},
-          "reason": "Not a game against DePauw’s team. Wabash’s opponent was the Navy V-5 flight school team stationed at DePauw: the score was printed at the time as “DePauw V-5, 69; Wabash, 49”, and DePauw’s own schedule for that season lists Navy V-5 as a separate opponent and has no game on this date.",
+          "reason": "Not a game against DePauw’s team. Wabash’s opponent was the Navy V-5 flight school team stationed at DePauw: the score was printed at the time as “DePauw V-5, 69; Wabash, 49”, and DePauw’s own schedule for that season lists Navy V-5 as a separate opponent and has no game on this date. The paper is dated Jan 6 and gives no day for the game, so it was probably played on Jan 5.",
           "sources": [
             {"label": "The Evening Star (Washington, D.C.), Jan 6, 1944, p. 14 (Library of Congress)", "url": "https://www.loc.gov/resource/sn83045462/1944-01-06/ed-1/?sp=14"},
             {"label": "DePauw Athletics, 1943-44 men’s basketball schedule", "url": "https://depauwtigers.com/sports/mens-basketball/schedule/1943-44"}
@@ -298,7 +300,7 @@
           "date": "1920-06-04",
           "location": "home",
           "site": "Greencastle, IN",
-          "reason": "The next day’s paper says Wabash won 7 to 4 at Greencastle on “Friday afternoon”.",
+          "reason": "A report dated Greencastle in the next day’s paper says Wabash won 7 to 4 on “Friday afternoon”.",
           "sources": [
             {"label": "Indiana Daily Times, Jun 5, 1920, p. 8 (Library of Congress)", "url": "https://www.loc.gov/resource/sn85047611/1920-06-05/ed-1/?sp=8"}
           ]
@@ -349,8 +351,8 @@
         {
           "school": "depauw",
           "row": {"date": "1966-10-29", "score": "1-2"},
-          "note": "Wabash’s side was a student club team; soccer became a varsity sport at Wabash in 1967, so Wabash’s record does not list this game.",
-          "reason": "The game is kept because DePauw’s record lists it. Wabash’s yearbook says soccer “started at Wabash last year” as a student club and was “added to the roster of varsity sports for the year 1967”.",
+          "note": "Wabash’s side was not yet a varsity team; soccer became a varsity sport at Wabash in 1967, so Wabash’s record does not list this game. Wabash’s yearbook gives the score as 3-1.",
+          "reason": "The game is kept because DePauw’s record lists it, with the score on DePauw’s page (Wabash 2, DePauw 1). Wabash’s yearbook says soccer “started at Wabash last year” when students formed a club, that the team of fall 1966 beat DePauw 3-1 at home, and that soccer “was added to the roster of varsity sports for the year 1967”.",
           "sources": [
             {"label": "Wabash College, The Wabash yearbook, 1967 (Internet Archive)", "url": "https://archive.org/details/wabashwabash1967"}
           ]
@@ -409,7 +411,7 @@
           "date": "1937-05-05",
           "location": "away",
           "site": "Crawfordsville, IN",
-          "reason": "DePauw’s yearbook says DePauw played Earlham on May 1 “and four days later Wabash was handed a 9 to 0 shutout on their own courts”. The date is counted from that sentence.",
+          "reason": "DePauw’s yearbook says DePauw beat Earlham on May Day (May 1) “and four days later Wabash was handed a 9 to 0 shutout on their own courts”. The date is counted from that sentence.",
           "sources": [
             {"label": "DePauw University, Mirage yearbook, 1938 (Internet Archive)", "url": "https://archive.org/details/mirage1938depa"}
           ]

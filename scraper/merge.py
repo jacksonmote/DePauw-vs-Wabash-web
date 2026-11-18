@@ -11,9 +11,11 @@ row a ruling in data/overrides.json says is a different game.
      are only days of a longer meet (session_of): those are set aside, not counted as games. Four more kinds
      name one row of one school's page (or, for a score, the pair), each with a reason and its sources:
      set_aside (the row is not a game between the two teams, or repeats another row: not counted), found
-     (a date or a place found in another source), note (a note shown on the game) and score (Wabash's
+     (a date found in another source for a row whose page lists no usable date, or a place found in another
+     source, which may replace the place the page lists), note (a note shown on the game) and score (Wabash's
      version of a disputed score counts, where DePauw's own records contradict its history page; it never
-     changes a winner).
+     changes a winner). A score ruling, and a found place on a row of DePauw's page, are the two exceptions
+     to "DePauw's version counts".
   1. Same date and same score.
   2. Rows with no usable date match by season and score. A date is unusable when it is a placeholder
      (a Wabash row on Jan 1 to Jan 3) or falls in a month the sport is not played (season_months).
@@ -27,6 +29,8 @@ row a ruling in data/overrides.json says is a different game.
      flagged date_differs.
 Several games on one date (doubleheaders) pair by score first, then by order on the page.
 What is left is a game only one school lists; it still counts, and says whose record it is from.
+One leftover stops the merge: a row a found ruling dated, when the other school has a leftover row from the
+same season with the same score. The found date kept the two out of pass 2, so they may be one game.
 A disputed game counts DePauw's version; Wabash's is kept for display.
 
 Why each rule exists, what it risks, why the numbers are what they are, and how to change them
@@ -49,7 +53,8 @@ Each merged game is a dict with the fields of a game in series.json plus:
   sessions        the running-score rows a session_of ruling set aside, on the meet they belong to
   ruled           what found, note and score rulings changed on this game, each with its sources (omitted
                   when none did): {"kind": "found", "school", "what": ["date", "place"], "listed": what the
-                  school's page lists, "sources"}, {"kind": "note", "note", "sources"} or {"kind": "score",
+                  school's page lists (its "date" is always null: a found date is only for a row with no
+                  usable date), "sources"}, {"kind": "note", "note", "sources"} or {"kind": "score",
                   "school": "DePauw", "listed": the score on DePauw's page, "sources"}
   depauw_date     DePauw's date, only when DePauw's was unusable and Wabash's date was used instead
 A disputed game can also have different dates. Games are stored oldest first; games with no usable date
@@ -64,6 +69,9 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import places
+
+SOURCES = Path(__file__).resolve().parent / "sources.json"
 MAX_DATE_GAP_DAYS = 2
 SCORE_TOLERANCE = 3       # how far each side's score may differ (points, runs, goals) in a near-date dispute
 PLACEHOLDER_DAYS = {(1, 1), (1, 2), (1, 3)}
@@ -173,11 +181,18 @@ def typo_kind(a: str, b: str) -> str | None:
 # Rulings (data/overrides.json)
 # --------------------------------------------------------------------------- #
 
-def load_overrides(path: Path) -> dict:
+def sport_keys(path: Path = SOURCES) -> set:
+    """The sport keys in scraper/sources.json: the only sports a ruling can be for."""
+    return {s["key"] for s in json.loads(Path(path).read_text(encoding="utf-8"))["sports"]}
+
+
+def load_overrides(path: Path, sports=None) -> dict:
     """The per-sport rulings, {sport key: {kind: [...] for each kind in RULING_KINDS}}. ("keep_previous"
     rulings, which reject a school's edit to an old game, are read by review.load_keep_previous and take no
-    part in the merge.) A missing file is no rulings. A malformed file raises MergeError, because a typo must not silently turn rulings off."""
-    path = Path(path)
+    part in the merge.) A missing file is no rulings. A malformed file raises MergeError, because a typo must not silently turn rulings off.
+    `sports` is the sport keys the site has (sport_keys()): when given, an entry for any other key raises
+    MergeError too, because rulings under a mistyped key would never be applied and nothing would say so."""
+    path, known = Path(path), sports
     if not path.exists():
         return {}
     try:
@@ -187,6 +202,10 @@ def load_overrides(path: Path) -> dict:
     sports = data.get("sports") if isinstance(data, dict) else None
     if not isinstance(sports, dict):
         raise MergeError(f'{path.name} needs a "sports" object')
+    if known is not None and (unknown := sorted(set(sports) - set(known))):
+        names = ", ".join(f'"{key}"' for key in unknown)
+        raise MergeError(f"{path.name} has rulings for {names}, which {'is' if len(unknown) == 1 else 'are'} not "
+                         f"in scraper/sources.json (the sports are {', '.join(sorted(known))})")
     out = {}
     for key, rules in sports.items():
         if not isinstance(rules, dict) or set(rules) - {*RULING_KINDS, "keep_previous"}:
@@ -244,8 +263,9 @@ def _session_ruling(name: str, key: str, r) -> dict:
 ROW_HELP = {
     "set_aside": 'each ruling needs a "school" ("depauw" or "wabash"), a "row", a "reason" and at least one source',
     "found": 'each ruling needs a "school" ("depauw" or "wabash"), a "row", a "reason", at least one source, and '
-             'what was found: a "date" (YYYY-MM-DD), a "location" ("home", "away" or "neutral", from DePauw\'s '
-             'side) or a "site"',
+             'what was found: a "date" (YYYY-MM-DD, in the row\'s season), a "location" ("home", "away" or '
+             '"neutral", from DePauw\'s side) or a "site". A "home" site is in Greencastle, an "away" site in '
+             'Crawfordsville, and a "neutral" game needs a "site" that is in neither',
     "note": f'each ruling needs a "school" ("depauw" or "wabash"), a "row", a "reason" and a "note" of at most '
             f'{NOTE_MAX} characters ("sources" may be empty)',
 }
@@ -288,6 +308,21 @@ def _sources(items, required: bool) -> list:
     return out
 
 
+def place_problem(location, site) -> str | None:
+    """Why a location and a site contradict each other, or None when they do not. From DePauw's side, like every
+    game: a home game is in Greencastle, an away game in Crawfordsville, and a neutral site is a named place in
+    neither town. A home or an away game may name no site."""
+    text = places.ap_place(site) or ""
+    towns = {"home": places.HOME_SITE, "away": places.AWAY_SITE}
+    if location in towns and site and towns[location] not in text:
+        return f'a "{location}" game is in {towns[location]}, not at "{site}"'
+    if location == "neutral" and not site:
+        return 'a "neutral" game needs its "site"'
+    if location == "neutral" and any(town in text for town in towns.values()):
+        return f'"{site}" is a home or an away game, not a neutral site'
+    return None
+
+
 def _row_ruling(name: str, key: str, kind: str, r) -> dict:
     """A set_aside, found or note ruling: one row of one school's page, a reason and the sources."""
     try:
@@ -299,6 +334,11 @@ def _row_ruling(name: str, key: str, kind: str, r) -> dict:
         if kind == "found":
             if "date" in r:
                 parsed["date"] = dt.date.fromisoformat(r["date"]).isoformat()
+                # A season covers at most two calendar years, so a date further than a year from the row's own
+                # is a typo whatever the season is. (The row's season itself is checked when the ruling is
+                # applied, in _row_rulings: only the page knows it.)
+                if abs(int(parsed["date"][:4]) - int(parsed["row"]["date"][:4])) > 1:
+                    raise ValueError
             if "location" in r:
                 if r["location"] not in LOCATIONS:
                     raise ValueError
@@ -306,6 +346,8 @@ def _row_ruling(name: str, key: str, kind: str, r) -> dict:
             if "site" in r:
                 parsed["site"] = _text(r["site"])
             if not ROW_FIELDS["found"] & set(parsed):
+                raise ValueError
+            if "location" in parsed and place_problem(parsed["location"], parsed.get("site")):
                 raise ValueError
         if kind == "note":
             parsed["note"] = _text(r["note"])
@@ -482,6 +524,20 @@ def merge_sport(depauw: list, wabash: list, *, season_months=None, rules=None) -
              and typo_kind(gd["date"], gw["date"]) and allowed(gd, gw)]
     _pair(edges, used_d, used_w, take("typo"))
 
+    # A found date takes its row out of the no-date pass (2), the one that joins rows by season and score. If the
+    # other school's page then lists that game on a day no dated pass joins to the found date, the two rows would
+    # be left as two games: one game counted twice, with only a CHECK line in the log. Stop instead.
+    for gd in (g for di, g in enumerate(d) if di not in used_d):
+        for gw in (g for wi, g in enumerate(w) if wi not in used_w):
+            dated = next((x for x in ((gd, "DePauw"), (gw, "Wabash")) if x[0].get("_date_ruled")), None)
+            if dated and season_key(gd) == season_key(gw) and score(gd) == score(gw) and allowed(gd, gw):
+                raise MergeError(
+                    f"overrides.json found ruling gives {dated[1]}'s row {_identity(dated[0])[0]} "
+                    f"{_score_text(score(dated[0]))} the date {dated[0]['date']}, and the other school's page has "
+                    f"an unmatched row from the same season with the same score (DePauw {_identity(gd)[0]} / Wabash "
+                    f"{_identity(gw)[0]}): they may be one game counted twice. Check both pages, then remove the "
+                    f"ruling's date, or add a different_games ruling if they are two games")
+
     wabash_for = {wi: di for di, (wi, _) in pairs.items()}
     for_meet = attach
     merged: list = []
@@ -540,12 +596,20 @@ def _public(g: dict) -> dict:
     return {k: v for k, v in g.items() if not k.startswith("_")}
 
 
+def _score_text(sc: tuple) -> str:
+    return "no score" if sc == (None, None) else f"{sc[0]}-{sc[1]}"
+
+
+def _row_name(r: dict) -> str:
+    """The row a set_aside, found or note ruling names, for an error: "Wabash's row 2008-04-16 9-0 (season 2008)"."""
+    row = r["row"]
+    return (f"{SCHOOL_NAMES[r['school']]}'s row {row['date']} {_score_text(row['score'])}"
+            + (f" (season {row['season']})" if "season" in row else ""))
+
+
 def _stale_row(kind: str, r: dict, hits: int) -> str:
     """The error for a set_aside, found or note ruling that does not name exactly one row."""
-    row = r["row"]
-    sc = "no score" if row["score"] == (None, None) else f"{row['score'][0]}-{row['score'][1]}"
-    name = (f"{SCHOOL_NAMES[r['school']]}'s row {row['date']} {sc}"
-            + (f" (season {row['season']})" if "season" in row else ""))
+    name = _row_name(r)
     if not hits:
         return (f"overrides.json {kind} ruling no longer finds {name} (a source page changed, or the ruling "
                 f"was mistyped)")
@@ -559,7 +623,10 @@ def _row_rulings(depauw: list, wabash: list, rules: dict, months) -> tuple:
     game. A found ruling gives its row the date or the place a person found in another source, and a note
     ruling attaches a note; both leave what they did in the row's "_ruled", which the merged game shows as
     "ruled". Every ruling must name exactly one row, and a row takes at most one ruling of each kind:
-    anything else raises MergeError, like any other stale ruling."""
+    anything else raises MergeError, like any other stale ruling. So does a ruling the page has overtaken: a
+    set_aside ruling for a repeat (one that names its row's season) when the other copy is gone, a found date for
+    a row whose page now lists a usable date or whose season does not hold the date, and a found place that
+    contradicts itself (place_problem)."""
     lists = {"depauw": list(depauw), "wabash": list(wabash)}
     taken: dict = {}                               # (kind, school, index) -> the ruling that named the row
     aside, drop = [], {"depauw": set(), "wabash": set()}
@@ -578,6 +645,15 @@ def _row_rulings(depauw: list, wabash: list, rules: dict, months) -> tuple:
         i = find("set_aside", r)
         drop[r["school"]].add(i)
         aside.append({**_public(lists[r["school"]][i]), "school": SCHOOL_NAMES[r["school"]]})
+    # A ruling names its row's season only when the page repeats the row (two rows, one date and score). Setting a
+    # repeat aside must leave the other copy: if the page now lists the game once, the ruling would take out the
+    # game itself, and the match would quietly become a one-school game.
+    for r in rules.get("set_aside", []):
+        if "season" in r["row"] and not any(_identity(g) == _ruled(r["row"])
+                                            for k, g in enumerate(lists[r["school"]]) if k not in drop[r["school"]]):
+            raise MergeError(f"overrides.json set_aside ruling for a repeat no longer finds the other copy of "
+                             f"{_row_name(r)}: the page now lists that row once, so the ruling would take out the "
+                             f"game itself. Remove the ruling")
     for kind in ("found", "note"):
         for r in rules.get(kind, []):
             i = find(kind, r)
@@ -592,16 +668,30 @@ def _row_rulings(depauw: list, wabash: list, rules: dict, months) -> tuple:
             else:
                 what, listed = [], {}
                 if "date" in r:
+                    # A found date is for a row whose page lists no usable date, never a way to overrule a date a
+                    # page lists (two pages that list different dates are a same_game ruling, with both shown).
                     no_date = (months is not None and int(g["date"][5:7]) not in months) \
                         or (r["school"] == "wabash" and is_placeholder(g))
+                    if not no_date:
+                        raise MergeError(f"overrides.json found ruling gives {_row_name(r)} the date {r['date']}, "
+                                         f"but the page lists a usable date for that row ({g['date']}): a found "
+                                         f"date is only for a row with none. Remove the ruling's date")
+                    first, last = season_years(g.get("season"), g["date"])
+                    if not first <= int(r["date"][:4]) <= last:
+                        raise MergeError(f"overrides.json found ruling gives {_row_name(r)} the date {r['date']}, "
+                                         f"which is outside the row's season ({g.get('season') or first})")
                     what.append("date")
-                    listed["date"] = None if no_date else g["date"]
+                    listed["date"] = None
                     g["date"], g["_date_ruled"] = r["date"], True
                 if "location" in r or "site" in r:
                     what.append("place")
                     listed.update(location=g.get("location"), site=g.get("site"))
                     g["location"] = r.get("location", g.get("location"))
                     g["site"] = r.get("site", g.get("site"))
+                    # A ruling that gives both was checked when the file was read; one that gives only the site
+                    # must still fit the home or away the page lists.
+                    if "location" not in r and (problem := place_problem(g["location"], g["site"])):
+                        raise MergeError(f"overrides.json found ruling for {_row_name(r)}: {problem}")
                 entry = {"kind": "found", "school": school, "what": what, "listed": listed, "sources": r["sources"]}
             g["_ruled"] = [*g.get("_ruled", []), entry]
             rows[i] = g

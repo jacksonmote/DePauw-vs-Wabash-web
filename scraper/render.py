@@ -92,8 +92,7 @@ SOURCE_HOST = "depauwtigers.com"
 WABASH_HOST = "sports.wabash.edu"
 SOURCE_HOSTS = (SOURCE_HOST, "www." + SOURCE_HOST, WABASH_HOST)
 # Where DePauw's games vs. Wabash are played when the source gives no site (neutral sites are never guessed).
-HOME_SITE = "Greencastle, Ind."
-AWAY_SITE = "Crawfordsville, Ind."
+HOME_SITE, AWAY_SITE = places.HOME_SITE, places.AWAY_SITE
 
 TITLE = "DePauw University vs. Wabash College: All-Time Head-to-Head Records"
 SUBTITLE = "DePauw University vs. Wabash College: all-time head-to-head records in men’s sports."
@@ -674,7 +673,7 @@ def times_text(n: int) -> str:
 
 
 def repeat_text(found: list) -> str:
-    """" (36 times, most recently Apr 24, 2026)" for a record several games share, else nothing. The date is
+    """" (34 times, most recently Apr 14, 2022)" for a record several games share, else nothing. The date is
     the newest game that has one; games with no recorded date never count as the most recent."""
     if len(found) < 2:
         return ""
@@ -773,7 +772,7 @@ def ruled_flags(g: dict) -> list:
         elif r["kind"] == "found":
             listed, has = r["listed"], []
             if "date" in r["what"]:
-                has.append(f"it on {fmt_date(listed['date'])}" if listed["date"] else "no date")
+                has.append("no date")           # a found date is only ever for a row whose page lists no usable date
             if "place" in r["what"]:
                 place = LISTED_PLACE.get(listed["location"]) if listed.get("site") or listed["location"] != "neutral" else None
                 has.append((place + (f" at {places.ap_place(listed['site'])}" if listed.get("site") else ""))
@@ -1739,7 +1738,7 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
         footer_html="\n".join(site_footer(when, prefix="../", alumni=(alumni_data, endowment_data))))
     upcoming = meetings.load_upcoming(upcoming_path)
     overrides_path = overrides_path or OVERRIDES
-    rules = merge.load_overrides(overrides_path)
+    rules = merge.load_overrides(overrides_path, sports=merge.sport_keys())    # an unknown sport key stops the build
     kept = sum(len(r) for r in review.load_keep_previous(overrides_path).values())
     pages = {
         "index.html": render_index(data, checked_at, now, upcoming, fun_facts_data),

@@ -726,8 +726,9 @@ def main(argv=None) -> int:
     ap.add_argument("--output", type=Path, default=OUTPUT)
     ap.add_argument("--depauw-output", type=Path, help="default: depauw.json next to --output")
     ap.add_argument("--wabash-output", type=Path, help="default: wabash.json next to --output")
-    ap.add_argument("--overrides", type=Path, help="rulings on same/different games; default: overrides.json "
-                                                   "next to --output")
+    ap.add_argument("--overrides", type=Path, help="the rulings file (same and different games, rows set aside, "
+                                                   "found dates and places, scores, notes, rejected edits); "
+                                                   "default: overrides.json next to --output")
     ap.add_argument("--pending", type=Path, help="changes to old games waiting for review; default: "
                                                  "pending-changes.json next to --output")
     ap.add_argument("--apply-reviewed", action="store_true",
@@ -761,7 +762,8 @@ def main(argv=None) -> int:
     pending_path = args.pending or args.output.parent / "pending-changes.json"
     try:
         overrides_path = args.overrides or args.output.parent / "overrides.json"
-        overrides = merge.load_overrides(overrides_path)
+        # a sport key that is not in sources.json is a typo: its rulings would never be applied
+        overrides = merge.load_overrides(overrides_path, sports={s["key"] for s in cfg["sports"]})
         keep_rules = review.load_keep_previous(overrides_path)
         pending = review.load_pending(pending_path)
     except (merge.MergeError, ValueError) as exc:
