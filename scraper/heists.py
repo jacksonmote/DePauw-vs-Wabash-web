@@ -254,16 +254,19 @@ def bell_game(football_games: list, year: int) -> dict | None:
 
 
 def game_line(game: dict, year: int | None = None) -> str:
-    """"That year’s Bell game: Wabash 16, DePauw 6", winner first; "DePauw 7, Wabash 7" for a tie; just the result when
-    the score is unknown. With `year` (a story that shows another year's game) it starts "The 1967 Bell game:"."""
+    """"That year’s Bell game: Wabash 16, DePauw 6", winner first; "Tie 7–7" for a tie, as everywhere on the site
+    (facts.TIE_FORMAT); just the result when the score is unknown. With `year` (a story that shows another year's
+    game) it starts "The 1967 Bell game:"."""
     lead = f"The {year} Bell game" if year is not None else "That year’s Bell game"
     result = game["result"]
     if not facts.has_score(game):
         outcome = {"W": "DePauw won", "L": "Wabash won", "T": "a tie"}[result]
         return f"{lead}: {outcome}"
     d, w = facts.num(game["depauw"]), facts.num(game["wabash"])
+    if result == "T":
+        return f"{lead}: " + facts.TIE_FORMAT.format(depauw=f"{d:,}", wabash=f"{w:,}")
     first, second = (("Wabash", w), ("DePauw", d)) if result == "L" else (("DePauw", d), ("Wabash", w))
-    return f"{lead}: {first[0]} {first[1]:,}, {second[0]} {second[1]:,}" + (" (tie)" if result == "T" else "")
+    return f"{lead}: {first[0]} {first[1]:,}, {second[0]} {second[1]:,}"
 
 
 def correction_url(title: str | None = None, repo_url: str = REPO_URL) -> str:

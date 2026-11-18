@@ -131,8 +131,12 @@ import re  # noqa: E402
 ONE_SCORE = {"football": 8, "mens-basketball": 3, "baseball": 1, "mens-soccer": 1,
              "mens-lacrosse": 1, "mens-tennis": 1, "mens-swimming-and-diving": 10}
 # The word before "games" in that fact. A swimming meet is scored in dozens of points, so 10 points is "close",
-# not "one score".
-CLOSE_WORD = {"mens-swimming-and-diving": "Close"}
+# not "one score". Football's 8 points has been one score only since the two-point conversion (1958), and many of
+# its close games are older, so it is "close" too and its label carries the margin (MARGIN_IN_LABEL).
+CLOSE_WORD = {"mens-swimming-and-diving": "Close", "football": "Close"}
+MARGIN_IN_LABEL = {"football"}
+# A tie's score, the same on every page: "Tie 6–6" (an en dash; the two scores are equal, so no school comes first).
+TIE_FORMAT = "Tie {depauw}–{wabash}"
 UNIT = {"points": "point", "runs": "run", "goals": "goal", "individual matches": "match"}
 # Sports that meet more than once a year get a season-by-season list when at least one season in five
 # has two or more games. Football (two such seasons) and soccer don't qualify; basketball, baseball and

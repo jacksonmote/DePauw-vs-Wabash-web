@@ -205,8 +205,15 @@ def swimming_lines(sports: dict) -> list:
 
 
 def totals(sports: dict) -> dict:
-    keys = ("both", "depauw_only", "wabash_only", "disputed", "date_differs", "dates_not_recorded")
+    keys = ("both", "depauw_only", "wabash_only", "disputed", "date_differs", "dates_not_recorded",
+            "place_differs")
     return {k: sum(s.get("sources", {}).get(k, 0) for s in sports.values()) for k in keys}
+
+
+def no_site_games(sports: dict) -> int:
+    """Games shown as "Site not recorded": only Wabash lists them, and its page gives no place (merge.no_place)."""
+    return sum(1 for s in sports.values() for g in s["games"]
+               if g.get("source") == "wabash" and merge.no_place(g))
 
 
 def frequent_minutes() -> int:
@@ -232,6 +239,7 @@ def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_includ
     both_listed = n["both"]
     one_school = n["depauw_only"] + n["wabash_only"]
     replaced = replaced_places(sports)
+    no_site = no_site_games(sports)
     overrides_url = f"{repo_url}/blob/main/data/overrides.json"
     out = [
         '<section class="prose" aria-labelledby="how-h">',
@@ -283,11 +291,14 @@ def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_includ
         'from one version and are repeatable. That is a convention, not a judgement that DePauw is right: '
         'every disputed game shows both versions, each labelled with whose record it is. '
         f'Games the two schools list on different dates are flagged as well ({n["date_differs"]:,} right '
-        'now).</p>',
+        f'now), and so are games they list at different places ({n["place_differs"]:,} right now): the game '
+        'shows DePauw’s place, and a note says where Wabash’s record puts it.</p>',
+        '<p>Wabash’s page marks a game with no recorded place as a neutral-site game with no site named. The '
+        f'site shows such a game as “Site not recorded” ({no_site:,} right now), not as a neutral-site game.</p>',
 
         '<h3>Rulings</h3>',
-        f'<p>When the automatic rules cannot decide, a person checks the box scores and records a ruling, '
-        f'with a reason. Rulings made so far: {sum(by_kind.values()):,}'
+        f'<p>When the automatic rules cannot decide, a person checks the two records, and other sources where '
+        f'there are any, and records a ruling, with a reason. Rulings made so far: {sum(by_kind.values()):,}'
         + (f' ({kinds_text})' if kinds_text else '')
         + f'. They are public: '
         f'<a href="{esc(overrides_url)}">data/overrides.json</a> on GitHub.</p>',

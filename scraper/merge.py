@@ -46,6 +46,11 @@ Each merged game is a dict with the fields of a game in series.json plus:
   wabash_version  Wabash's {result, depauw, wabash} for a disputed game, in DePauw's point of view
   date_differs    True when the two schools list the game on different dates (omitted otherwise)
   wabash_date     Wabash's date for such a game
+  place_differs   True when the two schools list the game at different places: one says home and the other
+                  away, or one names a neutral site (omitted otherwise). DePauw's place is the game's; Wabash's
+                  site is not borrowed for it. A Wabash row marked neutral with no site is that page's way of
+                  listing no place, so it disagrees with nothing
+  wabash_place    Wabash's {location, site} for such a game, from DePauw's point of view
   score_known     False when the school lists the result but no score (omitted when True); depauw and wabash
                   are then null, and the game counts in the record but in no point total
   score_order_reversed  ["Wabash"] etc.: the school's page printed the two scores in the other order from
@@ -586,6 +591,8 @@ def merge_sport(depauw: list, wabash: list, *, season_months=None, rules=None) -
         stats["session_rows"] = len(set_aside)
     if not_games:
         stats["rows_set_aside"] = len(not_games)
+    if places_differ := sum(1 for g in merged if g.get("place_differs")):
+        stats["place_differs"] = places_differ
     result = MergeResult(merged, stats, depauw_only, wabash_only, disputed, differs, matches, set_aside, not_games)
     check(d, w, result)
     return result
@@ -756,7 +763,11 @@ def _set_aside_sessions(depauw: list, wabash: list, rulings: list) -> tuple:
 def _combine(game: dict, gd: dict, gw: dict, d_unknown: bool, w_unknown: bool) -> None:
     """Fill a merged game from DePauw's row and Wabash's: the date to use, then what the schools disagree on."""
     game["source"] = "both"
-    _fill_gaps(game, gw)
+    differs = place_differs(gd, gw)
+    _fill_gaps(game, gw, site=not differs)
+    if differs:
+        game["place_differs"] = True
+        game["wabash_place"] = {"location": gw["location"], "site": gw.get("site")}
     if d_unknown and w_unknown:
         game["date_known"] = False
     elif d_unknown:
@@ -834,9 +845,24 @@ def _base(g: dict, source: str) -> dict:
     return game
 
 
-def _fill_gaps(game: dict, other: dict) -> None:
-    """DePauw's row is the base of a game both schools list. Fill what it lacks from Wabash's row."""
-    if game["site"] is None and other.get("site"):
+def no_place(g: dict) -> bool:
+    """Wabash's page marks a game with no recorded place as a neutral-site game with no site (all of its undated
+    games, for one). Such a row lists no place: it is not a claim that the game was on neutral ground."""
+    return g.get("location") == "neutral" and not g.get("site")
+
+
+def place_differs(gd: dict, gw: dict) -> bool:
+    """Do the two schools' rows of one game put it in different places? Home, away and neutral are compared, both
+    from DePauw's side. A row with no location, and a Wabash row that lists no place (no_place), disagree with
+    nothing."""
+    d, w = gd.get("location"), gw.get("location")
+    return d in LOCATIONS and w in LOCATIONS and d != w and not no_place(gw)
+
+
+def _fill_gaps(game: dict, other: dict, site: bool = True) -> None:
+    """DePauw's row is the base of a game both schools list. Fill what it lacks from Wabash's row. The site is
+    not taken (`site=False`) when the two rows disagree on the place: Wabash's site belongs to Wabash's version."""
+    if site and game["site"] is None and other.get("site"):
         game["site"] = other["site"]
     if game["location"] == "unknown" and other.get("location") not in (None, "unknown"):
         game["location"] = other["location"]

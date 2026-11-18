@@ -379,7 +379,7 @@ def test_real_football_has_one_game_left_on_each_side_until_a_person_rules_on_18
     d, w, r = real("football")
     assert len(r.games) == 132 and merge.tally(r.games) == (60, 63, 9)
     assert r.stats == {"both": 130, "depauw_only": 1, "wabash_only": 1, "disputed": 2, "date_differs": 2,
-                       "dates_not_recorded": 0}
+                       "dates_not_recorded": 0, "place_differs": 4}       # 1903, 1915, 1935 and 1971
     # The two schools disagree on two scores (1901 and 1941); neither changes who won.
     assert sorted(x["date"] for x in r.disputed) == ["1901-11-11", "1941-11-15"]
     assert all(x["wabash_version"]["result"] == x["result"] for x in r.disputed)
@@ -418,7 +418,7 @@ def test_real_baseball_merges_the_1984_pair_as_a_dispute_and_leaves_1986_for_a_r
     assert (len(d), len(w), len(r.games)) == (141, 314, 316)
     assert merge.tally(r.games) == (157, 156, 3)
     assert r.stats == {"both": 139, "depauw_only": 2, "wabash_only": 175, "disputed": 2, "date_differs": 14,
-                       "dates_not_recorded": 64}
+                       "dates_not_recorded": 64, "place_differs": 8}
     pair = sorted((x["depauw"], x["wabash"], x["wabash_version"]["depauw"], x["wabash_version"]["wabash"], x["date"],
                    x["wabash_date"]) for x in r.disputed)
     assert pair == [(11, 1, 10, 2, "1984-04-25", "1984-04-24"), (12, 5, 11, 5, "1984-04-25", "1984-04-24")]
@@ -454,7 +454,7 @@ def test_real_soccer_is_one_game_short_at_wabash_and_lacrosse_agrees_completely(
     d, w, r = real("mens-soccer")
     assert (len(d), len(w), len(r.games)) == (65, 64, 65) and merge.tally(r.games) == (41, 18, 6)
     assert r.stats == {"both": 64, "depauw_only": 1, "wabash_only": 0, "disputed": 0, "date_differs": 5,
-                       "dates_not_recorded": 0}
+                       "dates_not_recorded": 0, "place_differs": 3}
     assert sorted((m["depauw"]["date"], m["wabash"]["date"]) for m in merge.beyond_window(r)) == [
         ("1969-10-12", "1969-11-12"), ("1969-10-15", "1969-10-11"), ("1969-11-16", "1968-11-16")]
     d, w, r = real("mens-lacrosse")

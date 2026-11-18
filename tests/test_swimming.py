@@ -308,7 +308,7 @@ def test_the_csv_leaves_scores_blank_for_unscored_meets_and_keeps_halves(site):
     assert by_date["1934-01-05"][5:8] == ["", "", "DePauw win"] and by_date["1934-02-12"][5:7] == ["", ""]
     assert by_date["2006-11-03"][5:8] == ["127.5", "172.5", "Wabash win"]
     # the frozen copy is from before the score ruling for this meet (tests/test_rulings.py covers the ruling)
-    assert by_date["2011-11-09"][-3:] == ["205-80", "205-89", ""]
+    assert by_date["2011-11-09"][15:18] == ["205-80", "205-89", ""]      # both scores, no ruling note
     assert "127.50" not in (site / "games.csv").read_text(encoding="utf-8")
 
 
