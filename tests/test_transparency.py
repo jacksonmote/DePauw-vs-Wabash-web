@@ -31,7 +31,8 @@ def test_games_csv_has_one_row_per_game_with_the_documented_columns(tmp_path):
     rows = list(csv.DictReader(io.StringIO((out / "games.csv").read_text(encoding="utf-8"))))
     assert list(rows[0]) == ["sport", "date", "season", "location", "site", "depauw_score", "wabash_score",
                              "result", "note", "boxscore_url", "source", "date_recorded", "disputed",
-                             "date_differs", "wabash_record_date", "depauw_record_score", "wabash_record_score"]
+                             "date_differs", "wabash_record_date", "depauw_record_score", "wabash_record_score",
+                             "ruling_notes"]
     assert len(rows) == 5 + 2 + len(basketball()["games"])
     ot = next(r for r in rows if r["date"] == "2002-11-09")
     assert ot == {"sport": "Football", "date": "2002-11-09", "season": "2002", "location": "home",
@@ -39,7 +40,7 @@ def test_games_csv_has_one_row_per_game_with_the_documented_columns(tmp_path):
                   "result": "DePauw win", "note": "2 OT",
                   "boxscore_url": "https://depauwtigers.com/boxscore.aspx?id=1&path=football",
                   "source": "depauw", "date_recorded": "yes", "disputed": "no", "date_differs": "no",
-                  "wabash_record_date": "", "depauw_record_score": "", "wabash_record_score": ""}
+                  "wabash_record_date": "", "depauw_record_score": "", "wabash_record_score": "", "ruling_notes": ""}
     assert {r["result"] for r in rows} <= {"DePauw win", "Wabash win", "Tie"}
     tie = next(r for r in rows if r["date"] == "1999-11-06")
     assert (tie["result"], tie["depauw_score"], tie["wabash_score"]) == ("Tie", "7", "7")

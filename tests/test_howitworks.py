@@ -53,7 +53,7 @@ def test_every_number_comes_from_the_data(site):
     src = {k: sum(s["sources"][k] for s in DATA["sports"].values())
            for k in ("both", "depauw_only", "wabash_only", "disputed", "date_differs", "dates_not_recorded")}
     rules = merge.load_overrides(ROOT / "data" / "overrides.json")
-    n_rules = sum(len(r["same_game"]) + len(r["different_games"]) + len(r["session_of"]) for r in rules.values())
+    n_rules = sum(len(found) for r in rules.values() for found in r.values())        # every kind of ruling
     assert f"Disputed games right now: {src['disputed']}" in t
     assert f"Rulings made so far: {n_rules}" in t
     assert f"Games with no recorded date right now: {src['dates_not_recorded']}" in t

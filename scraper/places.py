@@ -10,6 +10,11 @@ venue string like "Crawfordsville High School" or "College of Wooster; Wooster, 
 
 from __future__ import annotations
 
+# The two schools' towns, in the AP style the page shows. A home or an away game that names no site is shown
+# there (render.py; neutral sites are never guessed), and a found ruling's place is checked against them (merge.py).
+HOME_SITE = "Greencastle, Ind."         # DePauw
+AWAY_SITE = "Crawfordsville, Ind."      # Wabash
+
 # postal code -> (AP abbreviation, full name)
 STATES = {
     "AL": ("Ala.", "Alabama"), "AK": ("Alaska", "Alaska"), "AZ": ("Ariz.", "Arizona"),

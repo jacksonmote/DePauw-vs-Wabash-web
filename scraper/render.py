@@ -92,8 +92,7 @@ SOURCE_HOST = "depauwtigers.com"
 WABASH_HOST = "sports.wabash.edu"
 SOURCE_HOSTS = (SOURCE_HOST, "www." + SOURCE_HOST, WABASH_HOST)
 # Where DePauw's games vs. Wabash are played when the source gives no site (neutral sites are never guessed).
-HOME_SITE = "Greencastle, Ind."
-AWAY_SITE = "Crawfordsville, Ind."
+HOME_SITE, AWAY_SITE = places.HOME_SITE, places.AWAY_SITE
 
 TITLE = "DePauw University vs. Wabash College: All-Time Head-to-Head Records"
 SUBTITLE = "DePauw University vs. Wabash College: all-time head-to-head records in men’s sports."
@@ -674,7 +673,7 @@ def times_text(n: int) -> str:
 
 
 def repeat_text(found: list) -> str:
-    """" (36 times, most recently Apr 24, 2026)" for a record several games share, else nothing. The date is
+    """" (34 times, most recently Apr 14, 2022)" for a record several games share, else nothing. The date is
     the newest game that has one; games with no recorded date never count as the most recent."""
     if len(found) < 2:
         return ""
@@ -746,8 +745,46 @@ def series_html(rows: list) -> str:
 FOOTNOTES = {("mens-basketball", "1954-12-04"): "Listed as a tie by both schools."}
 
 
+# How a school's page lists a place, in a row note about a found ruling (from DePauw's side, like the rows).
+LISTED_PLACE = {"home": "a home game", "away": "an away game", "neutral": "a neutral-site game"}
+
+
+def source_words(sources: list) -> str:
+    """' Source: A.' or ' Sources: A; B.' for a ruling's sources, by their labels (the links are on the
+    how-it-works page, which lists every sourced ruling). Nothing when there is no source."""
+    if not sources:
+        return ""
+    return f" Source{'' if len(sources) == 1 else 's'}: {'; '.join(s['label'] for s in sources)}."
+
+
+def ruled_flags(g: dict) -> list:
+    """A row note for each thing a ruling in data/overrides.json set on this game (its "ruled" list): a date
+    or a place found in another source, a score, or a note. Each says what the school's page lists instead,
+    so a ruling never silently replaces a school's record."""
+    out = []
+    for r in g.get("ruled", []):
+        if r["kind"] == "note":
+            out.append(r["note"] + source_words(r["sources"]))
+        elif r["kind"] == "score":
+            listed = r["listed"]
+            out.append(f"Score from a ruling; {r['school']}’s page lists {fmt_num(listed['depauw'])}-"
+                       f"{fmt_num(listed['wabash'])} (DePauw-Wabash)." + source_words(r["sources"]))
+        elif r["kind"] == "found":
+            listed, has = r["listed"], []
+            if "date" in r["what"]:
+                has.append("no date")           # a found date is only ever for a row whose page lists no usable date
+            if "place" in r["what"]:
+                place = LISTED_PLACE.get(listed["location"]) if listed.get("site") or listed["location"] != "neutral" else None
+                has.append((place + (f" at {places.ap_place(listed['site'])}" if listed.get("site") else ""))
+                           if place else "no place")
+            what = " and ".join(r["what"]).capitalize()
+            lists = "neither" if has == ["no date", "no place"] else " and ".join(has)
+            out.append(f"{what} from a ruling; {r['school']}’s page lists {lists}." + source_words(r["sources"]))
+    return out
+
+
 def game_flags(key: str, g: dict, merged: bool) -> list:
-    """Short notes for one row: whose record it comes from, a disputed score, a date mismatch."""
+    """Short notes for one row: whose record it comes from, a disputed score, a date mismatch, a ruling."""
     flags = []
     if merged and g.get("source") == "wabash":
         flags.append("Wabash record only")
@@ -772,6 +809,7 @@ def game_flags(key: str, g: dict, merged: bool) -> list:
                          for x in g["sessions"]])
         flags.append(f"One meet over several days. Wabash’s record also lists {days} as separate games; "
                      f"they are running scores of this meet, so they aren’t counted.")
+    flags += ruled_flags(g)
     note = FOOTNOTES.get((key, g["date"]))
     if note and g["result"] == "T" and g.get("source") == "both" and not g.get("disputed"):
         flags.append(note)
@@ -909,7 +947,8 @@ def provenance_text(s: dict) -> str:
     if not c:
         return ""
     words = game_words(s)
-    if not (c["depauw_only"] or c["wabash_only"] or c["disputed"] or c["date_differs"] or c.get("session_rows")):
+    if not (c["depauw_only"] or c["wabash_only"] or c["disputed"] or c["date_differs"] or c.get("session_rows")
+            or c.get("rows_set_aside")):
         return "DePauw and Wabash records agree."
     parts = [f"{count_noun(c['both'], words)} listed by both", f"{c['wabash_only']:,} by Wabash only",
              f"{c['depauw_only']:,} by DePauw only", f"{c['disputed']:,} disputed"]
@@ -922,6 +961,10 @@ def provenance_text(s: dict) -> str:
         text += (f" {plural(rows, 'row')} listed as separate {words[1]} {'is' if rows == 1 else 'are'} the running "
                  f"score of a multi-day {words[0]} already counted once, so {'it is' if rows == 1 else 'they are'} "
                  f"not counted.")
+    if rows := c.get("rows_set_aside"):     # rows a set_aside ruling took out (overrides.json)
+        text += (f" A ruling sets {plural(rows, 'row')} aside (not a {words[0]} between the two teams, or a "
+                 f"repeat), so {'it is' if rows == 1 else 'they are'} not counted; “How the numbers work” lists "
+                 f"{'it' if rows == 1 else 'them'}.")
     return text
 
 
@@ -1632,7 +1675,7 @@ def render_sitemap(data: dict, checked: str | None = None, alumni_verified: str 
 
 CSV_COLUMNS = ["sport", "date", "season", "location", "site", "depauw_score", "wabash_score",
                "result", "note", "boxscore_url", "source", "date_recorded", "disputed", "date_differs",
-               "wabash_record_date", "depauw_record_score", "wabash_record_score"]
+               "wabash_record_date", "depauw_record_score", "wabash_record_score", "ruling_notes"]
 RESULT_WORDS = {"W": "DePauw win", "L": "Wabash win", "T": "Tie"}
 
 
@@ -1668,7 +1711,8 @@ def render_csv(data: dict) -> str:
                              "yes" if date_known(g) else "no", "yes" if g.get("disputed") else "no",
                              "yes" if g.get("date_differs") else "no", csv_text(g.get("wabash_date")),
                              f"{fmt_csv_num(g['depauw'])}-{fmt_csv_num(g['wabash'])}" if g.get("disputed") and v else "",
-                             f"{fmt_csv_num(v['depauw'])}-{fmt_csv_num(v['wabash'])}" if g.get("disputed") and v else ""])
+                             f"{fmt_csv_num(v['depauw'])}-{fmt_csv_num(v['wabash'])}" if g.get("disputed") and v else "",
+                             csv_text(" ".join(ruled_flags(g)))])
     return buf.getvalue()
 
 
@@ -1694,7 +1738,7 @@ def build(data_path: Path, out: Path, *, checked_at: str | None = None,
         footer_html="\n".join(site_footer(when, prefix="../", alumni=(alumni_data, endowment_data))))
     upcoming = meetings.load_upcoming(upcoming_path)
     overrides_path = overrides_path or OVERRIDES
-    rules = merge.load_overrides(overrides_path)
+    rules = merge.load_overrides(overrides_path, sports=merge.sport_keys())    # an unknown sport key stops the build
     kept = sum(len(r) for r in review.load_keep_previous(overrides_path).values())
     pages = {
         "index.html": render_index(data, checked_at, now, upcoming, fun_facts_data),

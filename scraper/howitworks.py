@@ -22,6 +22,7 @@ import html
 import alumni as alumni_page
 import gameday
 import merge
+import places
 import privacy
 
 TITLE = "How the athletics numbers work | DePauw vs. Wabash"
@@ -50,12 +51,108 @@ def placeholder_range() -> str:
     return name(ds[0]) if len(ds) == 1 else f"{name(ds[0])} to {name(ds[-1])}"
 
 
-def ruling_counts(rules: dict) -> tuple:
-    """(same-game, different-games, several-days-of-one-meet rulings) across every sport, from the overrides."""
-    same = sum(len(r.get("same_game", [])) for r in rules.values())
-    diff = sum(len(r.get("different_games", [])) for r in rules.values())
-    days_of_one = sum(len(r.get("session_of", [])) for r in rules.values())
-    return same, diff, days_of_one
+# What each kind of ruling in data/overrides.json does, in the words of the Rulings paragraph ("17 saying ...").
+RULING_WORDS = {
+    "same_game": "saying two entries are the same game",
+    "different_games": "saying two entries are different games",
+    "session_of": "saying several entries are days of one meet",
+    "set_aside": "setting a row aside",
+    "score": "choosing which score counts",
+    "found": "giving a date or a place found in another source",
+    "note": "adding a note to a game",
+}
+
+
+def ruling_counts(rules: dict) -> dict:
+    """{kind: how many rulings of that kind} across every sport, from the overrides, in RULING_WORDS order."""
+    return {kind: sum(len(r.get(kind, [])) for r in rules.values()) for kind in RULING_WORDS}
+
+
+def fmt_date(iso: str) -> str:
+    """'Jan 6, 1944', like the dates on the game lists."""
+    year, month, day = (int(x) for x in iso.split("-"))
+    return f"{MONTH_ABBR[month - 1]} {day}, {year}"
+
+
+def row_words(school: str, row: dict) -> str:
+    """A row as a ruling names it: 'Wabash’s row for Jan 6, 1944 (DePauw 69, Wabash 49)'. A row dated on a
+    placeholder day says only its year, because the page lists no real date."""
+    month_day = tuple(int(x) for x in row["date"].split("-")[1:])
+    when = row["date"][:4] if month_day in merge.PLACEHOLDER_DAYS else fmt_date(row["date"])
+    d, w = row["score"]
+    score = "no score listed" if d is None else f"DePauw {d:,}, Wabash {w:,}"
+    return f"{merge.SCHOOL_NAMES[school]}’s row for {when} ({score})"
+
+
+def sources_html(sources: list) -> str:
+    """' Source: <a>label</a>.' for a ruling's sources, or nothing when it has none."""
+    if not sources:
+        return ""
+    links = "; ".join(f'<a href="{esc(s["url"])}">{esc(s["label"])}</a>' for s in sources)
+    return f' Source{"" if len(sources) == 1 else "s"}: {links}.'
+
+
+FOUND_WORDS = {"home": "at DePauw", "away": "at Wabash", "neutral": "at a neutral site"}
+
+
+def ruling_item(kind: str, name: str, r: dict) -> str:
+    """One sourced ruling as a list item: the sport, the row it names, what it does, the reason and the sources."""
+    if kind == "same_game":
+        what = f'{row_words("depauw", r["depauw"])} and {row_words("wabash", r["wabash"])} are one game.'
+    elif kind == "score":
+        d, w = r[r["use"]]["score"]
+        what = (f'{row_words("depauw", r["depauw"])} and {row_words("wabash", r["wabash"])}: '
+                f'DePauw {d:,}, Wabash {w:,} counts.')
+    else:
+        what = row_words(r["school"], r["row"])
+        if kind == "found":
+            got = [fmt_date(r["date"])] if "date" in r else []
+            if "location" in r or "site" in r:
+                where = FOUND_WORDS.get(r.get("location"), "")
+                site = f'({places.ap_place(r["site"])})' if "site" in r else ""
+                got.append(" ".join(x for x in (where, site) if x))
+            what += f': {", ".join(got)}.'
+        elif kind == "note":
+            what += f': “{r["note"]}”'
+        else:
+            what += "."
+    return f'<li><strong>{esc(name)}.</strong> {esc(what)} {esc(r["reason"])}{sources_html(r.get("sources", []))}</li>'
+
+
+def ruling_lists(sports: dict, rules: dict) -> list:
+    """The sourced rulings, listed under the Rulings paragraph: the rows set aside in the open (they are in no
+    game list, so this is the one place the site shows them), then, in a closed disclosure, the same-game rulings
+    that name sources and the scores, dates, places and notes a ruling set. Each item gives the reason and links
+    its sources. Empty lists are left out."""
+    def items(kind: str) -> list:
+        return [ruling_item(kind, sports[key]["name"] if key in sports else key, r)
+                for key, by_kind in rules.items() for r in by_kind.get(kind, [])
+                if kind != "same_game" or r.get("sources")]
+
+    out = []
+    if aside := items("set_aside"):
+        out += ['<p id="rows-set-aside">Rows set aside by a ruling are not counted and are not in the game lists. '
+                f'Right now there {"is" if len(aside) == 1 else "are"} {plural(len(aside), "such row")}:</p>',
+                f'<ul>\n{chr(10).join(aside)}\n</ul>']
+    rest = [i for kind in ("same_game", "score", "found", "note") for i in items(kind)]
+    if rest:
+        out += ['<details class="rulings">',
+                f'<summary>The {plural(len(rest), "other ruling")} with a source or a note</summary>',
+                '<p>A game whose score, date, place or note comes from one of these says so in its notes on the '
+                'game list.</p>',
+                f'<ul>\n{chr(10).join(rest)}\n</ul>',
+                '</details>']
+    return out
+
+
+def replaced_places(sports: dict) -> list:
+    """'Football, Nov 20, 1915' for each game whose place comes from a found ruling although DePauw's page lists
+    one: with a score ruling, the only cases where something other than DePauw's version counts. Read from the
+    merged games ("ruled"), so the page says it only of games the ruling really changed."""
+    return [f'{s["name"]}, {fmt_date(g["date"])}'
+            for s in sports.values() for g in s["games"] for r in g.get("ruled", [])
+            if r["kind"] == "found" and r["school"] == merge.SCHOOL_NAMES["depauw"] and "place" in r["what"]
+            and r["listed"].get("location") in merge.LOCATIONS]
 
 
 SWIMMING = "mens-swimming-and-diving"
@@ -127,12 +224,14 @@ def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_includ
     sports = data["sports"]
     t = data["totals"]
     n = totals(sports)
-    same, diff, days_of_one = ruling_counts(rules)
+    by_kind = {kind: n for kind, n in ruling_counts(rules).items() if n}
+    kinds_text = ", ".join(f"{n:,} {RULING_WORDS[kind]}" for kind, n in by_kind.items())
     names = [s["name"] for s in sports.values()]
     names_text = (" and ".join(names) if len(names) <= 2        # a serial comma from three items on
                   else ", ".join(names[:-1]) + f", and {names[-1]}")
     both_listed = n["both"]
     one_school = n["depauw_only"] + n["wabash_only"]
+    replaced = replaced_places(sports)
     overrides_url = f"{repo_url}/blob/main/data/overrides.json"
     out = [
         '<section class="prose" aria-labelledby="how-h">',
@@ -188,11 +287,19 @@ def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_includ
 
         '<h3>Rulings</h3>',
         f'<p>When the automatic rules cannot decide, a person checks the box scores and records a ruling, '
-        f'with a reason. Rulings made so far: {same + diff + days_of_one:,} ({same:,} saying two entries '
-        f'are the same game, {diff:,} saying they are different games'
-        + (f', {days_of_one:,} saying several entries are days of one meet' if days_of_one else '')
-        + f'). They are public: '
+        f'with a reason. Rulings made so far: {sum(by_kind.values()):,}'
+        + (f' ({kinds_text})' if kinds_text else '')
+        + f'. They are public: '
         f'<a href="{esc(overrides_url)}">data/overrides.json</a> on GitHub.</p>',
+        '<p>A ruling can also set aside a row that is not a game between the two teams, or that repeats another '
+        'row. It can record a date that a newspaper or yearbook of the time gives when the school’s page has '
+        'none, and a place when the page has none or the source shows another one. Two kinds of ruling are '
+        'exceptions to “DePauw’s version counts”: one chooses the score, when DePauw’s own records contradict '
+        'its history page, and one replaces the place DePauw’s page lists, when a source of the time shows '
+        f'where the game was played ({plural(len(replaced), "game")} so far'
+        + (f': {esc("; ".join(replaced))}' if replaced else '')
+        + '). Each of these rulings names its sources, and none changes who won a game.</p>',
+        *ruling_lists(sports, rules),
 
         '<h3>How often it updates</h3>',
         f'<p>The site checks both schools’ pages twice a day, and every {frequent_minutes()} minutes while a '
