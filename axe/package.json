@@ -4,6 +4,6 @@
   "description": "Accessibility check only: axe-core run on the generated pages in the browser the machine already has. Kept apart from the root package so the production validator install never changes. The site itself ships no JavaScript dependencies.",
   "devDependencies": {
     "axe-core": "4.14.0",
-    "playwright-core": "1.65.0"
+    "playwright-core": "1.65.1"
   }
 }
