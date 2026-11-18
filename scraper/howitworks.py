@@ -455,7 +455,9 @@ def alumni_content(data: dict, endowment: dict, *, repo_url: str) -> list:
         '<h3>How names were found and checked</h3>',
         f'<p>{esc(data["methodology"])}</p>',
         '<p>Every name carries a source for the degree and a source for the office or award, shown beside it on '
-        'the alumni page. For Fortune 500 CEOs the page also shows the company, the ranking year and the rank, '
+        'the alumni page. When the page that states the degree gives no year, the school’s page for the class '
+        'year is linked beside it. A link to an Internet Archive copy of a page says “(archived copy)”. '
+        'For Fortune 500 CEOs the page also shows the company, the ranking year and the rank, '
         'with a source for the ranking; the year shown is the ranking year, not the length of the term. Open '
         'terms read “present”.</p>'
         f'<p>These are verified named graduates in the sources reviewed, not a claim that the list is complete: '

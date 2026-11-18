@@ -348,7 +348,8 @@ def test_degree_labels_say_what_is_recorded_and_never_the_vague_graduate():
     assert alumni.degree_label({"degree": "Graduate", "degree_year": 1885}) == "Class of 1885"
     assert alumni.degree_label({"degree": "Law department graduate", "degree_year": 1866}) == "Law department graduate, 1866"
     assert alumni.degree_label(people["mike-braun"]) == "B.A., 1976"
-    demotte = next(p for p in people.values() if p["degree"].startswith("Literary department"))
+    demotte = people["mark-demotte"]
+    assert re.search(r"\(18\d\d\)", demotte["degree"])
     assert alumni.degree_label(demotte) == demotte["degree"]          # already names its years
     page = committed_page()
     assert "Graduate (" not in page and "B.A., 1976" in page and "Class of 1955" in page
@@ -628,6 +629,43 @@ def test_a_source_that_is_both_the_school_and_the_qualification_source_is_listed
     other = dict(person["qualifications"][cid]["source"], url="https://example.com/other")
     assert alumni._sources(person["school_source"], other).count("<a ") == 2
     assert alumni._sources(person["school_source"], person["school_source"]).count("<a ") == 1
+
+
+def test_a_class_year_source_is_optional_validated_and_listed_after_the_degree_source():
+    data = read_data()
+    person = next(p for p in data["people"] if p["id"] == "ferid-murad")
+    assert "class_year_source" not in person and alumni.degree_sources(person) == [person["school_source"]]
+    person["class_year_source"] = {"label": "School page for the class year", "url": "https://example.edu/class-year"}
+    html = page_for(alumni.validate_alumni(data), alumni.validate_endowment(read_endowment()))
+    item = next(li for li in re.findall(r"<li><strong>.*?</li>", html, re.S) if "Ferid Murad" in li)
+    degree_at = item.index(f'href="{person["school_source"]["url"]}"')
+    year_at = item.index('href="https://example.edu/class-year"')
+    award_at = item.index(f'href="{person["qualifications"]["nobel"]["source"]["url"]}"')
+    assert degree_at < year_at < award_at
+    for broken, message in ((dict(person["class_year_source"], url="http://example.edu/x"), r"https URL"),
+                            (dict(person["class_year_source"], label=" "), r"non-empty"),
+                            ("https://example.edu/class-year", r"label and url"),
+                            (dict(person["school_source"]), r"different page")):
+        person["class_year_source"] = broken
+        with pytest.raises(alumni.AlumniError, match=message):
+            alumni.validate_alumni(data)
+
+
+def test_a_degree_type_is_shown_only_with_a_source_other_than_a_bare_class_year_list():
+    # an entry that shows a degree type must not rest on the page that only lists class years
+    for person in read_data()["people"]:
+        if person["degree"] != "Graduate":
+            assert person["school_source"]["url"] != "https://www.wabash.edu/news/story/3014", person["id"]
+        if "class_year_source" in person:
+            assert person["class_year_source"]["url"] != person["school_source"]["url"], person["id"]
+
+
+def test_an_older_fortune_rank_outside_the_first_ten_cites_a_full_list_not_fortune_com():
+    # fortune.com's year pages show ranks 1 to 10 to a plain read; ranks from before 2018 cite a full list instead
+    for person in read_data()["people"]:
+        q = person["qualifications"].get("fortune-500-ceos")
+        if q and q["rank"] > 10 and q["ranking_source"]["url"].startswith("https://fortune.com/"):
+            assert q["rank_year"] >= 2018, person["id"]
 
 
 def test_the_higher_count_underline_is_on_the_number_not_the_cell():

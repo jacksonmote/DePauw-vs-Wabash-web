@@ -7,6 +7,8 @@ render.build validates them on every build (a bad file fails the render instead 
 
   validate_alumni / validate_endowment   refuse missing or inconsistent data (ten categories, a source for
                                          every person and award, enrollment for the fall before the fiscal year)
+  degree_sources                         the page that states the degree, then the optional class_year_source
+                                         (the school's page for the class year, when the first gives no year)
   counts, visible_categories             named graduates per school and category (once per school and category)
   comparable_amount, per_student,        endowment per student on one basis (pooled endowment net assets),
   exact_per_student, about_even,         calculated from the exact integers; "about even" when the higher is
@@ -132,12 +134,18 @@ def validate_alumni(data: dict) -> dict:
         year = person.get("degree_year")
         if isinstance(year, bool) or not isinstance(year, int) or not 1700 <= year <= 2100:
             _fail(f"person {pid}.degree_year must be a valid earned-degree year")
-        for field in ("school_source",):
+        # school_source states the earned degree. class_year_source is optional: the school's page for the
+        # class year, only when the degree source gives no year (and never the same page twice).
+        for field in ("school_source", "class_year_source"):
+            if field == "class_year_source" and field not in person:
+                continue
             source = person.get(field)
             if not isinstance(source, dict):
                 _fail(f"person {pid}.{field} must have label and url")
             _text(source.get("label"), f"person {pid}.{field}.label")
             _url(source.get("url"), f"person {pid}.{field}.url")
+        if person.get("class_year_source", {}).get("url") == person["school_source"]["url"]:
+            _fail(f"person {pid}.class_year_source must be a different page from school_source")
         cats = person.get("categories")
         if not isinstance(cats, list) or not cats:
             _fail(f"person {pid}.categories must be non-empty")
@@ -396,6 +404,11 @@ def degree_label(person: dict) -> str:
     return f"{degree}, {year}"
 
 
+def degree_sources(person: dict) -> list:
+    """The source that states the degree, then the class-year source when the entry has one."""
+    return [person["school_source"]] + ([person["class_year_source"]] if "class_year_source" in person else [])
+
+
 def _esc(value):
     return html.escape(str(value), quote=True)
 
@@ -543,7 +556,7 @@ def render_page(data: dict, endowment: dict, *, head_html: str, footer_html: str
                     rows.append(
                         f'<li><strong>{_esc(p["name"])}</strong> · {_esc(degree_label(p))}'
                         f'<br>{what}'
-                        f'<br>Sources: {_sources(p["school_source"], q["source"], *extra)}</li>')
+                        f'<br>Sources: {_sources(*degree_sources(p), q["source"], *extra)}</li>')
                 details = f'<details><summary>Names and sources</summary><ul>{"".join(rows)}</ul></details>'
             else:
                 details = '<p class="alumni-zero">No qualifying graduates found in the reviewed sources.</p>'
