@@ -72,7 +72,7 @@ def test_the_privacy_page_renders_with_its_title_headings_and_a_fixed_date(site)
     assert s.find("link", rel="canonical")["href"] == "https://depauwvswabash.com/privacy/"
     assert s.find("meta", property="og:image")["content"].startswith("https://depauwvswabash.com/og-image.png")
     assert not s.find("meta", attrs={"name": "robots"})
-    assert "Last updated Nov 1, 2026" in s.find("p", class_="updated").get_text()
+    assert "Last updated Nov 18, 2026" in s.find("p", class_="updated").get_text()
     assert s.find("time")["datetime"] == privacy.UPDATED
     assert not any(a.has_attr("aria-current") for a in s.find("nav").find_all("a"))     # no nav item marked current
 

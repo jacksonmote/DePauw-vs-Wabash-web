@@ -200,8 +200,8 @@ def swimming_lines(sports: dict) -> list:
         '<p>Only dual meets, where DePauw’s team swims Wabash’s team head to head, are counted. Invitationals, '
         'relays, and conference championships have many teams in the pool at once, so there is no head-to-head '
         'result to add up, and they are left out of the records and out of “Next meeting”. '
-        'The site tells a dual meet from a multi-team event by the name the school gives it and by how many '
-        'opponents are listed.</p>',
+        'The schools’ history pages list dual meets only. On the schedule pages, the site tells a dual meet from '
+        'a multi-team event by the name the school gives it and by how many opponents are listed.</p>',
         '<ul>',
         f'<li><strong>Half points:</strong> a meet can end with half a point on the board. Scores like 172.5 are '
         f'shown just as the schools list them (meets with a half point right now: {half:,}), and the point '
@@ -265,10 +265,11 @@ def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_includ
         'the numbers come from and what the site does when the two schools’ records do not line up.</p>',
 
         '<h3>Where the data comes from</h3>',
-        '<p>Nothing is typed in by hand. The site reads each school’s own athletics website: the '
+        '<p>The games are not typed in by hand. The site reads each school’s own athletics website: the '
         '“opponent history” page for each sport (every game ever recorded against the other school) and '
-        'the schedule page (upcoming games). Those pages are checked automatically, and you can open any '
-        'of them yourself to compare:</p>',
+        'the schedule page (upcoming games). The few corrections a person has made from other sources, such '
+        'as newspapers and yearbooks, are listed under “Rulings” below. The pages are checked automatically, '
+        'and you can open any of them yourself to compare:</p>',
         f'<ul class="sources">\n{sources_html}\n</ul>',
 
         '<h3>What is counted</h3>',
@@ -482,8 +483,8 @@ def alumni_content(data: dict, endowment: dict, *, repo_url: str) -> list:
         'For Fortune 500 CEOs the page also shows the company, the ranking year and the rank, '
         'with a source for the ranking; the year shown is the ranking year, not the length of the term. Open '
         'terms read “present”.</p>'
-        f'<p>These are verified named graduates in the sources reviewed, not a claim that the list is complete: '
-        f'a missing name usually means no source was found yet. The records were last verified {esc(verified)}.</p>',
+        f'<p>A missing name usually means no source was found yet. The records were last verified '
+        f'{esc(verified)}.</p>',
 
         '<h3>Curated by hand</h3>',
         f'<p>The athletics results update automatically from the schools’ websites. The alumni and endowment records '
