@@ -135,7 +135,8 @@ def test_a_row_set_aside_is_not_counted_matched_or_listed(tmp_path):
                                                                  aside("wabash", "1944-02-05", "28-19")]))
     assert [x["date"] for x in r.games] == ["1944-01-11", "1944-02-17"] and merge.tally(r.games) == (2, 0, 0)
     assert r.stats == {"both": 2, "depauw_only": 0, "wabash_only": 0, "disputed": 0, "date_differs": 0,
-                       "dates_not_recorded": 0, "rows_set_aside": 2}
+                       "dates_not_recorded": 0, "rows_set_aside": 2,
+                       "first_season": {"depauw": "1944", "wabash": "1944"}}
     assert [(x["school"], x["date"], x["depauw"], x["wabash"]) for x in r.set_aside] == [
         ("Wabash", "1944-01-06", 69, 49), ("Wabash", "1944-02-05", 28, 19)]
 

@@ -12,6 +12,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scraper"))
 import facts  # noqa: E402
+import merge  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SERIES = json.loads((ROOT / "data" / "series.json").read_text(encoding="utf-8"))
@@ -46,6 +47,19 @@ def test_every_result_is_valid_and_agrees_with_its_score(key):
         if g.get("score_known", True):
             expected = "W" if g["depauw"] > g["wabash"] else "L" if g["depauw"] < g["wabash"] else "T"
             assert g["result"] == expected, (key, g["date"], g["depauw"], g["wabash"])
+
+
+@pytest.mark.parametrize("key", SPORTS)
+def test_a_page_that_starts_later_leaves_the_earlier_games_to_the_other_school(key):
+    src = SPORTS[key].get("sources") or {}
+    later = src.get("later_start")
+    if later is None:                            # the pages start in the same season (or an older file)
+        return
+    earlier = "wabash" if later == "depauw" else "depauw"
+    start = merge.season_key({"season": src["first_season"][later], "date": "0000-01-01"})
+    before = [g for g in SPORTS[key]["games"] if merge.season_key(g) < start]
+    assert before and all(g["source"] == earlier for g in before), key
+    assert len(before) == src[f"{earlier}_only"] - src["only_since_later_start"], key
 
 
 @pytest.mark.parametrize("key", SPORTS)

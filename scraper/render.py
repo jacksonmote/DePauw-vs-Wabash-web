@@ -972,6 +972,26 @@ def bell_block(games: list) -> str:
     ])
 
 
+def coverage_text(c: dict, words: tuple) -> str:
+    """When one school's page starts in a later season (merge.coverage), the sentences that say so, each with a
+    leading space: "DePauw’s page lists games from 1978 on; earlier games come from Wabash’s page. 1 game since
+    then is on Wabash’s page only." Else "". All of it comes from the merge stats: the later page's first season,
+    and how many of the other school's one-school games fall before it and since."""
+    later = c.get("later_start")
+    if later not in merge.SCHOOL_NAMES:
+        return ""
+    earlier = "wabash" if later == "depauw" else "depauw"
+    late, early = merge.SCHOOL_NAMES[later], merge.SCHOOL_NAMES[earlier]
+    since = c.get("only_since_later_start", 0)
+    before = c[f"{earlier}_only"] - since
+    text = f" {late}’s page lists {words[1]} from {c['first_season'][later]} on; "
+    text += (f"the one earlier {words[0]} comes from {early}’s page." if before == 1 else
+             f"earlier {words[1]} come from {early}’s page.")
+    if since:
+        text += f" {count_noun(since, words)} since then {'is' if since == 1 else 'are'} on {early}’s page only."
+    return text
+
+
 def provenance_text(s: dict) -> str:
     """Where a sport's record comes from, when both schools' pages were merged."""
     c = s.get("sources")
@@ -983,7 +1003,7 @@ def provenance_text(s: dict) -> str:
         return "DePauw and Wabash records agree."
     parts = [f"{count_noun(c['both'], words)} listed by both", f"{c['wabash_only']:,} by Wabash only",
              f"{c['depauw_only']:,} by DePauw only", f"{c['disputed']:,} disputed"]
-    text = "Combined from DePauw and Wabash records: " + ", ".join(parts) + "."
+    text = "Combined from DePauw and Wabash records: " + ", ".join(parts) + "." + coverage_text(c, words)
     if c["date_differs"]:
         n = c["date_differs"]
         text += (f" {n:,} of the shared {words[1]} have different dates in the two records." if n != 1 else

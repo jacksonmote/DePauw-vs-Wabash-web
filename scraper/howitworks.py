@@ -169,6 +169,23 @@ def words(name: str) -> str:
     return name.replace("Men’s ", "").replace("Men's ", "").lower()
 
 
+def later_starts(sports: dict) -> str:
+    """' Right now the pages start in different seasons for 2 sports: baseball (DePauw’s page starts in 1978) and
+    soccer (Wabash’s page starts in 1967). Each of those cards says so.' (plain text, with a leading space): the
+    sports whose two pages start in different seasons (merge.coverage, in the merge stats), in page order. '' when
+    there are none."""
+    items = []
+    for s in sports.values():
+        c = s.get("sources") or {}
+        if (later := c.get("later_start")) in merge.SCHOOL_NAMES:
+            items.append(f"{words(s['name'])} ({merge.SCHOOL_NAMES[later]}’s page starts in "
+                         f"{c['first_season'][later]})")
+    if not items:
+        return ""
+    return (f" Right now the pages start in different seasons for {plural(len(items), 'sport')}: "
+            f"{_list_and(items)}. " + ("Each of those cards says so." if len(items) > 1 else "That card says so."))
+
+
 def swimming_lines(sports: dict) -> list:
     """The swimming and diving section, from the data. Empty when the sport is not on the site."""
     s = sports.get(SWIMMING)
@@ -282,6 +299,11 @@ def content(data: dict, rules: dict, kept: int, *, sources_html: str, not_includ
         '</ul>',
         '<p>The site would rather leave a doubtful pair as two separate one-school games, which is visible '
         'and can be checked, than quietly merge two real games into one.</p>',
+        '<p>The two pages do not always go back equally far. When one school’s page starts in a later season, '
+        'the games before then come only from the other school’s page, and they count like any game one school '
+        'lists. So “DePauw’s version counts” (see “Disputed games”) can only apply to a game DePauw’s page '
+        'lists; before DePauw’s page starts, Wabash’s record is the only one.'
+        + esc(later_starts(sports)) + '</p>',
 
         *swimming_lines(sports),
 
