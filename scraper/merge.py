@@ -593,9 +593,36 @@ def merge_sport(depauw: list, wabash: list, *, season_months=None, rules=None) -
         stats["rows_set_aside"] = len(not_games)
     if places_differ := sum(1 for g in merged if g.get("place_differs")):
         stats["place_differs"] = places_differ
+    stats.update(coverage(d, w, depauw_only, wabash_only))
     result = MergeResult(merged, stats, depauw_only, wabash_only, disputed, differs, matches, set_aside, not_games)
     check(d, w, result)
     return result
+
+
+def coverage(depauw: list, wabash: list, depauw_only: list, wabash_only: list) -> dict:
+    """How far back each school's page reaches, for the merge stats. `depauw` and `wabash` are the rows the merge
+    counts (after the rulings took rows out), the other two the rows of each that nobody else lists.
+      first_season           {"depauw", "wabash"}: the season of each page's oldest row, spelled as the site spells
+                             a season ("1978", "1996-97"); only when both pages have rows
+      later_start            the school whose page starts in a later season (compared by the year a season ends
+                             in, so "1902-03" and "1902-1903" start together); omitted when they start together
+      only_since_later_start how many of the other school's one-school rows fall in that season or later. Its rows
+                             before it are the games only it can list; they number its one-school count minus this
+    A page whose oldest row is earlier only because the other page lists that same game in a later season has no
+    game of its own before the other page starts, so that is not a later start."""
+    if not depauw or not wabash:
+        return {}
+    first = {"depauw": min(depauw, key=season_key), "wabash": min(wabash, key=season_key)}
+    stats = {"first_season": {school: normalize_season(g.get("season"), g["date"]) for school, g in first.items()}}
+    start = {school: season_key(g) for school, g in first.items()}
+    if start["depauw"] == start["wabash"]:
+        return stats
+    later = max(start, key=start.get)
+    earlier_only = wabash_only if later == "depauw" else depauw_only
+    since = sum(1 for g in earlier_only if season_key(g) >= start[later])
+    if len(earlier_only) > since:
+        stats.update(later_start=later, only_since_later_start=since)
+    return stats
 
 
 def _public(g: dict) -> dict:

@@ -35,7 +35,7 @@ def test_the_same_date_and_score_is_one_game_from_both_records():
     only = r.games[0]
     assert only["source"] == "both" and "disputed" not in only and "date_differs" not in only
     assert r.stats == {"both": 1, "depauw_only": 0, "wabash_only": 0, "disputed": 0, "date_differs": 0,
-                       "dates_not_recorded": 0}
+                       "dates_not_recorded": 0, "first_season": {"depauw": "2020", "wabash": "2020"}}
 
 
 def test_a_doubleheader_pairs_by_score_then_by_order():
@@ -379,7 +379,8 @@ def test_real_football_has_one_game_left_on_each_side_until_a_person_rules_on_18
     d, w, r = real("football")
     assert len(r.games) == 132 and merge.tally(r.games) == (60, 63, 9)
     assert r.stats == {"both": 130, "depauw_only": 1, "wabash_only": 1, "disputed": 2, "date_differs": 2,
-                       "dates_not_recorded": 0, "place_differs": 4}       # 1903, 1915, 1935 and 1971
+                       "dates_not_recorded": 0, "place_differs": 4,       # 1903, 1915, 1935 and 1971
+                       "first_season": {"depauw": "1890", "wabash": "1890"}}
     # The two schools disagree on two scores (1901 and 1941); neither changes who won.
     assert sorted(x["date"] for x in r.disputed) == ["1901-11-11", "1941-11-15"]
     assert all(x["wabash_version"]["result"] == x["result"] for x in r.disputed)
@@ -403,8 +404,11 @@ def test_real_tennis_gains_88_old_matches_with_no_date_and_two_with_dates():
     d, w, r = real("mens-tennis")
     assert (len(d), len(w), len(r.games)) == (33, 123, 123)
     assert merge.tally(r.games) == (115, 7, 1)
+    # DePauw's page starts in 1996-97; the 2 Wabash-only matches since are the repeated rows a set_aside ruling
+    # takes out on the site
     assert r.stats == {"both": 33, "depauw_only": 0, "wabash_only": 90, "disputed": 1, "date_differs": 0,
-                       "dates_not_recorded": 88}
+                       "dates_not_recorded": 88, "first_season": {"depauw": "1996-97", "wabash": "1915"},
+                       "later_start": "depauw", "only_since_later_start": 2}
     assert [x["date"] for x in r.disputed] == ["2011-04-13"] and r.disputed[0]["depauw"] == 9
     one_nine_ninety_seven = [x for x in r.games if x["date"].startswith("1997")]
     assert [(x["source"], x["date"]) for x in one_nine_ninety_seven] == [("both", "1997-04-09")]
@@ -417,8 +421,11 @@ def test_real_baseball_merges_the_1984_pair_as_a_dispute_and_leaves_1986_for_a_r
     d, w, r = real("baseball")
     assert (len(d), len(w), len(r.games)) == (141, 314, 316)
     assert merge.tally(r.games) == (157, 156, 3)
+    # the 3 Wabash-only games since DePauw's page starts: the 1981 tie and the 1986 pair until a ruling joins it
     assert r.stats == {"both": 139, "depauw_only": 2, "wabash_only": 175, "disputed": 2, "date_differs": 14,
-                       "dates_not_recorded": 64, "place_differs": 8}
+                       "dates_not_recorded": 64, "place_differs": 8,
+                       "first_season": {"depauw": "1978", "wabash": "1887-88"},
+                       "later_start": "depauw", "only_since_later_start": 3}
     pair = sorted((x["depauw"], x["wabash"], x["wabash_version"]["depauw"], x["wabash_version"]["wabash"], x["date"],
                    x["wabash_date"]) for x in r.disputed)
     assert pair == [(11, 1, 10, 2, "1984-04-25", "1984-04-24"), (12, 5, 11, 5, "1984-04-25", "1984-04-24")]
@@ -434,6 +441,58 @@ def test_real_baseball_with_the_1986_rulings_is_wabashs_by_one():
     d, w, r = real("baseball", ruled)
     assert (len(r.games), merge.tally(r.games)) == (314, (155, 156, 3))
     assert r.stats["both"] == 141 and r.stats["depauw_only"] == 0
+
+
+# ---- how far back each page reaches (merge.coverage) ------------------------------------------ #
+
+def test_the_baseball_fixture_starts_in_1978_on_depauws_page_with_one_wabash_only_game_since():
+    # With the two 1986 rulings the site applies. Without them the 1986 doubleheader is two more one-school rows
+    # on each side, and 3 Wabash-only games fall in 1978 or later (the test above).
+    ruled = {"same_game": [ruling(("1986-03-19", "12-4"), ("1986-03-23", "12-4")),
+                           ruling(("1986-03-19", "16-4"), ("1986-03-23", "16-4"))], "different_games": []}
+    d, w, r = real("baseball", ruled)
+    c = r.stats
+    assert c["first_season"] == {"depauw": "1978", "wabash": "1887-88"}
+    assert (c["later_start"], c["only_since_later_start"]) == ("depauw", 1)
+    since = [x for x in r.wabash_only if merge.season_key(x) >= 1978]
+    assert [(x["date"], x["result"], x["depauw"], x["wabash"]) for x in since] == [("1981-03-17", "T", 7, 7)]
+    before = [x for x in r.games if merge.season_key(x) < 1978]
+    assert len(before) == c["wabash_only"] - c["only_since_later_start"] == 172
+    assert all(x["source"] == "wabash" for x in before)
+
+
+def test_pages_that_start_in_the_same_season_record_it_and_nothing_else():
+    r = merged([g("1999-11-06", 7, 7), g("2001-11-10", 17, 24)], [g("1999-11-06", 7, 7)])
+    assert r.stats["first_season"] == {"depauw": "1999", "wabash": "1999"}
+    assert "later_start" not in r.stats and "only_since_later_start" not in r.stats
+
+
+def test_a_season_spelled_two_ways_is_one_start():
+    r = merged([g("1903-03-03", season="1902-03")], [g("1903-03-04", 9, 5, season="1902-1903")])
+    assert r.stats["first_season"] == {"depauw": "1902-03", "wabash": "1902-03"} and "later_start" not in r.stats
+
+
+def test_a_later_start_on_either_side_counts_the_other_schools_games_since_then():
+    old = [g("1966-10-29", 1, 2), g("1967-11-11", 2, 1)]
+    r = merged(old, [g("1967-11-11", 2, 1)])                    # Wabash's page starts a season later
+    assert r.stats["first_season"] == {"depauw": "1966", "wabash": "1967"}
+    assert (r.stats["later_start"], r.stats["only_since_later_start"]) == ("wabash", 0)
+    r = merged([g("1981-03-18", 10, 7)], [g("1975-04-01", 3, 4), g("1981-03-17", 7, 7), g("1981-03-17", 10, 7)])
+    assert (r.stats["later_start"], r.stats["only_since_later_start"]) == ("depauw", 1)      # the 7-7 tie
+    assert r.stats["wabash_only"] - r.stats["only_since_later_start"] == 1                  # the 1975 game
+
+
+def test_an_earlier_row_that_is_the_same_game_as_a_later_one_is_not_a_later_start():
+    # Wabash lists the game a year earlier (a typo the merge joins), so Wabash's page has no game of its own
+    # before DePauw's starts.
+    r = merged([g("1969-11-16", 3, 0)], [g("1968-11-16", 3, 0)])
+    assert r.stats["both"] == 1 and r.stats["first_season"] == {"depauw": "1969", "wabash": "1968"}
+    assert "later_start" not in r.stats
+
+
+def test_one_school_with_no_rows_records_no_start():
+    r = merged([g("2020-11-14")], [])
+    assert not {"first_season", "later_start", "only_since_later_start"} & set(r.stats)
 
 
 def test_real_basketball_has_seven_disputed_scores_and_the_1954_tie_in_both_records():
@@ -454,12 +513,14 @@ def test_real_soccer_is_one_game_short_at_wabash_and_lacrosse_agrees_completely(
     d, w, r = real("mens-soccer")
     assert (len(d), len(w), len(r.games)) == (65, 64, 65) and merge.tally(r.games) == (41, 18, 6)
     assert r.stats == {"both": 64, "depauw_only": 1, "wabash_only": 0, "disputed": 0, "date_differs": 5,
-                       "dates_not_recorded": 0, "place_differs": 3}
+                       "dates_not_recorded": 0, "place_differs": 3,
+                       "first_season": {"depauw": "1966", "wabash": "1967"},       # Wabash's starts a year later
+                       "later_start": "wabash", "only_since_later_start": 0}
     assert sorted((m["depauw"]["date"], m["wabash"]["date"]) for m in merge.beyond_window(r)) == [
         ("1969-10-12", "1969-11-12"), ("1969-10-15", "1969-10-11"), ("1969-11-16", "1968-11-16")]
     d, w, r = real("mens-lacrosse")
     assert r.stats == {"both": 12, "depauw_only": 0, "wabash_only": 0, "disputed": 0, "date_differs": 0,
-                       "dates_not_recorded": 0}
+                       "dates_not_recorded": 0, "first_season": {"depauw": "2015", "wabash": "2015"}}
     assert merge.tally(r.games) == (12, 0, 0)
 
 

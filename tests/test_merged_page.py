@@ -56,6 +56,42 @@ def test_a_card_says_how_its_record_was_combined(tmp_path):
            "1 by DePauw only, 0 disputed." in text_of(card(html, "football"))
 
 
+def test_a_card_says_when_one_schools_page_starts_later(tmp_path):
+    later = {"first_season": {"depauw": "1978", "wabash": "1887-88"}, "later_start": "depauw",
+             "only_since_later_start": 1}
+    s = merged_sport("football", "Football", football()["games"], counts(**later))
+    _, html = build(tmp_path, {"football": s})
+    assert "174 by Wabash only, 1 by DePauw only, 0 disputed. DePauw’s page lists games from 1978 on; earlier " \
+           "games come from Wabash’s page. 1 game since then is on Wabash’s page only." in text_of(card(html, "football"))
+
+
+def coverage(**kw):
+    return render.provenance_text({"sources": counts(**kw)})
+
+
+def test_the_coverage_sentence_appears_only_when_the_pages_start_in_different_seasons():
+    assert "page lists" not in coverage(first_season={"depauw": "1890", "wabash": "1890"})
+    assert "page lists" not in coverage()                     # an older series.json without the stats
+    assert "page lists" in coverage(first_season={"depauw": "1978", "wabash": "1887-88"}, later_start="depauw",
+                                    only_since_later_start=0)
+
+
+def test_the_coverage_sentence_counts_and_words_from_the_data():
+    one_earlier = coverage(depauw_only=1, wabash_only=0, first_season={"depauw": "1966", "wabash": "1967"},
+                           later_start="wabash", only_since_later_start=0)
+    assert "Wabash’s page lists games from 1967 on; the one earlier game comes from DePauw’s page." in one_earlier
+    assert "since then" not in one_earlier
+    tennis = render.provenance_text({"unit": ["match", "matches"], "sources": counts(
+        wabash_only=88, first_season={"depauw": "1996-97", "wabash": "1915"}, later_start="depauw",
+        only_since_later_start=0)})
+    assert "DePauw’s page lists matches from 1996-97 on; earlier matches come from Wabash’s page." in tennis
+    assert "game" not in tennis
+    swim = render.provenance_text({"unit": ["meet", "meets"], "sources": counts(
+        wabash_only=9, first_season={"depauw": "1995-96", "wabash": "1926-27"}, later_start="depauw",
+        only_since_later_start=2)})
+    assert "earlier meets come from Wabash’s page. 2 meets since then are on Wabash’s page only." in swim
+
+
 def test_a_card_where_the_schools_agree_completely_says_so(tmp_path):
     s = merged_sport("football", "Football", football()["games"], counts(both=5, depauw_only=0, wabash_only=0))
     _, html = build(tmp_path, {"football": s})

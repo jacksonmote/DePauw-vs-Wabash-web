@@ -606,7 +606,8 @@ def test_end_to_end_merges_both_schools_and_keeps_each_schools_games(both_dir, t
     # letter (W 7-19, W 7-10, W 1-2 in DePauw's view); trusting the letter moves 16 runs to DePauw.
     assert sp["baseball"]["points"] == {"depauw": 1817, "wabash": 1734}
     assert sp["football"]["sources"] == {"both": 130, "depauw_only": 1, "wabash_only": 1, "disputed": 2,
-                                         "date_differs": 2, "dates_not_recorded": 0, "place_differs": 4}
+                                         "date_differs": 2, "dates_not_recorded": 0, "place_differs": 4,
+                                         "first_season": {"depauw": "1890", "wabash": "1890"}}
     assert sp["mens-tennis"]["unit"] == ["match", "matches"] and "unit" not in sp["football"]
     assert sp["football"]["wabash_source_url"] == \
         "https://sports.wabash.edu/sports/football/opponent-history/depauw-university/4"

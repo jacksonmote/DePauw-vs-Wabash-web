@@ -76,6 +76,40 @@ def test_the_swimming_section_explains_dual_meets_and_takes_its_numbers_from_the
     assert "days of one meet" in t
 
 
+def test_the_page_explains_a_page_that_starts_later_and_names_the_sports_from_the_data(tmp_path):
+    data = json.loads(json.dumps(DATA))
+    for s in data["sports"].values():
+        for k in ("later_start", "only_since_later_start"):
+            s.get("sources", {}).pop(k, None)
+    data["sports"]["baseball"]["sources"].update(first_season={"depauw": "1978", "wabash": "1887-88"},
+                                                 later_start="depauw", only_since_later_start=1)
+    data["sports"]["mens-soccer"]["sources"].update(first_season={"depauw": "1966", "wabash": "1967"},
+                                                    later_start="wabash", only_since_later_start=0)
+    t = text_of(how(build(tmp_path, data)))
+    assert "When one school’s page starts in a later season, the games before then come only from the other " \
+           "school’s page" in t
+    assert "“DePauw’s version counts” (see “Disputed games”) can only apply to a game DePauw’s page lists" in t
+    assert ("Right now the pages start in different seasons for 2 sports: baseball (DePauw’s page starts in 1978) "
+            "and soccer (Wabash’s page starts in 1967). Each of those cards says so.") in t
+
+
+def test_one_sport_with_a_later_start_reads_in_the_singular():
+    one = {"baseball": {"name": "Baseball", "sources": {"first_season": {"depauw": "1978", "wabash": "1887-88"},
+                                                        "later_start": "depauw", "only_since_later_start": 1}}}
+    assert howitworks.later_starts(one) == (" Right now the pages start in different seasons for 1 sport: baseball "
+                                            "(DePauw’s page starts in 1978). That card says so.")
+    assert howitworks.later_starts({"baseball": {"name": "Baseball", "sources": {}}}) == ""
+
+
+def test_with_no_page_starting_later_the_page_names_no_sport(tmp_path):
+    data = json.loads(json.dumps(DATA))
+    for s in data["sports"].values():
+        for k in ("first_season", "later_start", "only_since_later_start"):
+            s.get("sources", {}).pop(k, None)
+    t = text_of(how(build(tmp_path, data)))
+    assert "When one school’s page starts in a later season" in t and "Right now the pages start" not in t
+
+
 def test_changing_the_data_changes_the_page(tmp_path):
     data = json.loads(json.dumps(DATA))
     data["sports"]["football"]["sources"]["disputed"] += 40
