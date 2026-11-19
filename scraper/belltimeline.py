@@ -12,10 +12,13 @@ from the hand-curated data/bell-heists.json, each linking to its story's card on
                              tie, the tie rules, a year without a game), with their source
   rules_lines                the same notes as the "Monon Bell rules" section of /how-it-works/athletics/
   summary_rows               the figures above the grid, from facts.bell and facts.bell_summary
+  song_html                  "The Bell in song": a short note on the rivalry's song, with a plain link to a video
+                             of it and the news release it is told from (a link, never an embed)
   description                the page's meta description, from the same figures
   render_main                the page's <main> content (render.py supplies the head, the header and the footer)
 
-The page's styles are static/bell.css, which only this page loads. No script, no inline style.
+The page's styles are static/bell.css, which only this page loads. No script, no inline style, and nothing loaded
+from another site: the video is a plain link.
 """
 
 from __future__ import annotations
@@ -40,6 +43,23 @@ HEIST_MARK = '<span class="bt-dot" aria-hidden="true"></span>'
 # tests/test_bell_timeline.py keeps the two in step). Opened and read before it was cited.
 SOURCE = {"label": "DePauw Athletics: Rivalry facts",
           "url": "https://depauwtigers.com/sports/2022/6/28/rivalry-facts.aspx"}
+
+# "The Bell in song" (song_html). Told from DePauw's news release of the recording day, read in its Internet Archive
+# copy of 2012 (the live page is gone); the video's own page, on the DePauw University Video Archive channel, names
+# the same three alumni and who edited the 2012 video (its description, read 2026-11-19, gives his title then). Both
+# were opened and read before they were cited. No lyrics, and the video is a plain link: an embed would load
+# another site's page and break the privacy policy.
+SONG_HEADING = "The Bell in song"
+SONG_TITLE = "The Ballad of the Monon Bell"
+SONG_MAKERS = ("Darel Lindquist", "Nancy Ford", "Jimmy Ibbotson")   # DePauw alumni, in the release's order
+SONG_LEADER = "Ibbotson"                                            # he led the musicians at the recording
+SONG_RECORDED = "1985-10-15"                                        # in Nashville
+SONG_VIDEO = {"year": 2012, "url": "https://www.youtube.com/watch?v=xW74vxcnskw",
+              "editor": "Ken Owen ’82", "editor_role": "DePauw’s Executive Director of Media Relations"}
+SONG_SOURCE = {"label": "DePauw University, Oct 15, 1985: Ballad of the Monon Bell is Recorded in Nashville "
+                        "(archived copy)",
+               "url": "https://web.archive.org/web/20120914170940/"
+                      "https://www.depauw.edu/news-media/latest-news/details/23724/"}
 
 
 def _esc(value) -> str:
@@ -237,6 +257,23 @@ def summary_rows(summary: dict, record_html: str) -> list:
             ("Changes of hands", f'{summary["changes"]:,}')]
 
 
+def song_html() -> str:
+    """The "The Bell in song" card: three short sentences, a plain link to the video and the sources line."""
+    *first, last = SONG_MAKERS
+    video = SONG_VIDEO
+    return (
+        '<section class="bt-card" aria-labelledby="bt-song-h">\n'
+        f'<h3 class="eyebrow" id="bt-song-h">{_esc(SONG_HEADING)}</h3>\n'
+        f'<p>“{_esc(SONG_TITLE)}” is a song about the rivalry, created by DePauw alumni '
+        f'{_esc(", ".join(first))}, and {_esc(last)}. Musicians led by {_esc(SONG_LEADER)} recorded it in Nashville '
+        f'on {heists.fmt_date(SONG_RECORDED)}. The {video["year"]} video was edited by {_esc(video["editor"])}, then '
+        f'{_esc(video["editor_role"])}. <a href="{_esc(video["url"])}">Watch DePauw’s {video["year"]} video of the '
+        'song on YouTube</a>.</p>\n'
+        f'<p class="bt-source">Sources: <a href="{_esc(SONG_SOURCE["url"])}">{_esc(SONG_SOURCE["label"])}</a> and '
+        f'the {video["year"]} video’s description on YouTube.</p>\n'
+        '</section>')
+
+
 def lead(seasons: list) -> str:
     return (f"Who took the Monon Bell home after each DePauw–Wabash football game, from the "
             f"{seasons[0]['year'] if seasons else facts.BELL_START} season to today.")
@@ -264,7 +301,7 @@ def render_main(seasons: list, heists_data: dict | None, *, back_html: str, back
     top = [back_html, f'<h2>{_esc(TITLE)}</h2>', f'<p class="bt-lead">{_esc(lead(seasons))}</p>']
     foot = [f'<p class="bt-more"><a href="{_esc(heist_href)}">{_esc(HEIST_LINK)}</a> · {back_link}</p>']
     if not seasons:
-        return top + ['<p>No Bell game is on record yet.</p>'] + foot
+        return top + ['<p>No Bell game is on record yet.</p>', song_html()] + foot
     rows = summary_rows(facts.bell_summary(seasons), record_html)
     return top + [
         '<section class="bt-card" aria-labelledby="bt-numbers-h">',
@@ -278,4 +315,5 @@ def render_main(seasons: list, heists_data: dict | None, *, back_html: str, back
         legend_html(seasons, heists_data),
         notes_html(seasons, overtime_start),
         '</section>',
+        song_html(),
     ] + foot

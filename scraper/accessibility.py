@@ -25,7 +25,7 @@ import html
 import belltimeline
 import privacy
 
-UPDATED = "2026-11-17"           # the day the page's text last changed
+UPDATED = "2026-11-19"           # the day the page's text last changed
 REVIEWED = "2026-11-15"          # the day of the last full review of every page
 # Pages added since that review: (path from the site root, the page's name, the day it was checked). Each was
 # checked the day it was added with the tools the sentence below names; the next full review empties this list.
@@ -143,8 +143,9 @@ def content(*, repo_url: str, suggestion_url: str) -> list:
         '</ul>',
         '<h3>Content we don’t control</h3>',
         '<p>Pages here link to the two schools’ athletics sites (history pages, schedules, and box scores), to '
-        'GitHub, and to the sources cited for alumni, endowment, heist, and tiger-fact entries, some of which are '
-        'PDF documents. We don’t control those sites and can’t promise they are accessible. The correction and '
+        'GitHub, to a video of the Monon Bell song on YouTube, and to the sources cited for alumni, endowment, '
+        'heist, and tiger-fact entries, some of which are PDF documents. We don’t control those sites and can’t '
+        'promise they are accessible. The correction and '
         'suggestion forms are on GitHub and need a GitHub account; if that is a barrier, email us instead.</p>',
         '<h3>Report a problem</h3>',
         '<p>If something on this site is hard to use, or you can’t get to some information, please tell us:</p>',

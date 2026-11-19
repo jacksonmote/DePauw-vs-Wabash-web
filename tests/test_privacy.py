@@ -72,7 +72,7 @@ def test_the_privacy_page_renders_with_its_title_headings_and_a_fixed_date(site)
     assert s.find("link", rel="canonical")["href"] == "https://depauwvswabash.com/privacy/"
     assert s.find("meta", property="og:image")["content"].startswith("https://depauwvswabash.com/og-image.png")
     assert not s.find("meta", attrs={"name": "robots"})
-    assert "Last updated Nov 18, 2026" in s.find("p", class_="updated").get_text()
+    assert "Last updated Nov 19, 2026" in s.find("p", class_="updated").get_text()
     assert s.find("time")["datetime"] == privacy.UPDATED
     assert not any(a.has_attr("aria-current") for a in s.find("nav").find_all("a"))     # no nav item marked current
 
@@ -159,6 +159,22 @@ def test_the_script_has_no_network_cookie_or_storage_code():
         assert word not in code, word
     assert not re.search(r"https?:|//\w", code)           # no URL at all
     assert not re.search(r"\.(src|href|action)\s*=|setAttribute\(\s*['\"](src|href)", code)
+
+
+VIDEO_HOSTS = {"youtube.com", "youtu.be", "vimeo.com"}
+
+
+def test_a_video_is_only_ever_a_link_and_the_policy_names_video_sites_while_a_page_links_to_one(site):
+    """The Monon Bell page's song video is a plain link that leaves the site (the test below keeps every page free
+    of embeds); while any page links to a video site, "Links to other sites" names video sites."""
+    def video(href):
+        host = (urlparse(href).hostname or "").lower()
+        return host.removeprefix("www.").removeprefix("m.") in VIDEO_HOSTS
+
+    linked = [(page, a["href"]) for page in pages(site) for a in soup(page).find_all("a", href=True) if video(a["href"])]
+    if linked:
+        paragraph = soup(site / "privacy" / "index.html").find("h3", string="Links to other sites").find_next("p")
+        assert "video sites" in paragraph.get_text(), linked
 
 
 def test_no_page_loads_anything_from_another_origin(site):
