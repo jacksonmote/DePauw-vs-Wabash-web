@@ -606,7 +606,7 @@ def test_the_readme_and_agents_describe_the_watcher_the_politeness_rules_and_the
                    "never does", "workflow_dispatch"):
         assert phrase in watcher_section, phrase
     for phrase in ("**Politeness**", "robots.txt", "Crawl-delay", "gameday.SCRAPE_ON_PUSH", "`gameday-watcher.yml`",
-                   "What each run reads", "Actions cache", "change all nineteen `runs-on:` lines"):
+                   "What each run reads", "Actions cache", "change every `runs-on:` line together"):
         assert phrase in readme, phrase
     assert "twice a day: a history page" not in readme and "spaced a few seconds apart" not in readme
     for phrase in ("scraper/politeness.py", "Crawl-delay", "Never increase request volume", "gameday-watcher.yml",

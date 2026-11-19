@@ -20,7 +20,7 @@ from __future__ import annotations
 import datetime as dt
 import html
 
-UPDATED = "2026-11-01"           # the day the policy text last changed
+UPDATED = "2026-11-18"           # the day the policy text last changed
 PATH = "privacy/"                # relative to the site root
 SOURCE_PATH = "scraper/privacy.py"                    # this file, in the repository
 PRIVACY_EMAIL = "privacy@motetechnologygroup.com"     # the privacy contact: privacy page only
@@ -92,8 +92,8 @@ def content(*, repo_url: str, correction_url: str) -> list:
         '<p>The correction and suggestion links at the bottom of each page open a form on GitHub. You need a '
         'GitHub account to use one, and what you submit becomes a public GitHub issue that anyone can read and '
         'that is tied to your GitHub username. Please don’t post anything personal, such as phone numbers, email '
-        'addresses or home addresses. The links themselves carry only the page, category or sport you were '
-        'looking at, nothing about you.</p>',
+        'addresses or home addresses. The links themselves carry only the page, category, sport or part of the '
+        'site you were looking at, sometimes as the issue’s title, and nothing about you.</p>',
         f'<p>A security problem can be reported privately instead, through '
         f'{_a(security, "GitHub’s private vulnerability reporting")}. '
         'Those reports are visible only to the site’s maintainers and GitHub. '
@@ -101,7 +101,8 @@ def content(*, repo_url: str, correction_url: str) -> list:
         f'{_a(GITHUB_PRIVACY, "Privacy Statement")}.</p>',
         '<h3>The data on the site</h3>',
         '<p>Everything shown here is public information: game results from the two schools’ own athletics '
-        'pages, alumni and endowment figures from public sources linked next to each entry, and the Monon Bell '
+        'pages (plus a few corrections from newspapers and yearbooks, each cited under “Rulings” on the '
+        'athletics how-it-works page), alumni and endowment figures from public sources linked next to each entry, and the Monon Bell '
         'heist history and tiger facts, each with a source. On a schedule, an automated process reads the '
         'schools’ public athletics pages to update the records. It collects nothing about visitors, and the '
         'data it stores is sports data only.</p>',

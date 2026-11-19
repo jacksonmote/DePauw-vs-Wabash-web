@@ -16,7 +16,7 @@ run-name: ${{ inputs.dry_run && 'Game-day watcher (dry run)' || (inputs.test_dis
 # job at 6) a watcher starts a fresh run of itself, marked as a relay, and stops.
 #
 # One watcher at a time: the gate of a run that is not a relay or a dry run stands aside when an older watcher run
-# is in progress (the newer always yields), and the watch job's concurrency group queues anything that slips past.
+# is queued or in progress (the newer always yields), and the watch job's concurrency group queues anything that slips past.
 # Dry runs dispatch nothing, simulate the clock instead of sleeping, and take a pretend start time.
 # A test dispatch (test_dispatch, never with dry_run) skips the game check, starts one game-day update on main and
 # stops: proof that the dispatch works before a game day. It has its own concurrency group, so it never waits
