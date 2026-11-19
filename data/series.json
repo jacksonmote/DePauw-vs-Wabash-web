@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "updated_at": "2026-11-18T03:41:11+00:00",
+  "updated_at": "2026-11-19T00:55:50+00:00",
   "perspective": "DePauw",
   "totals": {
     "depauw_wins": 537,
@@ -34,7 +34,11 @@
         "disputed": 2,
         "date_differs": 3,
         "dates_not_recorded": 0,
-        "place_differs": 3
+        "place_differs": 3,
+        "first_season": {
+          "depauw": "1890",
+          "wabash": "1890"
+        }
       },
       "games": [
         {
@@ -1706,7 +1710,11 @@
         "date_differs": 18,
         "dates_not_recorded": 0,
         "rows_set_aside": 2,
-        "place_differs": 3
+        "place_differs": 3,
+        "first_season": {
+          "depauw": "1902-03",
+          "wabash": "1902-03"
+        }
       },
       "games": [
         {
@@ -4608,7 +4616,13 @@
         "disputed": 2,
         "date_differs": 16,
         "dates_not_recorded": 45,
-        "place_differs": 8
+        "place_differs": 8,
+        "first_season": {
+          "depauw": "1978",
+          "wabash": "1887-88"
+        },
+        "later_start": "depauw",
+        "only_since_later_start": 1
       },
       "games": [
         {
@@ -8949,7 +8963,13 @@
         "disputed": 0,
         "date_differs": 5,
         "dates_not_recorded": 0,
-        "place_differs": 3
+        "place_differs": 3,
+        "first_season": {
+          "depauw": "1966",
+          "wabash": "1967"
+        },
+        "later_start": "wabash",
+        "only_since_later_start": 0
       },
       "games": [
         {
@@ -9796,7 +9816,11 @@
         "wabash_only": 0,
         "disputed": 0,
         "date_differs": 0,
-        "dates_not_recorded": 0
+        "dates_not_recorded": 0,
+        "first_season": {
+          "depauw": "2015",
+          "wabash": "2015"
+        }
       },
       "games": [
         {
@@ -9975,7 +9999,13 @@
         "disputed": 1,
         "date_differs": 0,
         "dates_not_recorded": 85,
-        "rows_set_aside": 2
+        "rows_set_aside": 2,
+        "first_season": {
+          "depauw": "1996-97",
+          "wabash": "1915"
+        },
+        "later_start": "depauw",
+        "only_since_later_start": 0
       },
       "games": [
         {
@@ -11640,7 +11670,13 @@
         "disputed": 2,
         "date_differs": 1,
         "dates_not_recorded": 0,
-        "session_rows": 2
+        "session_rows": 2,
+        "first_season": {
+          "depauw": "1995-96",
+          "wabash": "1926-27"
+        },
+        "later_start": "depauw",
+        "only_since_later_start": 1
       },
       "games": [
         {
