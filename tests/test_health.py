@@ -244,6 +244,179 @@ def test_the_data_branch_check():
     assert "If the branch is ever lost" in (ROOT / "README.md").read_text(encoding="utf-8")
 
 
+# ---- the tests' fake-clock moments (read from checks.yml; every date here is fixed) ------------------------------ #
+
+EST, EDT = dt.timezone(dt.timedelta(hours=-5)), dt.timezone(dt.timedelta(hours=-4))
+CHECKS_YML = ROOT / ".github" / "workflows" / "checks.yml"
+
+
+def test_the_moments_are_read_from_checks_yml_as_yaml_reads_them():
+    """The check reads the file without a YAML package; it must find exactly what the workflow runs."""
+    job = yaml.safe_load(CHECKS_YML.read_text(encoding="utf-8"))["jobs"][health.CLOCK_JOB]
+    expected = [(m["label"], dt.datetime.fromisoformat(m["now"])) for m in job["strategy"]["matrix"]["include"]]
+    assert health.fake_clock_moments() == expected and len(expected) >= 3
+    assert all(when.tzinfo is not None for _, when in expected)
+
+
+def test_the_check_job_has_the_workflow_files_in_its_checkout():
+    """The health check reads checks.yml from its own checkout, which is sparse: the workflows folder must be in it."""
+    check_job = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]["check"]
+    checkout = next(s for s in check_job["steps"] if s.get("uses", "").startswith("actions/checkout@"))
+    assert ".github/workflows" in checkout["with"]["sparse-checkout"].split()
+
+
+def clock_file(tmp_path, matrix):
+    text = ("jobs:\n  checks:\n    steps:\n      - run: x\n\n  fake-clock:\n    strategy:\n      matrix:\n"
+            "        include:\n" + matrix + "    steps:\n      - run: y\n\n  axe:\n    steps:\n"
+            "      - label: not a moment\n        now: \"2020-01-01T00:00:00-05:00\"\n")
+    path = tmp_path / "checks.yml"
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def test_only_the_fake_clock_jobs_moments_are_read_in_order_quoted_or_not(tmp_path):
+    path = clock_file(tmp_path, '          - label: "game day, Nov 13 2027"\n            now: "2027-11-13T13:30:00-05:00"\n'
+                                "          - label: far out\n            now: 2028-11-04T12:00:00-04:00\n")
+    assert health.fake_clock_moments(path) == [("game day, Nov 13 2027", dt.datetime(2027, 11, 13, 13, 30, tzinfo=EST)),
+                                               ("far out", dt.datetime(2028, 11, 4, 12, tzinfo=EDT))]
+
+
+@pytest.mark.parametrize("matrix, words", [
+    ("", "lists no moment"),
+    ("          - label: lonely\n", 'the moment "lonely" has no time'),
+    ('          - label: a\n          - label: b\n            now: "2027-01-01T00:00:00-05:00"\n', '"a" has no time'),
+    ('            now: "2027-01-01T00:00:00-05:00"\n', "a time has no label"),
+    ('          - label: naive\n            now: "2027-01-01T00:00:00"\n', '"naive" has no UTC offset'),
+    ("          - label: words\n            now: next year\n", '"words" is not an ISO time'),
+])
+def test_a_moment_that_cannot_be_read_raises_with_the_reason(tmp_path, matrix, words):
+    with pytest.raises(ValueError, match=re.escape(words)):
+        health.fake_clock_moments(clock_file(tmp_path, matrix))
+
+
+def test_a_file_without_the_job_raises(tmp_path):
+    path = tmp_path / "checks.yml"
+    path.write_text("jobs:\n  checks:\n    steps: []\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="no `fake-clock` job"):
+        health.fake_clock_moments(path)
+
+
+def test_every_moment_ahead_the_earliest_a_month_out_and_the_latest_six_months_out_is_ok():
+    c = health.check_fake_clock(NOW, MOMENTS)
+    assert c["key"] == "fake-clock" and c["status"] == "ok" and c["todo"] == ""
+    assert c["detail"] == ('All 3 moments of the `fake-clock` job are ahead. The earliest, "game day", is Nov 13, 2027, '
+                           '357 days from now; the latest, "far future", is Nov 4, 2028, 714 days from now. The rules: '
+                           "the earliest at least 30 days ahead, the latest at least 183 days (about six months).")
+
+
+def test_the_limits_are_a_month_for_the_earliest_and_six_months_for_the_latest():
+    assert (health.CLOCK_EARLIEST, health.CLOCK_AHEAD) == (dt.timedelta(days=30), dt.timedelta(days=183))
+
+
+def test_the_earliest_moment_exactly_30_days_ahead_is_still_ok_and_one_minute_less_is_a_problem():
+    edge = NOW + health.CLOCK_EARLIEST
+    assert health.check_fake_clock(NOW, [("soon", edge)] + MOMENTS[1:])["status"] == "ok"
+    c = health.check_fake_clock(NOW, [("soon", edge - dt.timedelta(minutes=1))] + MOMENTS[1:])
+    assert c["status"] == "problem" and c["todo"] == health.CLOCK_TODO
+    assert c["detail"] == ('The earliest moment still ahead, "soon", is Dec 20, 2026, 29 days from now; '
+                           "the rule is at least 30 days.")
+
+
+def test_with_these_moments_the_first_reminder_comes_a_month_before_game_day_not_on_it():
+    """The daily run is at 20:28 UTC. Game day is Nov 13, 2027, 1:30 PM EST; 30 days before is Oct 14, 2:30 PM EDT."""
+    def daily_run(day):
+        return dt.datetime(2027, 10, day, 20, 28, tzinfo=dt.timezone.utc)
+    assert health.check_fake_clock(daily_run(13), MOMENTS)["status"] == "ok"
+    c = health.check_fake_clock(daily_run(14), MOMENTS)
+    assert c["status"] == "problem"
+    assert c["detail"] == ('The earliest moment still ahead, "game day", is Nov 13, 2027, 29 days from now; '
+                           "the rule is at least 30 days.")
+
+
+def test_a_passed_moment_and_a_next_one_inside_the_month_are_both_named():
+    passed = [("old", dt.datetime(2026, 11, 14, 13, 30, tzinfo=EST)), ("soon", NOW + dt.timedelta(days=10))] + MOMENTS
+    c = health.check_fake_clock(NOW, passed)
+    assert c["detail"] == ('Already past: "old" (Nov 14, 2026, 1:30 PM EST). The earliest moment still ahead, "soon", '
+                           "is Nov 30, 2026, 10 days from now; the rule is at least 30 days.")
+
+
+def test_one_moment_too_close_breaks_both_rules_and_says_both():
+    c = health.check_fake_clock(NOW, [("only", NOW + dt.timedelta(days=5))])
+    assert c["detail"] == ('The earliest moment still ahead, "only", is Nov 25, 2026, 5 days from now; the rule is at '
+                           'least 30 days. The latest, "only", is Nov 25, 2026, 5 days from now; the rule is at least '
+                           "183 days (about six months).")
+
+
+def test_the_latest_moment_exactly_183_days_ahead_is_still_ok_and_one_minute_less_is_a_problem():
+    edge = NOW + health.CLOCK_AHEAD
+    assert health.check_fake_clock(NOW, [("edge", edge)])["status"] == "ok"
+    c = health.check_fake_clock(NOW, [("edge", edge - dt.timedelta(minutes=1))])
+    assert c["status"] == "problem"
+    assert c["detail"] == ('The latest, "edge", is May 22, 2027, 182 days from now; '
+                           "the rule is at least 183 days (about six months).")
+    assert c["todo"] == health.CLOCK_TODO
+
+
+def test_a_moment_in_the_past_is_a_problem_even_when_the_latest_is_far_ahead():
+    passed = [("Bell game, Nov 14 2026 1:30 PM ET", dt.datetime(2026, 11, 14, 13, 30, tzinfo=EST))] + MOMENTS
+    c = health.check_fake_clock(NOW, passed)
+    assert c["status"] == "problem"
+    assert c["detail"] == 'Already past: "Bell game, Nov 14 2026 1:30 PM ET" (Nov 14, 2026, 1:30 PM EST).'
+
+
+def test_a_moment_equal_to_now_counts_as_past():
+    assert health.check_fake_clock(NOW, [("now", NOW)] + MOMENTS)["status"] == "problem"
+
+
+def test_every_moment_past_says_so_once():
+    old = [("a", dt.datetime(2026, 11, 14, 13, 30, tzinfo=EST)), ("b", dt.datetime(2026, 10, 30, 12, tzinfo=EDT))]
+    c = health.check_fake_clock(NOW, old)
+    assert c["detail"] == ('Already past: "a" (Nov 14, 2026, 1:30 PM EST); "b" (Oct 30, 2026, 12:00 PM EDT). '
+                           "No moment is ahead.")
+
+
+def test_the_problem_says_how_to_choose_the_new_moments():
+    for words in ("`.github/workflows/checks.yml`", "Monon Bell game day at about kickoff", "a November game Saturday",
+                  "Dec 31 of that year at 11:30 PM Eastern", "an EDT offset", "before the earliest moment passes",
+                  "The site is not affected"):
+        assert words in health.CLOCK_TODO, words
+    assert "### Workflows" in (ROOT / "README.md").read_text(encoding="utf-8")
+
+
+def test_a_fake_clock_problem_goes_into_the_issue_like_any_other():
+    gh = FakeGh(labels=["site-health"])
+    checks = [health.check_data_branch(commit(ago(days=6))),
+              health.check_fake_clock(NOW, [("old", dt.datetime(2026, 11, 14, 13, 30, tzinfo=EST))] + MOMENTS)]
+    health.sync_issue(health.build_report(NOW, checks), "https://run", run=gh)
+    body = gh.calls[-1][1]
+    assert f"## {health.CLOCK_TITLE}" in body and 'Already past: "old"' in body
+    assert body.endswith("<!-- site-health: fake-clock -->\n")
+
+
+def test_moments_that_cannot_be_read_make_only_that_check_unknown():
+    def unreadable():
+        raise ValueError("its `fake-clock` job lists no moment")
+    checks = by_key(run_all(FakeGitHub(healthy_history()), moments=unreadable))
+    assert checks["fake-clock"]["status"] == "unknown"
+    assert checks["fake-clock"]["detail"] == ("Could not be checked: the moments could not be read from "
+                                              "`.github/workflows/checks.yml` (its `fake-clock` job lists no moment).")
+    assert all(c["status"] == "ok" for k, c in checks.items() if k != "fake-clock")
+
+    def missing():
+        raise FileNotFoundError(2, "No such file", "/home/runner/work/x/checks.yml")
+    detail = by_key(run_all(FakeGitHub(healthy_history()), moments=missing))["fake-clock"]["detail"]
+    assert detail.endswith("(FileNotFoundError).") and "/home/runner" not in detail
+
+
+def test_without_moments_given_the_check_reads_them_from_the_file(monkeypatch):
+    seen = []
+    monkeypatch.setattr(health, "fake_clock_moments", lambda: seen.append(1) or MOMENTS)
+    github = FakeGitHub(healthy_history())
+    checks = health.run_checks(NOW, REPO, github.get, github.history.log_of, lambda: page(ago(hours=9)), SCHEDULED,
+                               sleep=never_wait)
+    assert seen == [1] and by_key(checks)["fake-clock"]["status"] == "ok"
+
+
 # ---- finding the last full scrape and the last deploy among the update runs --------------------- #
 
 def test_the_gate_line_is_read_as_the_gate_really_prints_it(tmp_path, capsys):
@@ -489,18 +662,26 @@ def healthy_history():
     return Runs().add(3, ago(hours=1), scope="push").add(2, ago(hours=9), scope="all")
 
 
-def run_all(github, site=lambda: page(ago(hours=9)), sleep=never_wait):
-    return health.run_checks(NOW, REPO, github.get, github.history.log_of, site, SCHEDULED, sleep=sleep)
+# Fixed fake-clock moments, so these tests never depend on the dates in the real checks.yml.
+MOMENTS = [("game day", dt.datetime(2027, 11, 13, 13, 30, tzinfo=dt.timezone(dt.timedelta(hours=-5)))),
+           ("year end", dt.datetime(2027, 12, 31, 23, 30, tzinfo=dt.timezone(dt.timedelta(hours=-5)))),
+           ("far future", dt.datetime(2028, 11, 4, 12, 0, tzinfo=dt.timezone(dt.timedelta(hours=-4))))]
+
+
+def run_all(github, site=lambda: page(ago(hours=9)), sleep=never_wait, moments=lambda: MOMENTS):
+    return health.run_checks(NOW, REPO, github.get, github.history.log_of, site, SCHEDULED, sleep=sleep,
+                             moments=moments)
 
 
 def test_a_healthy_repository_passes_every_check_in_the_reports_order():
     checks = run_all(FakeGitHub(healthy_history()))
-    assert [c["key"] for c in checks] == ["workflows", "activity", "scrape", "deploy", "last-checked", "data-branch"]
-    assert [c["status"] for c in checks] == ["ok"] * 6
+    assert [c["key"] for c in checks] == ["workflows", "activity", "scrape", "deploy", "last-checked", "data-branch",
+                                          "fake-clock"]
+    assert [c["status"] for c in checks] == ["ok"] * 7
     report = health.build_report(NOW, checks)
-    assert report["totals"] == {"ok": 6, "problem": 0, "unknown": 0}
+    assert report["totals"] == {"ok": 7, "problem": 0, "unknown": 0}
     assert report["checked_at"] == "2026-11-20T20:28:00+00:00"
-    assert health.totals_line(report) == "6 checks: 0 problems, 6 OK."
+    assert health.totals_line(report) == "7 checks: 0 problems, 7 OK."
 
 
 def test_each_failing_check_is_reported_by_itself():
@@ -509,7 +690,7 @@ def test_each_failing_check_is_reported_by_itself():
                             site=lambda: page(ago(hours=60))))
     assert {k: c["status"] for k, c in checks.items()} == {
         "workflows": "problem", "activity": "problem", "scrape": "problem", "deploy": "problem",
-        "last-checked": "problem", "data-branch": "ok"}
+        "last-checked": "problem", "data-branch": "ok", "fake-clock": "ok"}
 
 
 def test_a_missing_data_branch_is_a_problem_and_other_errors_there_are_unknown():
@@ -737,7 +918,8 @@ def report(**status):
     """A report whose checks are ok unless named: report(activity="problem", deploy="unknown")."""
     titles = {"workflows": "Scheduled workflows are enabled", "activity": "Recent activity on main (GitHub's 60-day rule)",
               "scrape": "Last successful full scrape", "deploy": "Last successful deploy",
-              "last-checked": "The live site's \"Last checked\" time", "data-branch": "The data branch is readable"}
+              "last-checked": "The live site's \"Last checked\" time", "data-branch": "The data branch is readable",
+              "fake-clock": health.CLOCK_TITLE}
     checks = [health.check(k, t, status.get(k.replace("-", "_"), "ok"), f"detail of {k}", f"todo of {k}")
               for k, t in titles.items()]
     return health.build_report(NOW, checks)
@@ -766,7 +948,7 @@ class FakeGh:
 
 def test_the_summary_lists_every_check_and_what_to_do_about_each_problem():
     text = health.render_summary(report(activity="problem", deploy="unknown"))
-    assert text.startswith("# Site health, Nov 20, 2026\n\n6 checks: 1 problem, 1 could not be checked, 4 OK.\n")
+    assert text.startswith("# Site health, Nov 20, 2026\n\n7 checks: 1 problem, 1 could not be checked, 5 OK.\n")
     assert "| Last successful deploy | Could not check | detail of deploy |" in text
     assert "| The data branch is readable | OK | detail of data-branch |" in text
     assert "**Recent activity on main (GitHub's 60-day rule): what to do.** todo of activity" in text
@@ -867,7 +1049,7 @@ def test_every_check_passing_comments_and_closes_the_open_issue():
     gh = FakeGh(open_issues=[(7, "old\n<!-- site-health: activity -->\n")])
     assert health.sync_issue(report(), "https://run", run=gh) == "closed #7"
     assert gh.verbs() == [("issue", "list"), ("issue", "comment"), ("issue", "close")]
-    assert gh.calls[1][1] == ("Health check of Nov 20, 2026: every check passes. 6 checks: 0 problems, 6 OK. "
+    assert gh.calls[1][1] == ("Health check of Nov 20, 2026: every check passes. 7 checks: 0 problems, 7 OK. "
                               "Closing. https://run\n")
 
 
@@ -1186,11 +1368,12 @@ def test_check_writes_the_report_and_the_outputs_and_exits_0_even_with_a_problem
     monkeypatch.setattr(health, "job_log", lambda repo, token, job_id: github.history.log_of(job_id))
     monkeypatch.setattr(health, "fetch_site", lambda: page(ago(hours=9)))
     monkeypatch.setattr(health, "now_utc", lambda: NOW)
+    monkeypatch.setattr(health, "fake_clock_moments", lambda: MOMENTS)
     monkeypatch.setenv("GH_TOKEN", "TOKEN")
     monkeypatch.setenv("GITHUB_OUTPUT", str(tmp_path / "output.txt"))
     assert health.main(["check", "--repo", REPO, "--out", str(tmp_path / "out")]) == 0
     saved = json.loads((tmp_path / "out" / "health-report.json").read_text(encoding="utf-8"))
-    assert saved["totals"] == {"ok": 5, "problem": 1, "unknown": 0} and health.problem_keys(saved) == ["activity"]
+    assert saved["totals"] == {"ok": 6, "problem": 1, "unknown": 0} and health.problem_keys(saved) == ["activity"]
     assert (tmp_path / "out" / "summary.md").read_text(encoding="utf-8") == health.render_summary(saved)
     assert (tmp_path / "output.txt").read_text(encoding="utf-8") == "reported=true\nproblems=1\nunknown=0\n"
     assert "TOKEN" not in capsys.readouterr().out and "TOKEN" not in json.dumps(saved)

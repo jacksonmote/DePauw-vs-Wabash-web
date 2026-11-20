@@ -73,6 +73,11 @@ jobs:
   # date fails here in a pull request instead of blocking a production deploy later. time-machine fakes the clock
   # for the whole Python process (requirements-clock.txt pins it); the tests themselves never use the network.
   # Separate from the `checks` job on purpose: the required status check stays `checks`.
+  # The moments must stay in the future, or they prove nothing about the dates ahead: the next Monon Bell game day
+  # at about kickoff (the second Saturday of November until a schedule is published), Dec 31 of that year at
+  # 11:30 PM Eastern (UTC already the next year) and about a year past the game day in daylight time. The daily
+  # health check (scraper/health.py) reads them from this file and opens its issue when one has passed, the
+  # earliest is under 30 days ahead or the latest under 183 days; update the README's checks.yml row with them.
   fake-clock:
     name: fake-clock (${{ matrix.label }})
     runs-on: ubuntu-24.04
@@ -81,12 +86,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: Bell game, Nov 14 2026 1:30 PM ET
-            now: "2026-11-14T13:30:00-05:00"
-          - label: New Year, Jan 1 2027 12:30 AM ET
-            now: "2027-01-01T00:30:00-05:00"
-          - label: a year out, Oct 30 2027 noon ET
-            now: "2027-10-30T12:00:00-04:00"
+          - label: a November game Saturday, Nov 13 2027 1:30 PM ET
+            now: "2027-11-13T13:30:00-05:00"
+          - label: year end, Dec 31 2027 11:30 PM ET
+            now: "2027-12-31T23:30:00-05:00"
+          - label: far future, Nov 4 2028 noon EDT
+            now: "2028-11-04T12:00:00-04:00"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

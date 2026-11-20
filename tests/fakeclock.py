@@ -1,4 +1,4 @@
-"""Run the whole test process under a fake clock (`pytest --fake-now=2026-11-14T13:30:00-05:00`).
+"""Run the whole test process under a fake clock (`pytest --fake-now=2027-11-13T13:30:00-05:00`).
 
 The tests must not depend on the real date, so this lets anyone (and the `fake-clock` CI job) prove it:
 every call to `datetime.now`, `date.today` and `time.time` in the process, including ones a test never
@@ -10,7 +10,7 @@ import datetime as dt
 
 
 def parse_fake_now(value: str) -> dt.datetime:
-    """An ISO date and time with a UTC offset, e.g. 2026-11-14T13:30:00-05:00. The offset is required so a
+    """An ISO date and time with a UTC offset, e.g. 2027-11-13T13:30:00-05:00. The offset is required so a
     simulated moment means the same instant on every machine."""
     when = dt.datetime.fromisoformat(value)
     if when.tzinfo is None:
