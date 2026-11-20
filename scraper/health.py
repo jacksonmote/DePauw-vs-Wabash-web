@@ -19,6 +19,10 @@ request per run to our own home page (one more if it fails):
   deploy        the last successful deploy is at most MAX_AGE old
   last checked  the live home page's "Last checked" time is at most MAX_AGE old
   data branch   the data branch exists and its last commit can be read
+  fake clock    every moment the tests' `fake-clock` job (checks.yml) freezes the clock at is still ahead, the
+                earliest at least CLOCK_EARLIEST (30 days) ahead and the latest at least CLOCK_AHEAD (about six
+                months) ahead: a moment in the past still passes, but it no longer proves anything about the dates
+                to come (read from the workflow file, never from the clock of a test)
 
 What it never does: fetch the schools' sites, commit, push, deploy, or enable, disable or start a workflow. It
 holds no write permission except, in its own `issues` job, the one to keep the `site-health` issue. It does not
@@ -26,11 +30,11 @@ try to keep the schedules alive by itself (no enable call, no empty commit): the
 is a real commit on main, made by a person.
 
 Each check is "ok", a "problem" or "unknown" (it could not be made: GitHub's API did not answer, a job's log
-could not be downloaded, or the live page did not load, also on the second try). A problem opens or updates the
-one open issue labeled `site-health` (assigned to the repository's owner when it is opened, mentioning nobody);
-when every check is ok the issue is closed with a comment. An unknown check
-never opens or closes the issue, and never counts as a change in the problems; it turns the run red instead, so a
-red run means the check itself could not finish, and an open issue means it found something.
+could not be downloaded, the live page did not load, also on the second try, or the fake-clock moments could not be
+read from checks.yml). A problem opens or updates the one open issue labeled `site-health` (assigned to the
+repository's owner when it is opened, mentioning nobody); when every check is ok the issue is closed with a comment.
+An unknown check never opens or closes the issue, and never counts as a change in the problems; it turns the run
+red instead, so a red run means the check itself could not finish, and an open issue means it found something.
 
 Commands (standard library only, like the gate and the watcher):
 
@@ -79,6 +83,15 @@ SITE_TRIES = 2                          # the home page: one request, one more i
 SITE_RETRY_WAIT = 10                    # seconds before that second request
 REPORT_MAX_AGE = dt.timedelta(hours=6)  # the issue command ignores a report older than this (a re-run old job)
 REMIND_AT = (7, 2)                      # days left before GitHub's limit: a reminder comment at each
+CLOCK_AHEAD = dt.timedelta(days=183)    # the latest fake-clock moment must be at least this far ahead (six months)
+CLOCK_EARLIEST = dt.timedelta(days=30)  # and the earliest still ahead at least this far, so there is time to move it
+
+# The tests' fake-clock moments: the `fake-clock` job of this workflow, one `- label:` line and one `now:` line per
+# moment in its matrix (a test checks this reading against a YAML reading of the real file).
+CHECKS_WORKFLOW, CLOCK_JOB = "checks.yml", "fake-clock"
+JOB_LINE = re.compile(r"^  [A-Za-z0-9_-]+:\s*(?:#.*)?$")          # a job's own line, two spaces in under `jobs:`
+LABEL_LINE = re.compile(r"^\s+- label:\s*(.+?)\s*$")
+NOW_LINE = re.compile(r"^\s+now:\s*(.+?)\s*$")
 
 # What stops when GitHub switches the scheduled workflows off (the README uses the same words; a test checks).
 SCHEDULED_WORK = ("the twice-daily update, the game-day watcher, the monthly link check, the twice-a-year data "
@@ -302,6 +315,89 @@ def check_data_branch(commit: dict | None, error: str = "") -> dict:
                  f"{fmt_date(parse_time(commit['date']))}.")
 
 
+def _unquote(text: str) -> str:
+    return text[1:-1] if len(text) >= 2 and text[0] == text[-1] and text[0] in "\"'" else text
+
+
+def fake_clock_moments(path: Path | None = None) -> list:
+    """The moments the tests' `fake-clock` job freezes the clock at, as [(label, aware time)] in the file's order.
+
+    Read without a YAML package (this check installs nothing): the job's lines run from its `  fake-clock:` line to
+    the next job, and each moment is a `- label:` line with its `now:` line after it. A file without the job, a
+    label without its time (or the other way round), a time that is not ISO or has no UTC offset, or a job with no
+    moment at all raises ValueError, so the check is "could not be checked" instead of a wrong answer."""
+    lines = Path(path or WORKFLOWS / CHECKS_WORKFLOW).read_text(encoding="utf-8").splitlines()
+    try:
+        start = [line.rstrip() for line in lines].index(f"  {CLOCK_JOB}:")
+    except ValueError:
+        raise ValueError(f"it has no `{CLOCK_JOB}` job") from None
+    moments, label = [], None
+    for line in lines[start + 1:]:
+        if JOB_LINE.match(line):
+            break
+        if m := LABEL_LINE.match(line):
+            if label is not None:
+                raise ValueError(f"the moment \"{label}\" has no time")
+            label = _unquote(m.group(1))
+        elif m := NOW_LINE.match(line):
+            if label is None:
+                raise ValueError("a time has no label")
+            try:
+                when = dt.datetime.fromisoformat(_unquote(m.group(1)))
+            except ValueError:
+                raise ValueError(f"the moment \"{label}\" is not an ISO time") from None
+            if when.tzinfo is None:
+                raise ValueError(f"the moment \"{label}\" has no UTC offset")
+            moments.append((label, when))
+            label = None
+    if label is not None:
+        raise ValueError(f"the moment \"{label}\" has no time")
+    if not moments:
+        raise ValueError(f"its `{CLOCK_JOB}` job lists no moment")
+    return moments
+
+
+CLOCK_TITLE = "The tests' fake-clock moments are still ahead"
+CLOCK_TODO = (f"In a pull request, move the moments in the `{CLOCK_JOB}` job of `.github/workflows/{CHECKS_WORKFLOW}` "
+              "forward and give each an accurate label: the next Monon Bell game day at about kickoff, Eastern time "
+              "(until a schedule is published, the second Saturday of November, labeled \"a November game Saturday\"); "
+              "Dec 31 of that year at 11:30 PM Eastern (Eastern still that year, UTC already the next); and about a "
+              "year past the game day, in daylight saving time (an EDT offset). Then update the README's "
+              f"`{CHECKS_WORKFLOW}` row (\"Workflows\"). Do it before the earliest moment passes. The site is not "
+              "affected: the tests still pass, but a moment in the past proves nothing about the dates ahead.")
+
+
+def check_fake_clock(now: dt.datetime, moments: list) -> dict:
+    """`moments`: from fake_clock_moments. ok while every moment is after `now`, the earliest at least
+    CLOCK_EARLIEST after it (so the issue opens with time left to move it) and the latest at least CLOCK_AHEAD after
+    it. Nothing on the site depends on this: it keeps the pull-request job that proves the tests never read the
+    real clock pointed at dates still to come."""
+    past = [(label, when) for label, when in moments if when <= now]
+    ahead = sorted(((label, when) for label, when in moments if when > now), key=lambda m: m[1])
+    early_rule = f"at least {CLOCK_EARLIEST.days} days"
+    late_rule = f"at least {CLOCK_AHEAD.days} days (about six months)"
+
+    def when_words(moment):
+        return f"\"{moment[0]}\", is {fmt_date(moment[1])}, {plural((moment[1] - now).days, 'day')} from now"
+
+    if not past and ahead[0][1] - now >= CLOCK_EARLIEST and ahead[-1][1] - now >= CLOCK_AHEAD:
+        return check("fake-clock", CLOCK_TITLE, OK,
+                     f"All {plural(len(moments), 'moment')} of the `{CLOCK_JOB}` job are ahead. The earliest, "
+                     f"{when_words(ahead[0])}; the latest, {when_words(ahead[-1])}. The rules: the earliest "
+                     f"{early_rule} ahead, the latest {late_rule}.")
+    found = []
+    if past:
+        found.append("Already past: " + "; ".join(f"\"{l}\" ({fmt_time(w)})" for l, w in past) + ".")
+    if not ahead:
+        found.append("No moment is ahead.")
+    else:
+        if ahead[0][1] - now < CLOCK_EARLIEST:
+            found.append(f"The earliest moment still ahead, {when_words(ahead[0])}; the rule is {early_rule}.")
+        if ahead[-1][1] - now < CLOCK_AHEAD:
+            found.append(f"The latest, {when_words(ahead[-1])}; the rule is {late_rule}.")
+    return check("fake-clock", CLOCK_TITLE, PROBLEM, " ".join(found), CLOCK_TODO)
+
+
 def gate_scope(log: str) -> str | None:
     """What a run read, from its gate job's log: "all", a list of sports, "(nothing)", or None when the gate's
     line is not there."""
@@ -440,10 +536,12 @@ def last_commit(get, repo: str, branch: str) -> dict:
     return {"sha": data[0]["sha"], "date": data[0]["commit"]["committer"]["date"]}
 
 
-def run_checks(now: dt.datetime, repo: str, get, log_of, site, scheduled: list, sleep=time.sleep) -> list:
+def run_checks(now: dt.datetime, repo: str, get, log_of, site, scheduled: list, sleep=time.sleep,
+               moments=None) -> list:
     """Every check, in the order of the report. `get(path)` reads GitHub's API, `log_of(job id)` a job's log,
-    `site()` the live home page, `sleep(seconds)` waits before the home page's second try. A read that fails makes
-    its check unknown, with one exception that is an answer, not a failure: the data branch is not there (404)."""
+    `site()` the live home page, `sleep(seconds)` waits before the home page's second try, `moments()` the
+    fake-clock moments (fake_clock_moments when not given). A read that fails makes its check unknown, with one
+    exception that is an answer, not a failure: the data branch is not there (404)."""
     checks = []
     workflows_title = "Scheduled workflows are enabled"
     activity_title = "Recent activity on main (GitHub's 60-day rule)"
@@ -497,6 +595,14 @@ def run_checks(now: dt.datetime, repo: str, get, log_of, site, scheduled: list, 
             checks.append(check("data-branch", data_title, UNKNOWN, could_not(exc)))
     except Exception as exc:  # noqa: BLE001
         checks.append(check("data-branch", data_title, UNKNOWN, could_not(exc)))
+
+    try:
+        checks.append(check_fake_clock(now, (moments or fake_clock_moments)()))
+    except Exception as exc:  # noqa: BLE001
+        reason = str(exc) if isinstance(exc, ValueError) else type(exc).__name__
+        checks.append(check("fake-clock", CLOCK_TITLE, UNKNOWN,
+                            f"Could not be checked: the moments could not be read from "
+                            f"`.github/workflows/{CHECKS_WORKFLOW}` ({reason})."))
     return checks
 
 

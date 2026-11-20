@@ -34,7 +34,7 @@ _fake_clock = None
 def pytest_addoption(parser):
     parser.addoption("--fake-now", default=os.environ.get("FAKE_NOW"), metavar="ISO",
                      help="run the whole test process with the clock frozen at this moment, with a UTC offset "
-                          "(for example 2026-11-14T13:30:00-05:00); also read from FAKE_NOW")
+                          "(for example 2027-11-13T13:30:00-05:00); also read from FAKE_NOW")
 
 
 def pytest_configure(config):

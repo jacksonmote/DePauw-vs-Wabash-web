@@ -63,9 +63,10 @@ jobs:
       - name: Summarize
         run: cat "$RUNNER_TEMP/health-check/summary.md" >> "$GITHUB_STEP_SUMMARY"
 
-      # A check that could not be made (GitHub's API did not answer, a job's log could not be downloaded, or our
-      # home page did not load, also on the second try) is not a finding, so it never opens or closes the issue; it
-      # turns the run red instead. Last, so the report and the summary are always there.
+      # A check that could not be made (GitHub's API did not answer, a job's log could not be downloaded, our home
+      # page did not load, also on the second try, or the tests' fake-clock moments could not be read from
+      # checks.yml) is not a finding, so it never opens or closes the issue; it turns the run red instead. Last,
+      # so the report and the summary are always there.
       - name: Turn the run red when a check could not be made
         run: python3 scraper/health.py verdict --report "$RUNNER_TEMP/health-check/health-report.json"
 

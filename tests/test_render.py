@@ -223,6 +223,21 @@ def test_eastern_time_boundaries(utc, expected):
     assert render.to_eastern(dt.datetime.fromisoformat(utc))[1] == expected
 
 
+@pytest.mark.parametrize("local, utc, shown", [
+    # Mar 14, 2027: the clocks skip from 2:00 to 3:00 AM, so 2:30 AM never happens. It is read as EST, which is the
+    # instant the wall clock calls 3:30 AM EDT.
+    ("2027-03-14T02:30", "2027-03-14T07:30:00+00:00", ("2027-03-14T03:30:00", "EDT")),
+    # Nov 7, 2027: the clocks go back from 2:00 to 1:00 AM, so 1:30 AM happens twice. It is read as the first, EDT.
+    ("2027-11-07T01:30", "2027-11-07T05:30:00+00:00", ("2027-11-07T01:30:00", "EDT")),
+])
+def test_from_eastern_reads_the_skipped_spring_hour_and_the_repeated_fall_hour_as_documented(local, utc, shown):
+    from timeutil import from_eastern
+    instant = from_eastern(dt.datetime.fromisoformat(local))
+    assert instant == dt.datetime.fromisoformat(utc)
+    wall, zone = render.to_eastern(instant)
+    assert (wall.replace(tzinfo=None).isoformat(), zone) == shown
+
+
 NOW = dt.datetime(2026, 10, 28, 16, 0, tzinfo=dt.timezone.utc)
 
 
