@@ -504,6 +504,39 @@ def test_the_links_in_and_out(site, page):
     assert page.select_one("p.back a")["href"] == "../"
 
 
+def test_the_bell_in_song_is_a_short_note_with_plain_links_and_nothing_embedded(page):
+    card = page.find("section", attrs={"aria-labelledby": "bt-song-h"})
+    heading = card.find("h3", id="bt-song-h")
+    assert heading.get_text() == "The Bell in song" and heading["class"] == ["eyebrow"]
+    cards = [section.find("h3").get_text() for section in page.select("main section.bt-card")]
+    assert cards == ["The Bell in numbers", "Season by season", "The Bell in song"]   # last, above the foot links
+    assert card.find_next_sibling("p")["class"] == ["bt-more"]
+    note, source = card.find_all("p")
+    assert note.get_text() == (
+        "“The Ballad of the Monon Bell” is a song about the rivalry, created by DePauw alumni Darel Lindquist, "
+        "Nancy Ford, and Jimmy Ibbotson. Musicians led by Ibbotson recorded it in Nashville on Oct 15, 1985. "
+        "The 2012 video was edited by Ken Owen ’82, then DePauw’s Executive Director of Media Relations. "
+        "Watch DePauw’s 2012 video of the song on YouTube.")
+    label, url = belltimeline.SONG_SOURCE["label"], belltimeline.SONG_SOURCE["url"]
+    assert [(a["href"], a.get_text()) for a in card.find_all("a")] == [
+        ("https://www.youtube.com/watch?v=xW74vxcnskw", "Watch DePauw’s 2012 video of the song on YouTube"),
+        (url, label)]
+    assert all(set(a.attrs) == {"href"} for a in card.find_all("a"))                # plain links, nothing more
+    assert source.get_text() == f"Sources: {label} and the 2012 video’s description on YouTube."
+    assert source["class"] == ["bt-source"]
+    assert label.endswith(" (archived copy)") and url.startswith("https://web.archive.org/web/")
+    assert "http://" not in url                                                       # no plain-http address
+    loads = ["iframe", "embed", "object", "video", "audio", "source", "track", "img", "picture", "script"]
+    assert card.find_all(loads) == [] and page.find_all(["iframe", "embed", "object", "video", "audio"]) == []
+
+
+def test_the_accessibility_page_names_the_song_video_among_the_content_we_do_not_control(site, page):
+    assert page.select_one('section[aria-labelledby="bt-song-h"] a[href*="youtube.com"]') is not None
+    statement = soup((site / "accessibility" / "index.html").read_text(encoding="utf-8"))
+    paragraph = statement.find("h3", string="Content we don’t control").find_next_sibling("p").get_text()
+    assert "a video of the Monon Bell song on YouTube" in paragraph
+
+
 def test_a_series_without_bell_games_still_builds_the_page():
     data = frozen()
     old = [game for game in data["sports"]["football"]["games"] if int(game["date"][:4]) < facts.BELL_START]
@@ -517,6 +550,7 @@ def test_a_series_without_bell_games_still_builds_the_page():
     data["totals"]["games_played"] -= removed
     page = bell_page(data, NOW)
     assert page.select_one("table.bt-grid") is None and "No Bell game is on record yet." in page.get_text()
+    assert page.find(id="bt-song-h").get_text() == "The Bell in song"                # the song needs no game
     assert home_page(data, NOW).select_one('a[href="monon-bell/"]') is None          # no strip, so no link from it
 
 

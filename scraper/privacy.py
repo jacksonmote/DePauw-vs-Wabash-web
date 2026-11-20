@@ -20,7 +20,7 @@ from __future__ import annotations
 import datetime as dt
 import html
 
-UPDATED = "2026-11-18"           # the day the policy text last changed
+UPDATED = "2026-11-19"           # the day the policy text last changed
 PATH = "privacy/"                # relative to the site root
 SOURCE_PATH = "scraper/privacy.py"                    # this file, in the repository
 PRIVACY_EMAIL = "privacy@motetechnologygroup.com"     # the privacy contact: privacy page only
@@ -114,8 +114,8 @@ def content(*, repo_url: str, correction_url: str) -> list:
         'no personal details needed, and we’ll consider it.</p>',
         '<h3>Links to other sites</h3>',
         '<p>Pages here link to other sites, including the schools’ athletics and college sites, Wikipedia, news '
-        'outlets, government sites and College Navigator. Those sites have their own privacy policies, and '
-        'this one doesn’t cover them.</p>',
+        'outlets, video sites, government sites and College Navigator. Those sites have their own privacy '
+        'policies, and this one doesn’t cover them.</p>',
         '<h3>Changes</h3>',
         '<p>If this policy changes, the “Last updated” date at the top changes with it. The full history is in '
         f'the public repository: {_a(history, "changes to this page")} and {_a(source, "the page’s source")}.</p>',
