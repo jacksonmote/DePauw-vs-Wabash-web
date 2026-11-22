@@ -1491,7 +1491,7 @@ def test_the_workflow_permissions_are_minimal():
     assert "secrets." not in text and text.count("github.token") == 2
     assert "refs/heads/main" in wf["jobs"]["issues"]["if"]                                 # a branch run opens no issue
     for job in wf["jobs"].values():
-        assert job["runs-on"] == "ubuntu-24.04" and 0 < job["timeout-minutes"] <= 10
+        assert job["runs-on"] == "ubuntu-26.04" and 0 < job["timeout-minutes"] <= 10
         assert job["steps"][0]["with"]["persist-credentials"] is False
         assert "pip install" not in json.dumps(job) and "npm" not in json.dumps(job)
 

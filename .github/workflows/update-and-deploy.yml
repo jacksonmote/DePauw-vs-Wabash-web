@@ -59,7 +59,7 @@ jobs:
     # sources.json or requirements.txt (gameday.SCRAPE_ON_PUSH).
     # Reads only the data files (fetched from the data branch) with the runner's own Python: no dependencies, no
     # scrape, no commit, no deploy. A fetch that fails fails the job; it never reads a missing schedule as "no games".
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 3
     permissions:
       contents: read
@@ -115,7 +115,7 @@ jobs:
     # independent of the build, so a build that is queued or replaced never loses the hand-off. Reads only the
     # data branch; starts nothing when there is no game today or a watcher is already running.
     if: ${{ github.ref == 'refs/heads/main' && (github.event.schedule == '19 10 * * *' || github.event.schedule == '47 3 * * *') }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 3
     permissions:
       contents: read
@@ -144,7 +144,7 @@ jobs:
     # A full scrape waits 30 seconds between requests to each school's site (robots.txt), about 8 minutes.
     needs: gate
     if: ${{ needs.gate.outputs.run == 'true' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 25
     concurrency:
       group: update-and-deploy
@@ -285,7 +285,7 @@ jobs:
     # a red report job after the deploy. Every step that can fail is non-blocking, so this job itself succeeds.
     needs: build
     if: ${{ !cancelled() && needs.build.result == 'success' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -378,7 +378,7 @@ jobs:
   deploy:
     needs: build
     if: ${{ !cancelled() && needs.build.result == 'success' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     concurrency:
       group: pages
@@ -401,7 +401,7 @@ jobs:
     # can never open two issues at once.
     needs: build
     if: ${{ !cancelled() && needs.build.result == 'success' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     concurrency:
       group: review-issue
@@ -437,7 +437,7 @@ jobs:
     # commit that was rejected.
     needs: [build, deploy, validate]
     if: ${{ !cancelled() && needs.build.result == 'success' && (needs.build.outputs.problems == 'true' || needs.validate.result != 'success' || needs.validate.outputs.validation != 'ok') }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:
       - env:

@@ -31,7 +31,7 @@ jobs:
     # Read-only: contents for the checkout, actions to list the workflows, the update runs, their jobs and the
     # gate job's log. Standard library only: nothing is installed. A manual run on a branch uses that branch's
     # code against the same live state (and opens no issue).
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -80,7 +80,7 @@ jobs:
     # problems changed, or a reminder 7 and 2 days before GitHub's 60-day limit).
     needs: check
     if: ${{ !cancelled() && needs.check.outputs.reported == 'true' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       contents: read

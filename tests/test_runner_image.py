@@ -13,7 +13,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 WORKFLOWS = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
-PINNED = "ubuntu-24.04"
+PINNED = "ubuntu-26.04"
 
 
 def jobs():

@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   checks:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -80,7 +80,7 @@ jobs:
   # earliest is under 30 days ahead or the latest under 183 days; update the README's checks.yml row with them.
   fake-clock:
     name: fake-clock (${{ matrix.label }})
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -129,7 +129,7 @@ jobs:
   # the production workflow is unchanged; the browser is the Chrome already on the runner image, and nothing is
   # downloaded at run time. Read-only like the other jobs: no write token, no saved credentials.
   axe:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

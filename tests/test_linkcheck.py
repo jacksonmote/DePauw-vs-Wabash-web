@@ -638,7 +638,7 @@ def test_the_workflow_permissions_are_minimal_and_never_overlap():
     assert "secrets." not in WORKFLOW.read_text(encoding="utf-8")
     assert "refs/heads/main" in wf["jobs"]["issues"]["if"]                                 # a branch run opens no issue
     for job in wf["jobs"].values():
-        assert job["runs-on"] == "ubuntu-24.04"
+        assert job["runs-on"] == "ubuntu-26.04"
         assert job["steps"][0]["with"]["persist-credentials"] is False
 
 

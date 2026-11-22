@@ -55,7 +55,7 @@ jobs:
   gate:
     # Watch or not? Reads only the data branch with the runner's own Python (nothing installed). Watches when today
     # (Eastern) has a game that is not postponed whose window is open or still to open.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 3
     permissions:
       contents: read
@@ -91,7 +91,7 @@ jobs:
   watch:
     needs: gate
     if: ${{ needs.gate.outputs.watch == 'true' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 330 # the watcher hands over to a fresh run after 4 h 45 min (watcher.RELAY_AFTER); GitHub's limit is 6 h
     concurrency:
       group: ${{ (inputs.dry_run || inputs.test_dispatch) && format('gameday-watcher-solo-{0}', github.run_id) || 'gameday-watcher' }}
