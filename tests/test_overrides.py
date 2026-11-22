@@ -37,7 +37,7 @@ def test_the_committed_file_is_valid_and_every_ruling_has_a_reason():
     assert {k: {kind: len(found) for kind, found in v.items() if found} for k, v in rules.items()} == {
         "football": {"same_game": 1, "found": 1},
         "mens-basketball": {"same_game": 9, "set_aside": 2},
-        "baseball": {"same_game": 3, "found": 19},
+        "baseball": {"same_game": 3, "found": 19, "note": 1},
         "mens-soccer": {"same_game": 3, "note": 1},
         "mens-tennis": {"set_aside": 2, "found": 3},
         "mens-swimming-and-diving": {"same_game": 1, "session_of": 1, "score": 1, "note": 2}}

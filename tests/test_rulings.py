@@ -529,6 +529,25 @@ def test_the_1966_soccer_game_and_the_1934_meets_carry_their_notes():
     assert len(soccer.games) == 65                                              # kept, as DePauw's record lists it
 
 
+def test_the_1981_baseball_tie_carries_its_note_and_nothing_else_changes():
+    from test_merge import MONTHS
+    d, w, baseball = committed("baseball")
+    tie = next(x for x in baseball.games if x["date"] == "1981-03-17")
+    assert (tie["source"], tie["result"], tie["depauw"], tie["wabash"]) == ("wabash", "T", 7, 7)
+    assert [e["kind"] for e in tie["ruled"]] == ["note"] and tie["ruled"][0]["sources"] == []   # no source claimed
+    note = tie["ruled"][0]["note"]
+    assert note.startswith("Only Wabash’s record lists this game.") and "(DePauw 10, Wabash 7), dated Mar 18." in note
+    assert note.endswith("No account from 1981 has been found.")
+    win = next(x for x in baseball.games if x["date"] == "1981-03-18")             # the game both pages list
+    assert (win["source"], win["depauw"], win["wabash"], win.get("wabash_date")) == ("both", 10, 7, "1981-03-17")
+    assert "ruled" not in win
+    rules = merge.load_overrides(OVERRIDES)["baseball"]
+    without = merge.merge_sport(d, w, season_months=MONTHS["baseball"], rules={**rules, "note": []})
+    assert baseball.stats == without.stats                                       # a note changes no count
+    assert [{k: v for k, v in x.items() if k != "ruled"} for x in baseball.games] == \
+        [{k: v for k, v in x.items() if k != "ruled"} for x in without.games]
+
+
 # ---- on the pages ------------------------------------------------------------------------------- #
 
 @pytest.fixture
@@ -580,6 +599,9 @@ def test_each_ruled_game_says_so_in_its_row_with_what_the_page_lists_and_the_sou
     for date in ("Jan 5, 1934", "Feb 12, 1934"):
         assert ("Score not recorded; the result counts in the record but not in the point totals. No source other than "
                 "Wabash’s page has been found for this meet.") in row_text(page, date)
+    assert ("Tie 7–7 Wabash record only Only Wabash’s record lists this game. DePauw’s record lists only the "
+            "day’s other game (DePauw 10, Wabash 7), dated Mar 18. No account from 1981 has been found."
+            ) in row_text(page, "Mar 17, 1981")
     assert "Jan 6, 1944" not in page and "Feb 5, 1944" not in page              # set aside: in no list
     assert page.count(">Apr 16, 2008</time>") == page.count(">Apr 15, 2009</time>") == 1
 
@@ -599,10 +621,10 @@ def test_the_how_it_works_page_lists_every_row_set_aside_with_its_reason_and_sou
     parsed = merge.load_overrides(OVERRIDES)
     counts = howitworks.ruling_counts(parsed)
     assert counts == {"same_game": 17, "different_games": 0, "session_of": 1, "set_aside": 4, "score": 1,
-                      "found": 23, "note": 3}
-    assert ("Rulings made so far: 49 (17 saying two entries are the same game, 1 saying several entries are days of "
+                      "found": 23, "note": 4}
+    assert ("Rulings made so far: 50 (17 saying two entries are the same game, 1 saying several entries are days of "
             "one meet, 4 setting a row aside, 1 choosing which score counts, 23 giving a date or a place found in "
-            "another source, 3 adding a note to a game)") in text
+            "another source, 4 adding a note to a game)") in text
     assert "saying two entries are different games" not in text                 # a kind with no ruling is left out
     assert "Right now there are 4 such rows:" in text
     for wanted in ("Wabash’s row for Jan 6, 1944 (DePauw 69, Wabash 49).", "Wabash’s row for Feb 5, 1944 (DePauw 28, Wabash 19).",
@@ -617,6 +639,7 @@ def test_the_how_it_works_page_lists_every_row_set_aside_with_its_reason_and_sou
     assert "Wabash’s row for 1888 (DePauw 7, Wabash 6): May 19, 1888, at Wabash (Crawfordsville, Ind.)." in text
     assert "DePauw’s row for Nov 20, 1915 (DePauw 0, Wabash 34): at a neutral site (Indianapolis, Ind.)." in text
     assert "Wabash’s row for Jan 5, 1934 (no score listed): “No source other than Wabash’s page" in text
+    assert "Wabash’s row for Mar 17, 1981 (Tie 7–7): “Only Wabash’s record lists this game." in text   # TIE_FORMAT
     aside_at, rest_at = page.index('id="rows-set-aside"'), page.index('<details class="rulings">')
     assert aside_at < rest_at < page.index("How often it updates")              # the rows set aside are in the open
     assert "<script" not in page
@@ -633,7 +656,7 @@ def test_the_csv_download_carries_the_ruling_notes(built):
     swim = by[("Men's Swimming and Diving", "2011-11-09")]
     assert (swim["depauw_score"], swim["wabash_score"], swim["disputed"], swim["wabash_record_score"]) == ("205", "89", "no", "")
     assert swim["ruling_notes"].startswith("Score from a ruling; DePauw’s page lists 205-80 (DePauw-Wabash).")
-    assert sum(1 for r in rows if r["ruling_notes"]) == 27
+    assert sum(1 for r in rows if r["ruling_notes"]) == 28
     assert sum(1 for r in rows if r["date_recorded"] == "no") == 130
 
 

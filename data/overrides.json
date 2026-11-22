@@ -327,6 +327,15 @@
             {"label": "Indiana Daily Times, May 11, 1921, p. 8 (Library of Congress)", "url": "https://www.loc.gov/resource/sn85047611/1921-05-11/ed-1/?sp=8"}
           ]
         }
+      ],
+      "note": [
+        {
+          "school": "wabash",
+          "row": {"date": "1981-03-17", "score": "7-7"},
+          "note": "Only Wabash’s record lists this game. DePauw’s record lists only the day’s other game (DePauw 10, Wabash 7), dated Mar 18. No account from 1981 has been found.",
+          "reason": "Kept as Wabash’s page lists it. Wabash’s page and its 1981 schedule list a doubleheader at Greencastle on Mar 17, 1981, a 10-7 DePauw win and a 7-7 tie; DePauw’s page lists only the 10-7 game, on Mar 18. No yearbook of either school for 1981 or 1982 is on the Internet Archive, and no account of the games from 1981 has been found.",
+          "sources": []
+        }
       ]
     },
     "mens-soccer": {
