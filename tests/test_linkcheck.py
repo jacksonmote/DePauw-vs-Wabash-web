@@ -166,6 +166,74 @@ def test_classification(script, status, detail, methods):
     assert web.calls[0][0] == "HEAD"                                                      # HEAD always first
 
 
+VIDEO = "https://www.youtube.com/watch?v=xW74vxcnskw"
+OEMBED = "https://www.youtube.com/oembed?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DxW74vxcnskw&format=json"
+
+
+@pytest.mark.parametrize("url, oembed", [
+    (VIDEO, OEMBED),
+    ("https://youtube.com/watch?v=xW74vxcnskw", OEMBED),                               # any of YouTube's own hosts,
+    ("https://m.youtube.com/watch?v=xW74vxcnskw&t=42s", OEMBED),                        # other query keys ignored
+    ("https://www.youtube.com/channel/UCxyz", None),                                     # not a video: checked as a page
+    ("https://www.youtube.com/watch?v=short", None),                                     # not an 11-character id
+    ("https://www.youtube.com/watch?v=xW74vxcnskw&v=aaaaaaaaaaa", None),                 # two ids: not a plain link
+    ("https://www.youtube.com.example/watch?v=xW74vxcnskw", None),                       # not YouTube
+    ("https://a.example/watch?v=xW74vxcnskw", None),
+])
+def test_a_youtube_watch_link_is_checked_through_its_oembed_address(url, oembed):
+    assert linkcheck.youtube_oembed(url) == oembed
+
+
+def test_the_bell_songs_video_is_a_link_the_oembed_check_covers():
+    import belltimeline
+    assert linkcheck.youtube_oembed(belltimeline.SONG_VIDEO["url"]) == OEMBED
+
+
+@pytest.mark.parametrize("answer, status, detail", [
+    (200, "ok", "200 from YouTube’s oEmbed address: the video is there"),
+    (404, "broken", "404 from YouTube’s oEmbed address: the video is gone"),
+    (401, "blocked", "401 from YouTube’s oEmbed address: the video is private or may not be embedded, so it was not "
+                     "checked"),
+    (403, "blocked", "403 from YouTube’s oEmbed address: the video is private or may not be embedded, so it was not "
+                     "checked"),
+    (429, "blocked", "429 from YouTube’s oEmbed address"),
+    (500, "blocked", "500 from YouTube’s oEmbed address"),
+    (503, "blocked", "503 from YouTube’s oEmbed address"),
+    ("timeout", "blocked", "timed out at YouTube’s oEmbed address"),
+    ("connection", "blocked", "could not connect at YouTube’s oEmbed address"),
+    ("dns", "blocked", "DNS lookup failed at YouTube’s oEmbed address"),
+    ("tls", "blocked", "TLS (certificate) error at YouTube’s oEmbed address"),
+    (400, "broken", "400 from YouTube’s oEmbed address: YouTube does not know the video"),
+    (418, "other", "418 from YouTube’s oEmbed address"),
+])
+def test_a_youtube_video_costs_one_get_of_its_oembed_address_and_only_a_400_or_404_is_broken(answer, status,
+                                                                                               detail):
+    result, web = check({("GET", OEMBED): [answer]}, url=VIDEO)
+    assert (result["status"], result["detail"]) == (status, detail)
+    assert [(m, u) for m, u, _ in web.calls] == [("GET", OEMBED)]          # one request: no HEAD, no retry
+    assert result["url"] == VIDEO and result["final_url"] is None          # reported as the link on the page
+    assert (result["status"] == "broken") == (answer in (400, 404))
+
+
+def test_a_400_counts_as_broken_only_at_youtubes_oembed_address():
+    result, _ = check({("HEAD", U): [400], ("GET", U): [400]})
+    assert (result["status"], result["detail"]) == ("other", "400")
+
+
+def test_youtube_links_keep_the_two_second_spacing_and_land_in_the_report_under_the_watch_link():
+    other = "https://www.youtube.com/watch?v=aaaaaaaaaaa"
+    other_oembed = linkcheck.youtube_oembed(other)
+    clock = FakeClock()
+    web = FakeWeb({("GET", OEMBED): [200], ("GET", other_oembed): [404]}, clock)
+    pacer = linkcheck.Pacer(clock=clock, sleep=clock.sleep)
+    results = linkcheck.run_checks({VIDEO: ["monon-bell/"], other: ["index.html"]}, web, pacer,
+                                   sleep=clock.sleep, log=lambda *_: None)
+    assert [(r["url"], r["status"], r["used_on"]) for r in results] == [
+        (other, "broken", ["index.html"]), (VIDEO, "ok", ["monon-bell/"])]
+    (_, _, first), (_, _, second) = web.calls
+    assert second - (first + 0.5) >= linkcheck.HOST_GAP                     # same host: the usual gap
+
+
 def test_a_permanent_redirect_is_moved_and_gives_the_new_address():
     new = "https://b.example/archive/x"                                                  # an equally specific page
     result, web = check({("HEAD", U): [(301, new)], ("HEAD", new): [200]})
