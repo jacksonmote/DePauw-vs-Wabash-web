@@ -170,8 +170,9 @@ def test_history_reward_keeps_ties_undated_games_and_swimming_rows_intact():
     # newest first by decade (the swimming meet, then the 1954 tie), and the game with no date in the last group
     assert [r.find("th").get_text(" ", strip=True) for r in rows] == [
         BeautifulSoup(render.date_html(g), "html.parser").get_text(" ", strip=True) for g in (swim, tie, undated)]
-    assert result_of(rows[0]) == (swim["result"], render.result_html(swim))
-    assert result_of(rows[1]) == ("T", render.result_html(tie))
+    first = result_of(rows[0])
+    assert first == (swim["result"], html.unescape(render.result_html(swim))) and "\u00a0" in first[1]
+    assert result_of(rows[1]) == ("T", html.unescape(render.result_html(tie)))
     assert "date not recorded" in " ".join(cell.get_text(" ", strip=True) for cell in rows[-1].find_all(["th", "td"]))
     groups = soup.select("details.games details")
     assert [g.find("summary").get_text().split(" ")[0] for g in groups][-1] == render.UNDATED_GROUP
