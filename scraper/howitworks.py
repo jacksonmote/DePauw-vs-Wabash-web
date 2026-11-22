@@ -20,6 +20,7 @@ from __future__ import annotations
 import html
 
 import alumni as alumni_page
+import facts
 import gameday
 import merge
 import places
@@ -75,12 +76,18 @@ def fmt_date(iso: str) -> str:
 
 
 def row_words(school: str, row: dict) -> str:
-    """A row as a ruling names it: 'Wabash’s row for Jan 6, 1944 (DePauw 69, Wabash 49)'. A row dated on a
-    placeholder day says only its year, because the page lists no real date."""
+    """A row as a ruling names it: 'Wabash’s row for Jan 6, 1944 (DePauw 69, Wabash 49)', or for a tie
+    '... (Tie 7–7)' (facts.TIE_FORMAT, like every result on the site). A row dated on a placeholder day says only
+    its year, because the page lists no real date."""
     month_day = tuple(int(x) for x in row["date"].split("-")[1:])
     when = row["date"][:4] if month_day in merge.PLACEHOLDER_DAYS else fmt_date(row["date"])
     d, w = row["score"]
-    score = "no score listed" if d is None else f"DePauw {d:,}, Wabash {w:,}"
+    if d is None:
+        score = "no score listed"
+    elif d == w:
+        score = facts.TIE_FORMAT.format(depauw=f"{d:,}", wabash=f"{w:,}")
+    else:
+        score = f"DePauw {d:,}, Wabash {w:,}"
     return f"{merge.SCHOOL_NAMES[school]}’s row for {when} ({score})"
 
 
