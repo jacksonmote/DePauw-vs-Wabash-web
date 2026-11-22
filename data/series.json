@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "updated_at": "2026-11-19T00:55:50+00:00",
+  "updated_at": "2026-11-22T01:06:40+00:00",
   "perspective": "DePauw",
   "totals": {
     "depauw_wins": 537,
@@ -7205,7 +7205,14 @@
           "wabash": 7,
           "note": null,
           "boxscore": null,
-          "source": "wabash"
+          "source": "wabash",
+          "ruled": [
+            {
+              "kind": "note",
+              "note": "Only Wabash\u2019s record lists this game. DePauw\u2019s record lists only the day\u2019s other game (DePauw 10, Wabash 7), dated Mar 18. No account from 1981 has been found.",
+              "sources": []
+            }
+          ]
         },
         {
           "date": "1981-03-18",
