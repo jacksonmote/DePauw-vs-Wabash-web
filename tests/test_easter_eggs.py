@@ -275,6 +275,9 @@ def test_no_page_has_the_footer_comment_or_the_impartiality_note(site):
 
 
 STYLESHEET_LIMIT = 32768
+SCRIPT_LIMIT = 4096           # static/easter-eggs.js, the site's one script
+ART = ("easter-bell.svg", "easter-paw.svg", "easter-tiger.svg")
+ART_LIMIT = 12288             # the three easter-egg drawings together
 
 
 def shipped_size(data: bytes) -> int:
@@ -285,9 +288,9 @@ def shipped_size(data: bytes) -> int:
 
 
 def test_new_assets_and_stylesheet_stay_within_the_approved_budgets():
-    assert len((ROOT / "static/easter-eggs.js").read_bytes()) <= 4096
-    assert sum((ROOT / f"static/{asset}").stat().st_size for asset in
-               ("easter-bell.svg", "easter-paw.svg", "easter-tiger.svg")) <= 12288
+    # the script and the three drawings, like the stylesheet, as they ship (shipped_size)
+    assert shipped_size((ROOT / "static/easter-eggs.js").read_bytes()) <= SCRIPT_LIMIT
+    assert sum(shipped_size((ROOT / f"static/{asset}").read_bytes()) for asset in ART) <= ART_LIMIT
     # Baseline stylesheet on c9fcced: 13,666 bytes; feature allowance: 6,144 bytes. The front-end polish (design
     # tokens, compact header, quiet footer) raised the allowance to 24,576 bytes; the home top (scoreboard, record
     # bars with 101 width classes, jump list) to 32,768; later polish PRs state their own. The count is of the
@@ -299,7 +302,7 @@ def test_new_assets_and_stylesheet_stay_within_the_approved_budgets():
     assert (ROOT / "static/fonts/BarlowCondensed-Bold-latin.woff2").stat().st_size <= 16384
 
 
-def test_the_stylesheet_budget_counts_what_ships_whatever_the_working_copys_line_endings():
+def test_the_stylesheet_script_and_drawing_budgets_count_what_ships_whatever_the_working_copys_line_endings():
     lf = b".a { margin: 0; }\n.b { padding: 0; }\n"
     crlf = lf.replace(b"\n", b"\r\n")
     assert len(crlf) == len(lf) + 2 and shipped_size(crlf) == shipped_size(lf) == len(lf)
@@ -310,6 +313,17 @@ def test_the_stylesheet_budget_counts_what_ships_whatever_the_working_copys_line
     assert shipped_size(full + b"x") > STYLESHEET_LIMIT
     css = (ROOT / "static/styles.css").read_bytes()
     assert shipped_size(css) == len(css) - css.count(b"\r\n") <= STYLESHEET_LIMIT
+    # the script's budget is counted the same way: a script of exactly the limit passes with either line ending
+    script = (b"x" * 63 + b"\n") * (SCRIPT_LIMIT // 64)
+    assert shipped_size(script) == shipped_size(script.replace(b"\n", b"\r\n")) == SCRIPT_LIMIT
+    js = (ROOT / "static/easter-eggs.js").read_bytes()
+    assert shipped_size(js) == len(js) - js.count(b"\r\n") <= SCRIPT_LIMIT
+    # and so are the three drawings, as one sum: drawings of exactly the limit pass with either line ending
+    drawings = [(b"x" * 63 + b"\n") * (ART_LIMIT // 64 // 2), (b"x" * 63 + b"\n") * (ART_LIMIT // 64 // 2), b""]
+    assert sum(map(shipped_size, drawings)) == ART_LIMIT
+    assert sum(shipped_size(d.replace(b"\n", b"\r\n")) for d in drawings) == ART_LIMIT
+    art = [(ROOT / f"static/{asset}").read_bytes() for asset in ART]
+    assert sum(map(shipped_size, art)) == sum(len(a) - a.count(b"\r\n") for a in art) <= ART_LIMIT
 
 
 def test_original_art_is_safe_well_formed_svg():
