@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "verified_at": "2026-11-17",
+  "verified_at": "2026-11-23",
   "methodology": "Named earned-degree holders found by reviewing each school’s notable-alumni material and the relevant official award or office records. Count a person once per school and category. Include all genders and historical school names; exclude honorary-only degrees, attendance without an earned degree, nominees, finalists, members of a winning team or film without an individual award, and executives without the qualifying CEO title and year overlap. The one team exception is a Pulitzer Prize awarded to a newsroom’s staff: a graduate a source names as part of that staff counts. A degree type such as B.A. is shown only where a cited source states it; otherwise the entry gives the class year. These are verified named graduates in the reviewed sources, not a claim of complete all-time coverage.",
   "categories": [
     {
@@ -199,7 +199,7 @@
           ]
         },
         "wabash": {
-          "notes": "Reviewed named Wabash business leaders against school class records, company biographies, SEC filings, historical U.S. Fortune 500 lists, and the Congressional Research Service 1983 executive directory. Robert E. Allen, W. Paul Tippett, and Walter Y. Elisha have sourced CEO service and an overlapping rank; Allen’s tenure ends in 1997, when AT&T’s proxy statement says his successor became CEO. James L. Keyes is excluded: he is not the Johnson Controls CEO James H. Keyes. John Bachmann is excluded: Jones Financial is on none of the Fortune 500 lists reviewed for his years as managing partner.",
+          "notes": "Reviewed named Wabash business leaders against school class records, company biographies, SEC filings, historical U.S. Fortune 500 lists, and the Congressional Research Service 1983 executive directory. Robert E. Allen, W. Paul Tippett, and Walter Y. Elisha have sourced CEO service and an overlapping rank; Elisha is “a graduate of Wabash College” in Cummins Engine Company’s 1997 proxy statement, which names no degree, and a senior in the College’s 1954 yearbook; Allen’s tenure ends in 1997, when AT&T’s proxy statement says his successor became CEO. James L. Keyes is excluded: he is not the Johnson Controls CEO James H. Keyes. John Bachmann is excluded: Jones Financial is on none of the Fortune 500 lists reviewed for his years as managing partner.",
           "sources": [
             {
               "label": "Wabash political science alumni: Robert E. Allen ’57",
@@ -269,7 +269,7 @@
           ]
         },
         "wabash": {
-          "notes": "Reviewed College records of Rhodes graduates and individual alumni biographies. The College identifies nine graduates through Jacob Burnett '15; Chase Breaux '24 is explicitly a finalist and excluded. The Rhodes Trust’s table of winners by institution also counts nine for Wabash. For five of the nine (Pifer, Osborne, Littell, Barnett and Burnett) the cited page gives a class year only; no page that states the degree has been found yet.",
+          "notes": "Reviewed College records of Rhodes graduates and individual alumni biographies. The College identifies nine graduates through Jacob Burnett '15; Chase Breaux '24 is explicitly a finalist and excluded. The Rhodes Trust’s table of winners by institution also counts nine for Wabash. Each of the nine cites a page that states the degree. For Pifer and Osborne it is the College’s Phi Beta Kappa chapter list of 1909, for Littell his entry in America’s Young Men (1936), for Barnett the College’s 1951 yearbook (the 1947 yearbook gives his class), and for Burnett the College’s Academic Bulletin for 2015–16.",
           "sources": [
             {
               "label": "Wabash Rhodes Scholar news",
@@ -1642,14 +1642,14 @@
       "id": "claude-pifer",
       "name": "Claude A. Pifer",
       "school": "wabash",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1907,
       "categories": [
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "Wabash College News, Nov 21, 2005: the College archivist’s list of Rhodes Scholars, Claude A. Pifer ’07",
-        "url": "https://www.wabash.edu/news/story/3014"
+        "label": "The Beta of Indiana Chapter: Historical Sketch and List of Members, 1899–1909 (Phi Beta Kappa at Wabash College, 1909), p. 23: Claud A. Pifer, A.B., Wabash, ’07 (Internet Archive)",
+        "url": "https://archive.org/details/betaofindianacha00phibrich/page/n28/mode/1up"
       },
       "qualifications": {
         "rhodes-scholars": {
@@ -1694,14 +1694,18 @@
       "id": "frank-barnett",
       "name": "Frank R. Barnett",
       "school": "wabash",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1943,
       "categories": [
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "Wabash College News, Nov 21, 2005: the College archivist’s list of Rhodes Scholars, Frank R. Barnett ’43",
-        "url": "https://www.wabash.edu/news/story/3014"
+        "label": "The Wabash, 1951 (Wabash College yearbook), faculty: Frank R. Barnett, “A.B., Wabash” (Internet Archive)",
+        "url": "https://archive.org/details/wabash1951waba/page/n29/mode/1up"
+      },
+      "class_year_source": {
+        "label": "The Wabash, 1947 (Wabash College yearbook), p. 67: Frank Barnett, Wabash 1943 (Internet Archive)",
+        "url": "https://archive.org/details/wabash1947waba/page/n70/mode/1up"
       },
       "qualifications": {
         "rhodes-scholars": {
@@ -1720,14 +1724,14 @@
       "id": "insley-osborne",
       "name": "J. Insley Osborne",
       "school": "wabash",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1906,
       "categories": [
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "Wabash College News, Nov 21, 2005: the College archivist’s list of Rhodes Scholars, J. Insley Osborne ’06",
-        "url": "https://www.wabash.edu/news/story/3014"
+        "label": "The Beta of Indiana Chapter: Historical Sketch and List of Members, 1899–1909 (Phi Beta Kappa at Wabash College, 1909), p. 23: James Insley Osborne, A.B., Wabash, ’06 (Internet Archive)",
+        "url": "https://archive.org/details/betaofindianacha00phibrich/page/n28/mode/1up"
       },
       "qualifications": {
         "rhodes-scholars": {
@@ -1746,14 +1750,14 @@
       "id": "jacob-burnett",
       "name": "Jacob Burnett",
       "school": "wabash",
-      "degree": "Graduate",
+      "degree": "B.A.",
       "degree_year": 2015,
       "categories": [
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "Wabash College News, July 29, 2015: Jacob Burnett ’15, the College’s ninth Rhodes Scholar",
-        "url": "https://www.wabash.edu/news/story/10589"
+        "label": "Wabash College Academic Bulletin, 2015–16, pp. 269–271: Degrees in Course, Commencement Day, May 17, 2015, Bachelor of Arts, Jacob Levi Burnett (PDF)",
+        "url": "https://www.wabash.edu/academics/docs/AcademicBulletin15.pdf"
       },
       "qualifications": {
         "rhodes-scholars": {
@@ -1957,14 +1961,14 @@
       "id": "norman-littell",
       "name": "Norman Littell",
       "school": "wabash",
-      "degree": "Graduate",
+      "degree": "A.B.",
       "degree_year": 1921,
       "categories": [
         "rhodes-scholars"
       ],
       "school_source": {
-        "label": "Wabash College News, Nov 21, 2005: the College archivist’s list of Rhodes Scholars, Norman Littell ’21",
-        "url": "https://www.wabash.edu/news/story/3014"
+        "label": "America’s Young Men (1936), p. 353: Norman Mather Littell, A.B., Wabash College, 1921 (Internet Archive)",
+        "url": "https://archive.org/details/americasyoungmen1936howe/page/n452/mode/1up"
       },
       "qualifications": {
         "rhodes-scholars": {
@@ -2326,8 +2330,12 @@
         "fortune-500-ceos"
       ],
       "school_source": {
-        "label": "Wabash College Alumni Brick Terrace: Walter Y. Elisha, Class of 1954",
-        "url": "https://www.wabash.edu/Alumni/terrace.cfm?brick=10&quadrant=9"
+        "label": "Cummins Engine Company proxy statement, Mar 1, 1997 (SEC filing): Walter Y. Elisha, “a graduate of Wabash College” (Internet Archive)",
+        "url": "https://archive.org/details/micro_IA41159607_1078/page/n144/mode/1up"
+      },
+      "class_year_source": {
+        "label": "The Wabash, 1954 (Wabash College yearbook), p. 56: Walter Elisha, senior (Internet Archive)",
+        "url": "https://archive.org/details/wabash1954waba/page/n59/mode/1up"
       },
       "qualifications": {
         "fortune-500-ceos": {
