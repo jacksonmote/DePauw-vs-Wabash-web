@@ -35,15 +35,23 @@ same pacing and User-Agent; robots.txt on www.youtube.com allows /oembed). 200 i
 (YouTube answered 400 for two made-up video ids on 2026-11-21); 401 and 403 (a private video, or one that may not
 be embedded), 429, a 5xx and a request that gets no answer are couldn't check, never broken (see check_youtube).
 
+Two limits keep one bad day from costing the run its report (a request that gets no answer takes TIMEOUT seconds,
+and the report is written only after the last link). When SILENT_LINKS links in a row to one host end with no
+answer (a timeout or a failed connection, the retry included), the check stops asking that host: the rest of its
+links are not requested. And DEADLINE_MINUTES after the check starts it stops requesting altogether (a request
+already waiting for its turn still goes). A link left unrequested either way is couldn't check, never broken, and
+says why; the report counts those links (not_requested), the run summary and a warning on the run say the run was
+incomplete, and such a run never closes the open issue. Neither limit adds a request.
+
 Statuses: broken (404, 410, DNS failure, or still failing after the retry; also "probably broken": a 301 or 308
 on the way to a working homepage or top-level section page from a more specific address, see general_redirect),
 moved (a 301 or 308 on the way to any other working page at a different URL; the report gives the new one, so the
 link can be updated once the new page is checked to say the same thing), couldn't check (401, 403, 429 or another
 bot-protection answer: many sites block automated checks, so these are reported but never counted as broken),
-other (anything unexpected, with the status), OK. Two more cases count as couldn't check, because the checker
+other (anything unexpected, with the status), OK. Three more cases count as couldn't check, because the checker
 cannot see the page behind them: a redirect to a page whose query sends the visitor back to the address asked for
-(?next=, ?return_to= and the like: a bot check or sign-in page, see bot_check_redirect), and a timeout or failed
-connection on a host in BOT_CHECK_HOSTS.
+(?next=, ?return_to= and the like: a bot check or sign-in page, see bot_check_redirect), a timeout or failed
+connection on a host in BOT_CHECK_HOSTS, and a link that was not requested (the two limits above).
 
 Links within the site are checked separately, from the built files alone (internal_problems): every link between
 pages must reach a page or file that was built, and every #fragment an id on its target page. That needs no
@@ -89,11 +97,16 @@ HOST_GAP = 2.0          # seconds between requests to the same host, at least (t
 TIMEOUT = 20            # seconds, per request
 MAX_REDIRECTS = 5
 RETRY_WAIT = 10         # seconds before the one retry
+SILENT_LINKS = 2        # links in a row to one host that end with no answer before the check stops asking that host
+DEADLINE_MINUTES = 45   # the check stops requesting this long after it starts; the job's own limit leaves room (a test)
 REDIRECTS = {301, 302, 303, 307, 308}
 PERMANENT = {301, 308}
 BROKEN_CODES = {404, 410}
 BLOCKED_CODES = {401, 403, 429, 999}   # 999: what some sites send automated clients
 TRANSIENT_ERRORS = {"timeout", "connection", "dns", "tls"}
+NO_ANSWER = {"timeout", "connection"}   # what counts toward SILENT_LINKS (a DNS or TLS failure is quick, and broken)
+# Why a link was not requested (Pacer.stopped), with the words the report uses for each.
+NOT_REQUESTED = {"silent": "on a host that had stopped answering", "deadline": "after the run’s time limit"}
 GENERAL_SEGMENT_MAX = 20   # characters: a lone path segment this short (/company, /about, /news) is a section page
 GENERAL_DETAIL = "probably broken (redirects to a general page)"
 BOT_CHECK_DETAIL = "redirects to a bot check or sign-in page (the site blocks automated checks)"
@@ -311,9 +324,17 @@ class Pacer:
     scraper uses: `robots_fetch(url) -> str` reads a host's robots.txt, once per run and before any page on that
     host; the gap there is its Crawl-delay (politeness.DEFAULT_CRAWL_DELAY when it sets none or cannot be read,
     never under politeness.MIN_GAP_SECONDS); and `allowed` says no to a page it disallows for our user agent.
-    Without a `robots_fetch` (a test of how one link is classified) every host simply gets `gap`."""
-    def __init__(self, gap: float = HOST_GAP, clock=None, sleep=None, robots_fetch=None, log=None):
+    Without a `robots_fetch` (a test of how one link is classified) every host simply gets `gap`.
+
+    It also knows when to stop asking (`stopped`): a host after SILENT_LINKS links in a row there ended with no
+    answer (`note` keeps the count), and every host once `deadline` seconds have passed since it was made (None:
+    no time limit)."""
+    def __init__(self, gap: float = HOST_GAP, clock=None, sleep=None, robots_fetch=None, log=None,
+                 deadline: float | None = None):
         self.gap, self.clock, self.sleep, self.last = gap, clock or time.monotonic, sleep or time.sleep, {}
+        self.silent = {}                                     # host -> links in a row that ended with no answer
+        self.deadline = deadline
+        self.stop_at = None if deadline is None else self.clock() + deadline
         self.schools = None
         if robots_fetch is not None:
             self.schools = politeness.Pacer(fetch=robots_fetch, sleep=self.sleep, clock=self.clock, log=log)
@@ -343,12 +364,30 @@ class Pacer:
     def after(self, host: str) -> None:
         self.last[host] = self.clock()
 
+    def note(self, host: str, answered: bool) -> None:
+        """How a link to this host ended: an answer of any kind clears the host's count, no answer adds to it."""
+        self.silent[host] = 0 if answered else self.silent.get(host, 0) + 1
+
+    def stopped(self, url: str) -> tuple | None:
+        """(why, the detail for the report) when this address must not be requested any more, or None. "deadline":
+        the run's time is up. "silent": SILENT_LINKS links in a row to its host ended with no answer."""
+        if self.stop_at is not None and self.clock() >= self.stop_at:
+            return "deadline", f"not requested: the run reached its time limit ({self.deadline / 60:g} minutes)"
+        host = (urlparse(url).hostname or "").lower()
+        if self.silent.get(host, 0) >= SILENT_LINKS:
+            return "silent", (f"not requested: {host} gave no answer to {SILENT_LINKS} links in a row, so the run "
+                              "stopped asking it")
+        return None
+
 
 def follow(method: str, url: str, transport, pacer: Pacer) -> dict:
     """One request and its redirects. {status, headers, error, detail, final_url, hops: [(code, to)]}."""
     hops, current = [], url
     for _ in range(MAX_REDIRECTS + 1):
         host = (urlparse(current).hostname or "").lower()
+        stopped = pacer.stopped(current)
+        if stopped:                                          # a silent host or the time limit; never requested
+            return {"status": None, "error": stopped[0], "detail": stopped[1], "final_url": current, "hops": hops}
         if not pacer.allowed(current):                       # the schools' sites only; never requested
             return {"status": None, "error": "robots", "detail": f"robots.txt on {host} disallows {current}",
                     "final_url": current, "hops": hops}
@@ -379,6 +418,17 @@ def _ok(result: dict) -> bool:
 
 def _transient(result: dict) -> bool:
     return result["error"] in TRANSIENT_ERRORS or (result["error"] is None and result["status"] >= 500)
+
+
+def _note(result: dict, pacer: Pacer) -> None:
+    """Tell the pacer how a link ended, for its count of links in a row to one host with no answer. The host is
+    the one asked last (a redirect's target, if the link redirected). Anything else (a DNS or TLS failure, a link
+    that was not requested) leaves the count as it is."""
+    host = (urlparse(result["final_url"]).hostname or "").lower()
+    if result["error"] in NO_ANSWER:
+        pacer.note(host, answered=False)
+    elif result["error"] is None:
+        pacer.note(host, answered=True)
 
 
 def _bot_wall(result: dict) -> bool:
@@ -457,6 +507,8 @@ def classify(url: str, result: dict, retried: bool) -> dict:
     code, final = result["status"], result["final_url"]
     again = " (also on the retry)" if retried else ""
     out = {"code": code, "final_url": final if final != url else None}
+    if result["error"] in NOT_REQUESTED:
+        return {**out, "status": "blocked", "detail": result["detail"], "not_requested": result["error"]}
     if result["error"] in ("timeout", "connection") and _bot_check_host(url, final):
         return {**out, "status": "blocked",
                 "detail": ERROR_WORDS[result["error"]] + again + "; the site puts its pages behind a bot check"}
@@ -503,8 +555,11 @@ def check_youtube(url: str, oembed: str, transport, pacer: Pacer) -> dict:
     broken; any other answer other, like any unexpected answer. These rules hold for the oEmbed address only: on
     any other page a 400 is still other."""
     result = follow("GET", oembed, transport, pacer)
+    _note(result, pacer)
     code, error = result["status"], result["error"]
     out = {"url": url, "code": code, "final_url": None}
+    if error in NOT_REQUESTED:
+        return {**out, "status": "blocked", "detail": result["detail"], "not_requested": error}
     if error in TRANSIENT_ERRORS:
         return {**out, "status": "blocked", "detail": f"{ERROR_WORDS[error]} at YouTube’s oEmbed address"}
     if error:
@@ -525,7 +580,9 @@ def check_youtube(url: str, oembed: str, transport, pacer: Pacer) -> dict:
 
 def check_link(url: str, transport, pacer: Pacer, sleep=None) -> dict:
     """HEAD, then a GET if HEAD did not answer 2xx, then one retry of the GET for a transient failure. A YouTube
-    watch link is checked through its oEmbed address instead (check_youtube)."""
+    watch link is checked through its oEmbed address instead (check_youtube). A request the pacer has stopped
+    (Pacer.stopped) is not made: the link is then couldn't check, unless an earlier GET already failed, which
+    stands."""
     oembed = youtube_oembed(url)
     if oembed:
         return check_youtube(url, oembed, transport, pacer)
@@ -535,7 +592,10 @@ def check_link(url: str, transport, pacer: Pacer, sleep=None) -> dict:
         result = follow("GET", url, transport, pacer)
         if _transient(result):
             sleep(RETRY_WAIT)
-            result, retried = follow("GET", url, transport, pacer), True
+            again = follow("GET", url, transport, pacer)
+            if again["error"] not in NOT_REQUESTED:          # the time ran out during the wait: the first GET stands
+                result, retried = again, True
+    _note(result, pacer)
     return {"url": url, **classify(url, result, retried)}
 
 
@@ -555,16 +615,23 @@ def polite_order(urls: list) -> list:
 def run_checks(links: dict, transport, pacer: Pacer | None = None, sleep=None, log=print,
                skipped: dict | None = None) -> list:
     """Check every link, one request at a time. A link robots.txt disallows (the schools' sites only, see Pacer) is
-    not requested and gets no result: it is added to skipped["robots"], so the report counts it as skipped."""
+    not requested and gets no result: it is added to skipped["robots"], so the report counts it as skipped. A link
+    the pacer has stopped (its host went silent, or the run's time is up; Pacer.stopped) is not requested either,
+    and neither is its host's robots.txt: it is a result, couldn't check, with the reason."""
     pacer = pacer or Pacer(sleep=sleep)
     results, order = [], polite_order(list(links))
     for i, url in enumerate(order, 1):
-        if not pacer.allowed(url):
+        stopped = pacer.stopped(url)
+        if stopped:
+            result = {"url": url, "code": None, "final_url": None, "status": "blocked", "detail": stopped[1],
+                      "not_requested": stopped[0]}
+        elif not pacer.allowed(url):
             if skipped is not None:
                 skipped.setdefault("robots", set()).add(url)
             log(f"[{i}/{len(order)}] skipped  robots.txt disallows it, so it was not requested  {url}")
             continue
-        result = check_link(url, transport, pacer, sleep)
+        else:
+            result = check_link(url, transport, pacer, sleep)
         result["used_on"] = links[url]
         log(f"[{i}/{len(order)}] {result['status']:8} {result['detail']}  {url}")
         results.append(result)
@@ -627,6 +694,8 @@ def build_report(results: list, skipped: dict, checked_at: dt.datetime) -> dict:
         "schema_version": 1,
         "checked_at": checked_at.astimezone(dt.timezone.utc).isoformat(timespec="seconds"),
         "totals": {"checked": len(results), **{s: sum(r["status"] == s for r in results) for s in STATUSES}},
+        # Links left unrequested, by reason; they are part of "blocked" above. All zero on a complete run.
+        "not_requested": {why: sum(r.get("not_requested") == why for r in results) for why in NOT_REQUESTED},
         "skipped": {group: len(urls) for group, urls in skipped.items()},
         "links": links,
     }
@@ -646,6 +715,18 @@ def totals_line(report: dict) -> str:
     t = report["totals"]
     return (f"Checked {plural(t['checked'], 'link')}: {t['broken']} broken, {t['moved']} moved, {t['other']} other, "
             f"{t['blocked']} couldn’t check, {t['ok']} OK.")
+
+
+def not_requested_line(report: dict) -> str:
+    """One sentence when the run left links unrequested (a silent host, the time limit), else "". A report written
+    before the limits existed has no such count and reads as complete."""
+    left = {why: n for why, n in (report.get("not_requested") or {}).items() if n and why in NOT_REQUESTED}
+    if not left:
+        return ""
+    total = sum(left.values())
+    return (f"This run was incomplete: {plural(total, 'link')} not requested "
+            f"({', '.join(f'{n} {NOT_REQUESTED[why]}' for why, n in left.items())}), counted under couldn’t check. "
+            f"Run the link check again by hand to check {'it' if total == 1 else 'them'}.")
 
 
 def skipped_line(report: dict) -> str:
@@ -685,7 +766,9 @@ def sections(report: dict, statuses, keep: int | None = None) -> list:
 def render_markdown(report: dict, include_ok: bool = True) -> str:
     """The full report (include_ok) or the job summary (every status but OK)."""
     shown = list(STATUSES) if include_ok else [s for s in STATUSES if s != "ok"]
-    lines = [f"# Link check, {fmt_date(report['checked_at'])}", "", totals_line(report), "", skipped_line(report)]
+    lines = [f"# Link check, {fmt_date(report['checked_at'])}", "", totals_line(report)]
+    lines += ["", not_requested_line(report)] if not_requested_line(report) else []
+    lines += ["", skipped_line(report)]
     lines += sections(report, shown)
     if not include_ok:
         lines += ["", "The full report, including every OK link, is the run’s link-report artifact."]
@@ -705,8 +788,10 @@ def render_issue_body(report: dict, run_url: str = "") -> str:
         totals_line(report),
     ]
     if report["totals"]["blocked"]:
-        intro += ["", f"{plural(report['totals']['blocked'], 'link')} couldn’t be checked (the site blocks automated "
-                      "checks); they are listed in the run summary, not here."]
+        intro += ["", f"{plural(report['totals']['blocked'], 'link')} couldn’t be checked (most often because the "
+                      "site blocks automated checks); they are listed in the run summary, not here."]
+    if not_requested_line(report):
+        intro += ["", not_requested_line(report)]
     tail = ["", skipped_line(report)] + (["", f"Latest run: {run_url}"] if run_url else [])
     total = sum(report["totals"][s] for s in ISSUE_STATUSES)
     keep = total
@@ -726,21 +811,28 @@ def gh(*args: str, stdin: str | None = None) -> str:
 
 
 def sync_issue(report: dict, run_url: str = "", run=gh) -> str:
-    """Open, update or close the one broken-links issue. `run` is the gh runner (replaced in tests)."""
+    """Open, update or close the one broken-links issue. `run` is the gh runner (replaced in tests). A run that
+    left links unrequested never closes the issue: a link listed there may be one it did not reach."""
     open_issues = sorted(json.loads(run("issue", "list", "--label", LABEL, "--state", "open",
                                         "--json", "number", "--limit", "100")), key=lambda i: i["number"])
     when = fmt_date(report["checked_at"])
+    incomplete = not_requested_line(report)
     if not needs_issue(report):
         if not open_issues:
             return "nothing broken, moved or other, and no open issue"
         n = str(open_issues[0]["number"])
+        if incomplete:
+            run("issue", "comment", n, "--body-file", "-",
+                stdin=f"Link check of {when}: nothing broken, moved or other among the links it reached, but this "
+                      f"stays open. {incomplete} {totals_line(report)} {run_url}".strip() + "\n")
+            return f"left #{n} open: the run was incomplete"
         run("issue", "comment", n, "--body-file", "-",
             stdin=f"Link check of {when}: nothing broken, moved or other any more. {totals_line(report)} "
                   f"Closing. {run_url}".strip() + "\n")
         run("issue", "close", n)
         return f"closed #{n}"
     body = render_issue_body(report, run_url)
-    comment = f"Link check of {when}: {totals_line(report)} {run_url}".strip() + "\n"
+    comment = " ".join(filter(None, [f"Link check of {when}:", totals_line(report), incomplete, run_url])) + "\n"
     if open_issues:
         n = str(open_issues[0]["number"])
         run("issue", "edit", n, "--body-file", "-", stdin=body)
@@ -784,11 +876,14 @@ def main(argv=None) -> int:
         sys.stdout.reconfigure(encoding="utf-8")   # the curly apostrophe on a Windows console
     if args.command == "check":
         links, skipped = collect(args.site, args.data)
-        pacer = Pacer(robots_fetch=robots_reader(), log=print)   # logs each school host's robots.txt and delay
+        # Logs each school host's robots.txt and delay; the time limit counts from here.
+        pacer = Pacer(robots_fetch=robots_reader(), log=print, deadline=DEADLINE_MINUTES * 60)
         results = run_checks(links, requests_transport(), pacer, skipped=skipped)
         report = build_report(results, skipped, now_utc())
         write_report(report, args.out)
         print(totals_line(report))
+        if not_requested_line(report):                           # a warning on the Actions run; plain text elsewhere
+            print(f"::warning title=Link check incomplete::{not_requested_line(report)}")
         print(skipped_line(report))
         print(f"Wrote {args.out / 'link-report.md'} and link-report.json")
     else:

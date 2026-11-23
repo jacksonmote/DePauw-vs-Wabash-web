@@ -24,7 +24,9 @@ jobs:
   check:
     # Read-only. The schedule runs on main; a manual run on a branch checks that branch's code (and opens no issue).
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # A job that reaches this limit writes no report at all, so the check has a time limit of its own, well inside
+    # this one (DEADLINE_MINUTES in scraper/linkcheck.py: it then stops requesting and still writes the report).
+    timeout-minutes: 60
     permissions:
       contents: read
     steps:
@@ -47,8 +49,9 @@ jobs:
         run: python scraper/render.py
 
       # The one live step: one request at a time, at least 2 seconds between requests to a host; on the schools'
-      # athletics sites, robots.txt first and its crawl delay (30 seconds) instead. Exits 0 whether or not links
-      # are broken; it fails only if the checker itself fails.
+      # athletics sites, robots.txt first and its crawl delay (30 seconds) instead. It stops asking a host that
+      # gives no answer and stops requesting at its own time limit; the links it leaves are "couldn't check", and
+      # the run gets a warning. Exits 0 whether or not links are broken; it fails only if the checker itself fails.
       - name: Check the outbound links
         run: python scraper/linkcheck.py check --site site --out "$RUNNER_TEMP/link-check"
 

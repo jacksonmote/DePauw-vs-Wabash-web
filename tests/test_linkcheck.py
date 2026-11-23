@@ -363,8 +363,8 @@ def test_redirects_stop_after_the_limit():
 def test_requests_to_one_host_are_spaced_and_one_link_never_costs_more_than_three_tries():
     clock = FakeClock()
     urls = [f"https://same.example/{i}" for i in range(3)] + ["https://other.example/a"]
-    script = {("HEAD", u): ["timeout"] for u in urls}
-    script.update({("GET", u): ["timeout"] for u in urls})
+    script = {("HEAD", u): [503] for u in urls}               # an answer each time, so the host is never given up on
+    script.update({("GET", u): [503] for u in urls})
     web = FakeWeb(script, clock)
     pacer = linkcheck.Pacer(clock=clock, sleep=clock.sleep)
     results = linkcheck.run_checks({u: ["/"] for u in urls}, web, pacer, sleep=clock.sleep, log=lambda *_: None)
@@ -494,6 +494,155 @@ def test_a_redirect_onto_a_disallowed_school_page_is_not_followed_and_is_couldnt
     assert (results[0]["status"], results[0]["detail"]) == ("blocked", linkcheck.ROBOTS_DETAIL)
     assert results[0]["final_url"] == target and not skipped["robots"]
     assert target not in [url for _, url, _ in web.calls]
+
+
+# ---- the two limits: a host that gives no answer, and the run's own time limit ------------------- #
+
+class SlowWeb(FakeWeb):
+    """A FakeWeb on which a request that gets no answer takes the whole timeout, as it does live."""
+    def __call__(self, method, url, timeout):
+        start = self.clock()
+        try:
+            return super().__call__(method, url, timeout)
+        except linkcheck.LinkError as exc:
+            if exc.kind in linkcheck.NO_ANSWER:
+                self.clock.t = start + timeout
+            raise
+
+
+def run_plain(urls, script, web_class=FakeWeb, deadline=None):
+    """run_checks over `urls` with the school rules on and an optional time limit. (results, web, robots, clock)"""
+    clock = FakeClock()
+    web, robots = web_class(script, clock), FakeRobots(clock)
+    pacer = linkcheck.Pacer(clock=clock, sleep=clock.sleep, robots_fetch=robots, log=lambda m: None,
+                            deadline=deadline)
+    results = linkcheck.run_checks({u: ["/"] for u in urls}, web, pacer, sleep=clock.sleep, log=lambda *_: None)
+    return results, web, robots, clock
+
+
+def test_a_host_that_gives_no_answer_is_asked_about_two_links_and_the_rest_are_couldnt_check():
+    """Without the limit, 26 links on one silent host would cost 26 x 3 full timeouts, enough for the job to reach
+    its own limit before any report is written. The host costs two links, and the run goes on."""
+    silent = [f"https://silent.example/{i:02}" for i in range(26)]
+    fine = [f"https://fine.example/{i}" for i in range(4)]
+    script = {(m, u): ["timeout"] for u in silent for m in ("HEAD", "GET")}
+    script.update({("HEAD", u): [200] for u in fine})
+    results, web, _, clock = run_plain(silent + fine, script, SlowWeb)
+    by = {r["url"]: r for r in results}
+    assert linkcheck.SILENT_LINKS == 2
+    asked = [url for _, url, _ in web.calls if "silent.example" in url]
+    assert asked == [silent[0]] * 3 + [silent[1]] * 3                                    # HEAD, GET, the retry: twice
+    for url in silent[:2]:                                                               # reported as before
+        assert (by[url]["status"], by[url]["detail"]) == ("broken", "timed out (also on the retry)")
+        assert "not_requested" not in by[url]
+    for url in silent[2:]:
+        assert by[url]["status"] == "blocked" and by[url]["not_requested"] == "silent"
+        assert by[url]["detail"] == ("not requested: silent.example gave no answer to 2 links in a row, so the run "
+                                     "stopped asking it")
+    assert [by[u]["status"] for u in fine] == ["ok"] * 4                                 # every other host is checked
+    one_link = 3 * linkcheck.TIMEOUT + linkcheck.RETRY_WAIT + 3 * linkcheck.HOST_GAP
+    assert clock() - 1000.0 <= linkcheck.SILENT_LINKS * one_link + 5                     # minutes saved: 24 links' worth
+    report = linkcheck.build_report(results, {g: set() for g in linkcheck.SKIP_GROUPS}, WHEN)
+    assert report["not_requested"] == {"silent": 24, "deadline": 0}
+    assert report["totals"]["broken"] == 2 and report["totals"]["blocked"] == 24 and linkcheck.needs_issue(report)
+
+
+def test_a_failed_connection_counts_like_a_timeout_and_a_bot_check_host_goes_silent_too():
+    urls = [f"https://down.example/{i}" for i in range(3)]
+    results, web, _, _ = run_plain(urls, {(m, u): ["connection"] for u in urls for m in ("HEAD", "GET")})
+    assert [(r["status"], r.get("not_requested")) for r in results] == [
+        ("broken", None), ("broken", None), ("blocked", "silent")]
+    assert len(web.calls) == 6
+    unt = [f"https://digital.library.unt.edu/ark:/67531/x/{i}/" for i in range(3)]
+    results, web, _, _ = run_plain(unt, {(m, u): ["timeout"] for u in unt for m in ("HEAD", "GET")})
+    assert [r["status"] for r in results] == ["blocked"] * 3 and len(web.calls) == 6      # the third is not requested
+    assert [r.get("not_requested") for r in results] == [None, None, "silent"]
+
+
+def test_any_answer_clears_a_hosts_count_and_a_quick_failure_never_counts():
+    a = [f"https://a.example/{i}" for i in range(5)]
+    script = {(m, u): ["timeout"] for u in a for m in ("HEAD", "GET")}
+    script[("HEAD", a[1])] = [403]                                # one answer, of any kind, between two silences
+    script[("GET", a[1])] = [403]
+    script[("HEAD", a[3])] = ["timeout"]                          # HEAD gets no answer, but the GET does: an answer
+    script[("GET", a[3])] = [200]
+    results, web, _, _ = run_plain(a, script)
+    assert [r["status"] for r in results] == ["broken", "blocked", "broken", "ok", "broken"]
+    assert not any("not_requested" in r for r in results) and {url for _, url, _ in web.calls} == set(a)
+    for kind in ("dns", "tls"):                                   # quick to fail, and still broken: all are asked
+        b = [f"https://b.example/{i}" for i in range(4)]
+        results, web, _, _ = run_plain(b, {(m, u): [kind] for u in b for m in ("HEAD", "GET")})
+        assert [r["status"] for r in results] == ["broken"] * 4 and len(web.calls) == 12, kind
+    assert linkcheck.NO_ANSWER == {"timeout", "connection"} < linkcheck.TRANSIENT_ERRORS
+
+
+def test_a_redirect_onto_a_silent_host_is_not_followed_and_counts_for_the_host_that_was_silent():
+    def one_after_another(urls, script):
+        clock = FakeClock()
+        web = FakeWeb(script, clock)
+        pacer = linkcheck.Pacer(clock=clock, sleep=clock.sleep)
+        return [linkcheck.check_link(u, web, pacer, sleep=clock.sleep) for u in urls], web
+
+    dead = [f"https://dead.example/{i}" for i in range(2)]
+    old = "https://other.example/old"
+    script = {(m, u): ["timeout"] for u in dead for m in ("HEAD", "GET")}
+    script.update({(m, old): [(301, "https://dead.example/new")] for m in ("HEAD", "GET")})
+    results, web = one_after_another(dead + [old], script)
+    assert (results[2]["status"], results[2]["not_requested"]) == ("blocked", "silent")
+    assert results[2]["final_url"] == "https://dead.example/new"
+    assert "https://dead.example/new" not in [url for _, url, _ in web.calls]
+    # the other way round: a link that redirects to a host that then gives no answer counts for that host
+    hops = [f"https://from.example/{i}" for i in range(2)]
+    script = {(m, u): [(302, f"https://quiet.example/{i}")] for i, u in enumerate(hops) for m in ("HEAD", "GET")}
+    script.update({(m, f"https://quiet.example/{i}"): ["timeout"] for i in range(2) for m in ("HEAD", "GET")})
+    script[("HEAD", "https://quiet.example/z")] = [200]
+    script[("HEAD", "https://from.example/z")] = [200]
+    results, web = one_after_another(hops + ["https://quiet.example/z", "https://from.example/z"], script)
+    assert [r["status"] for r in results] == ["broken", "broken", "blocked", "ok"]         # from.example did answer
+    assert results[2]["not_requested"] == "silent" and "quiet.example" in results[2]["detail"]
+    assert "https://quiet.example/z" not in [url for _, url, _ in web.calls]
+
+
+def test_the_check_stops_requesting_at_its_time_limit_and_the_rest_are_couldnt_check():
+    """One host a link, so nothing waits: a request every half second, and a limit of 1.2 seconds."""
+    urls = [f"https://{h}.example/x" for h in "abcde"] + [f"{W}/news/story.aspx"]          # the school host sorts last
+    results, web, robots, _ = run_plain(urls, {("HEAD", u): [200] for u in urls}, deadline=1.2)
+    assert [r["status"] for r in results] == ["ok"] * 3 + ["blocked"] * 3
+    assert [url for _, url, _ in web.calls] == urls[:3] and not robots.calls              # not even robots.txt
+    for r in results[3:]:
+        assert r["not_requested"] == "deadline"
+        assert r["detail"] == "not requested: the run reached its time limit (0.02 minutes)"
+    report = linkcheck.build_report(results, {g: set() for g in linkcheck.SKIP_GROUPS}, WHEN)
+    assert report["not_requested"] == {"silent": 0, "deadline": 3} and not linkcheck.needs_issue(report)
+    # without a limit (how a single link is classified in these tests) nothing ever stops
+    results, web, _, _ = run_plain(urls, {("HEAD", u): [200] for u in urls})
+    assert [r["status"] for r in results] == ["ok"] * 6
+
+
+def test_a_retry_the_time_limit_stops_leaves_the_first_get_standing():
+    """HEAD at 0 s, GET at 2.5 s (the 2-second gap), then the 10-second wait for the retry runs past the limit."""
+    clock = FakeClock()
+    web = FakeWeb({("HEAD", U): ["timeout"], ("GET", U): ["timeout"]}, clock)
+    pacer = linkcheck.Pacer(clock=clock, sleep=clock.sleep, deadline=5.0)
+    result = linkcheck.check_link(U, web, pacer, sleep=clock.sleep)
+    assert (result["status"], result["detail"]) == ("broken", "timed out") and "not_requested" not in result
+    assert [m for m, _, _ in web.calls] == ["HEAD", "GET"]
+    # a GET the limit stops after an answered HEAD: nothing is known about the page, so it is couldn't check
+    clock = FakeClock()
+    web = FakeWeb({("HEAD", U): [405], ("GET", U): [200]}, clock)
+    pacer = linkcheck.Pacer(clock=clock, sleep=clock.sleep, deadline=0.4)
+    result = linkcheck.check_link(U, web, pacer, sleep=clock.sleep)
+    assert (result["status"], result["not_requested"]) == ("blocked", "deadline")
+    assert [m for m, _, _ in web.calls] == ["HEAD"]
+
+
+def test_a_youtube_video_is_not_requested_after_the_time_limit_either():
+    clock = FakeClock()
+    web = FakeWeb({("GET", OEMBED): [200]}, clock)
+    pacer = linkcheck.Pacer(clock=clock, sleep=clock.sleep, deadline=0)
+    result = linkcheck.check_link(VIDEO, web, pacer, sleep=clock.sleep)
+    assert (result["url"], result["status"], result["not_requested"]) == (VIDEO, "blocked", "deadline")
+    assert not web.calls
 
 
 def test_the_live_check_reads_robots_txt_the_way_the_scraper_does():
@@ -651,6 +800,74 @@ def test_couldnt_check_alone_opens_no_issue():
     assert gh.verbs() == [("issue", "list")]
 
 
+def incomplete_report(silent=0, deadline=0, **counts):
+    """sample_report with some of its couldn't-check links marked as not requested."""
+    report = sample_report(blocked=silent + deadline + 1, **counts)
+    blocked = [link for link in report["links"] if link["status"] == "blocked"]
+    for link, why in zip(blocked, ["silent"] * silent + ["deadline"] * deadline):
+        link["not_requested"] = why
+    report["not_requested"] = {"silent": silent, "deadline": deadline}
+    return report
+
+
+def test_an_incomplete_run_says_so_in_the_report_the_summary_and_the_issue():
+    line = ("This run was incomplete: 5 links not requested (3 on a host that had stopped answering, 2 after the "
+            "run’s time limit), counted under couldn’t check. Run the link check again by hand to check them.")
+    report = incomplete_report(silent=3, deadline=2)
+    assert linkcheck.not_requested_line(report) == line
+    for text in (linkcheck.render_markdown(report), linkcheck.render_markdown(report, include_ok=False),
+                 linkcheck.render_issue_body(report)):
+        assert text.count(line) == 1 and "6 couldn’t check" in text
+    assert linkcheck.not_requested_line(incomplete_report(deadline=1)) == (
+        "This run was incomplete: 1 link not requested (1 after the run’s time limit), counted under couldn’t "
+        "check. Run the link check again by hand to check it.")
+    complete = sample_report()
+    assert complete["not_requested"] == {"silent": 0, "deadline": 0}
+    assert linkcheck.not_requested_line(complete) == "" and "incomplete" not in linkcheck.render_markdown(complete)
+    del complete["not_requested"]                                 # a report written before the limits existed
+    assert linkcheck.not_requested_line(complete) == "" and "incomplete" not in linkcheck.render_issue_body(complete)
+    assert set(linkcheck.NOT_REQUESTED) == {"silent", "deadline"}
+
+
+def test_an_incomplete_run_never_closes_the_issue_and_still_opens_or_updates_it():
+    """A link listed in the open issue may be one this run did not reach, so "nothing broken" proves nothing."""
+    gh = FakeGh(open_issues=[7])
+    clean_but_incomplete = incomplete_report(silent=2, broken=0, moved=0, other=0)
+    assert linkcheck.sync_issue(clean_but_incomplete, "https://run", run=gh) == "left #7 open: the run was incomplete"
+    assert gh.verbs() == [("issue", "list"), ("issue", "comment")]                          # no close, no edit
+    comment = gh.calls[1][1]
+    assert "this stays open" in comment and "2 links not requested" in comment and comment.endswith("https://run\n")
+    gh = FakeGh()                                                  # nothing open: an incomplete run alone opens nothing
+    assert linkcheck.sync_issue(clean_but_incomplete, run=gh) == "nothing broken, moved or other, and no open issue"
+    assert gh.verbs() == [("issue", "list")]
+    gh = FakeGh(open_issues=[7], labels=["broken-links"])         # broken links found: the issue is updated as usual
+    assert linkcheck.sync_issue(incomplete_report(deadline=4), "https://run", run=gh) == "updated #7"
+    assert gh.verbs() == [("issue", "list"), ("issue", "edit"), ("issue", "comment")]
+    assert "4 links not requested" in gh.calls[1][1] and "4 links not requested" in gh.calls[2][1]
+    gh = FakeGh(open_issues=[7])                                   # and a complete clean run still closes it
+    assert linkcheck.sync_issue(sample_report(broken=0, moved=0, other=0), run=gh) == "closed #7"
+
+
+def test_the_check_command_stops_at_the_time_limit_writes_the_report_and_warns(tmp_path, monkeypatch, capsys):
+    """The command line passes the limit on: with no time at all, nothing is requested (robots.txt included), the
+    report is still written, the exit code is still 0 and the run gets a warning."""
+    asked = []
+    monkeypatch.setattr(linkcheck, "requests_transport", lambda: lambda *a: asked.append(a))
+    monkeypatch.setattr(linkcheck, "robots_reader", lambda: lambda url: asked.append(url))
+    monkeypatch.setattr(linkcheck.time, "sleep", lambda s: None)
+    monkeypatch.setattr(linkcheck.time, "monotonic", lambda: 0.0)
+    monkeypatch.setattr(linkcheck, "now_utc", lambda: WHEN)
+    monkeypatch.setattr(linkcheck, "DEADLINE_MINUTES", 0)
+    out = tmp_path / "out"
+    code = linkcheck.main(["check", "--site", str(FIX / "rendered"), "--data", str(FIX / "data"), "--out", str(out)])
+    assert code == 0 and not asked
+    report = json.loads((out / "link-report.json").read_text(encoding="utf-8"))
+    assert report["totals"]["checked"] == report["totals"]["blocked"] == report["not_requested"]["deadline"] == 7
+    line = linkcheck.not_requested_line(report)
+    assert line in (out / "summary.md").read_text(encoding="utf-8")
+    assert f"::warning title=Link check incomplete::{line}" in capsys.readouterr().out
+
+
 def test_the_check_command_writes_the_report_and_exits_zero_even_with_broken_links(tmp_path, monkeypatch):
     def web(method, url, timeout):
         return linkcheck.Response(404 if "wikipedia" in url else 200)
@@ -676,6 +893,8 @@ def test_the_check_command_writes_the_report_and_exits_zero_even_with_broken_lin
     assert report["checked_at"] == "2026-11-02T19:41:00+00:00"
     assert (out / "link-report.md").read_text(encoding="utf-8").startswith("# Link check, Nov 2, 2026")
     assert (out / "summary.md").is_file()
+    assert report["not_requested"] == {"silent": 0, "deadline": 0}                         # a complete run
+    assert "incomplete" not in (out / "summary.md").read_text(encoding="utf-8")
 
 # ---- the workflow ------------------------------------------------------------------------------ #
 
@@ -720,6 +939,26 @@ def test_the_check_job_fetches_installs_renders_checks_and_uploads_in_that_order
             < at("scraper/render.py") < at("scraper/linkcheck.py check") < at("actions/upload-artifact")
             < at("GITHUB_STEP_SUMMARY"))
     assert "linkcheck.py issue" in "".join(s.get("run", "") for s in workflow()["jobs"]["issues"]["steps"])
+
+
+def test_the_checks_own_time_limit_ends_well_inside_the_jobs():
+    """A job that reaches `timeout-minutes` is cancelled before the report is written and uploaded, so no report,
+    no summary and no issue update: the check must stop by itself first. The room left over is for the steps
+    before the check (fetch, install, render), the one request that may still be under way, and the upload."""
+    jobs = workflow()["jobs"]
+    limit = jobs["check"]["timeout-minutes"]
+    assert limit == 60 and linkcheck.DEADLINE_MINUTES == 45
+    assert limit - linkcheck.DEADLINE_MINUTES >= 15
+    assert 0 < jobs["issues"]["timeout-minutes"] <= 5
+    # the limit is the check's own: the workflow passes no time and nothing else ends the step early
+    check = next(s for s in jobs["check"]["steps"] if "linkcheck.py check" in s.get("run", ""))
+    assert "timeout-minutes" not in check and "continue-on-error" not in check
+    source = Path(linkcheck.__file__).read_text(encoding="utf-8")
+    assert "deadline=DEADLINE_MINUTES * 60" in source
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")                              # the README gives the numbers
+    assert f"When {linkcheck.SILENT_LINKS} links in a row to one host end with no answer" in readme
+    assert f"And {linkcheck.DEADLINE_MINUTES} minutes after the check starts" in readme
+    assert f"the job's own limit is {limit} minutes" in readme
 
 
 def test_every_action_in_the_workflow_is_pinned_to_a_full_sha():
