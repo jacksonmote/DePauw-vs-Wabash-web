@@ -80,7 +80,7 @@ Site
 ## Collaboration
 
 - Branch from the latest `main`. Any descriptive name works (`feat/…`, `fix/…`, `docs/…`, `codex/…`).
-- `main` moves (others merge; the data bot commits to the `data` branch, not to `main`). Before pushing, `git fetch origin` and bring the branch up to date: rebase if it was never pushed, merge `origin/main` if it was. Keep both sides' changes, then re-run the checks. The "Protect main" ruleset requires an up-to-date branch.
+- `main` moves whenever the maintainer merges a pull request, including one from a fork; the data bot commits to the `data` branch, not to `main`. Before pushing, `git fetch origin` and bring the branch up to date: rebase if it was never pushed, merge `origin/main` if it was. Keep both sides' changes, then re-run the checks. The "Protect main" ruleset requires an up-to-date branch.
 - One PR per change. Never push to `main`. Never force-push a shared branch.
 - The required status check is the `checks` job in `checks.yml` (matched by job name, not file name). Renaming the job needs a matching ruleset change by the maintainer.
 - Only the maintainer merges, after reviewing each pull request. Workflows on a pull request from a fork wait for the maintainer's approval only when the contributor is a first-time contributor (the repository's Actions setting); after that they run without it.
