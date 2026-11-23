@@ -18,12 +18,14 @@ from bs4 import BeautifulSoup
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scraper"))
 import facts  # noqa: E402
+import gameday  # noqa: E402
 import render  # noqa: E402
 
 NOW = dt.datetime(2026, 10, 30, 12, tzinfo=dt.timezone.utc)
 FROZEN = ROOT / "tests" / "fixtures" / "series-frozen-2026-10-30.json"
 CSS = (ROOT / "static" / "styles.css").read_text(encoding="utf-8").replace("\r\n", "\n")
 SEP = "\u00a0· "                              # a no-break space, then the dot: a line never starts with the dot
+NB = "\u00a0"                                     # a no-break space: between each team and its score in a game row
 PHONE_MAX = "42rem"                                # the widest screen that gets the two-line layout (672 px)
 TABLE_MIN = "42.0625rem"                           # the next pixel up: where the table with fixed columns starts
 # the hint above every list; a list with undated games adds one sentence about them
@@ -149,12 +151,13 @@ def test_every_per_game_detail_is_still_in_its_row():
     rows = BeautifulSoup(render.games_table("mens-swimming-and-diving", games, ("meet", "meets"), merged=True),
                          "html.parser").select("tbody tr")
     text = [[c.get_text(" ", strip=True) for c in r.find_all(["th", "td"])] for r in rows]
-    assert text[0] == ["Apr 6, 2024", "Home · Greencastle, Ind.", "W DePauw 12, Wabash 5",
+    assert text[0] == ["Apr 6, 2024", "Home · Greencastle, Ind.", f"W DePauw{NB}12, Wabash{NB}5",
                        "DePauw’s record (DePauw-Wabash): 12-5 · Wabash’s record (DePauw-Wabash): 11-5", ""]
-    assert text[1] == ["Nov 11, 2023", "Neutral · Indianapolis, Ind.", "W DePauw 33, Wabash 30", "2 OT", "Box score"]
+    assert text[1] == ["Nov 11, 2023", "Neutral · Indianapolis, Ind.", f"W DePauw{NB}33, Wabash{NB}30", "2 OT",
+                       "Box score"]
     assert rows[1].find("a")["href"] == box
-    assert text[2] == ["Nov 3, 2006", "Away · Crawfordsville, Ind.", "W DePauw 172.5, Wabash 127.5", "", ""]
-    assert text[3][:3] == ["Jan 5, 1934", "Home · Greencastle, Ind.", "W DePauw won · score not recorded"]
+    assert text[2] == ["Nov 3, 2006", "Away · Crawfordsville, Ind.", f"W DePauw{NB}172.5, Wabash{NB}127.5", "", ""]
+    assert text[3][:3] == ["Jan 5, 1934", "Home · Greencastle, Ind.", f"W DePauw won · score{NB}not{NB}recorded"]
     assert "Wabash record only" in text[3][3] and "Score not recorded" in text[3][3]
 
 
@@ -399,18 +402,41 @@ def test_on_wide_screens_every_decades_table_has_the_same_columns():
     assert "table-layout" not in phone_block()[1]
 
 
-def test_a_result_that_wraps_is_balanced_so_no_score_is_left_alone_on_a_line():
-    """A narrow Result column wraps most results, and plain wrapping fills the first line and can leave the last
-    score by itself on the second ("Wabash 5, DePauw" / "2"). `text-wrap: balance` splits the two lines evenly
-    instead; a browser without it wraps as before. The rule is for every width, so it sits at the top level
-    beside the other game-list rules, in no media block, and it names the Result cell by its position in the
-    row, like the phone layout does."""
-    child = render.GAME_COLUMNS.index("Result") + 1
-    rule = f".games td:nth-child({child}) {{ text-wrap: balance; }}"
-    assert child == 3 and CSS.count(rule) == 1 and CSS.count("text-wrap") == 1      # this cell, and only once
-    at = CSS.index(rule)
-    assert CSS[at - 1] == "\n" and CSS[:at].count("{") == CSS[:at].count("}")       # top level: in no block
-    assert CSS.index(".games table { width: 100%;") < at < CSS.index(f"@media (max-width: {PHONE_MAX})")
+def test_each_team_stays_with_its_score_in_every_game_row(home):
+    """A narrow Result column wraps most results. Plain wrapping can leave a score alone on the second line
+    ("Wabash 5, DePauw" / "2"), and balanced wrapping can end a line on a team's name and start the next with its
+    score ("W DePauw" / "9, Wabash 7"). A no-break space between each team and its score (and after "Tie") leaves
+    the comma as the only place a result can break, in every browser and at every width, with no stylesheet rule.
+    A result with no score keeps "score not recorded" together, so it can break only before "score"."""
+    scored = unscored = 0
+    for row in home.select("details.games tbody tr"):
+        cell = row.find_all("td")[render.GAME_COLUMNS.index("Result") - 1]
+        cell.find("abbr").extract()
+        words = cell.get_text()
+        if words.endswith(f"score{NB}not{NB}recorded"):
+            assert re.fullmatch(f" (DePauw won|Wabash won|Tie) · score{NB}not{NB}recorded", words), repr(words)
+            unscored += 1
+            continue
+        team = rf"(DePauw|Wabash){NB}[\d,.]+"
+        assert re.fullmatch(rf" ({team}, {team}|Tie{NB}[\d,.]+–[\d,.]+)", words), repr(words)
+        scored += 1
+    games = [g for s in json.loads(FROZEN.read_text(encoding="utf-8"))["sports"].values() for g in s["games"]]
+    assert (scored, unscored) == (sum(map(facts.has_score, games)), sum(not facts.has_score(g) for g in games))
+
+
+def test_only_the_game_rows_keep_a_team_with_its_score_and_every_other_use_keeps_ordinary_spaces():
+    win, loss, tie = game("2026-11-14", "W", 16, 10), game("2025-11-15", "L", 17, 24), game("1956-11-17", "T", 7, 7)
+    assert [render.result_html(g) for g in (win, loss, tie)] == [
+        "DePauw&nbsp;16, Wabash&nbsp;10", "Wabash&nbsp;24, DePauw&nbsp;17", "Tie&nbsp;7–7"]
+    assert [render.score_text(g) for g in (win, loss, tie)] == ["DePauw 16, Wabash 10", "Wabash 24, DePauw 17",
+                                                              facts.TIE_FORMAT.format(depauw=7, wabash=7)]
+    unscored = dict(game("1934-01-05", "W"), depauw=None, wabash=None, score_known=False)
+    assert render.result_html(unscored) == "DePauw won · score&nbsp;not&nbsp;recorded"
+    assert render.score_text(unscored) == "DePauw won · score not recorded"
+    # the fun facts, the "Most recent" line and the game-day banner's final score are sentences: ordinary spaces
+    assert render.game_line(win).startswith("DePauw 16, Wabash 10 · ")
+    final = {"name": "Football", "phase": gameday.FINAL, "results": [win]}
+    assert render.game_day_text(final, {}, several=False) == "Final: DePauw 16, Wabash 10"
 
 
 def test_decade_summaries_get_the_focus_ring_and_a_separating_line():

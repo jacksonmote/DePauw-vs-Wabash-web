@@ -349,16 +349,25 @@ def derive_streak(games: list) -> str:
     return f"{last}{n}"
 
 
-def score_text(g: dict) -> str:
-    """Winner first: 'DePauw 41, Wabash 20', 'Wabash 24, DePauw 17', 'Tie 7–7'."""
+NBSP = "\u00a0"    # a no-break space: written as &nbsp; in the game rows' result (result_html)
+
+
+def score_text(g: dict, keep_together: bool = False) -> str:
+    """Winner first: 'DePauw 41, Wabash 20', 'Wabash 24, DePauw 17', 'Tie 7–7'. With keep_together each team's
+    name and its score (and "Tie" and the tie's score) are joined by a no-break space, so a line can break only
+    after the comma, and a result with no score keeps "score not recorded" together, so it can break only before
+    "score"; only the game rows ask for it (result_html), and every other use keeps ordinary spaces."""
+    sp = NBSP if keep_together else " "
     if not facts.has_score(g):
-        return {"W": "DePauw won", "L": "Wabash won", "T": "Tie"}[g["result"]] + " · score not recorded"
+        winner = {"W": "DePauw won", "L": "Wabash won", "T": "Tie"}[g["result"]]
+        return f"{winner} · score{sp}not{sp}recorded"
     d, w = fmt_num(g["depauw"]), fmt_num(g["wabash"])
     if g["result"] == "W":
-        return f"DePauw {d}, Wabash {w}"
+        return f"DePauw{sp}{d}, Wabash{sp}{w}"
     if g["result"] == "L":
-        return f"Wabash {w}, DePauw {d}"
-    return facts.TIE_FORMAT.format(depauw=d, wabash=w)
+        return f"Wabash{sp}{w}, DePauw{sp}{d}"
+    tie = facts.TIE_FORMAT.format(depauw=d, wabash=w)
+    return tie.replace(" ", NBSP) if keep_together else tie
 
 
 NO_SITE = "Site not recorded"
@@ -848,7 +857,12 @@ def game_flags(key: str, g: dict, merged: bool) -> list:
 
 
 def result_html(g: dict) -> str:
-    return esc(score_text(g))      # DePauw's version, the one that counts; a dispute is spelled out in the notes
+    """A game row's result, DePauw's version (the one that counts; a dispute is spelled out in the notes), with a
+    no-break space between each team and its score, so a result that wraps breaks only after its comma: never a
+    score alone on the second line ("Wabash 5, DePauw" / "2") and never a team's name apart from its score
+    ("W DePauw" / "9, Wabash 7"). A result with no score keeps "score not recorded" together ("W DePauw won ·" /
+    "score not recorded")."""
+    return esc(score_text(g, keep_together=True)).replace(NBSP, "&nbsp;")
 
 
 # The every-game list on a card (games_table): one disclosure per decade, a table in each. The columns are the same

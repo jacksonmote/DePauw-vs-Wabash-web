@@ -255,7 +255,8 @@ def text(html):
 def test_the_card_shows_half_points_as_halves_and_whole_scores_as_whole(site):
     _, card = card_text(site)
     t = text(card)
-    assert "Wabash 172.5, DePauw 127.5" in t and "DePauw 147.5, Wabash 143.5" in t
+    nb = "\u00a0"                       # each team kept with its score in a game row (render.result_html)
+    assert f"Wabash{nb}172.5, DePauw{nb}127.5" in t and f"DePauw{nb}147.5, Wabash{nb}143.5" in t
     assert "172.50" not in t and "147.50" not in t and ".0," not in t
     assert "DePauw 4,957, Wabash 4,369" in t and "Meets played 39" in t and "All 39 meets" in t
 
@@ -263,7 +264,7 @@ def test_the_card_shows_half_points_as_halves_and_whole_scores_as_whole(site):
 def test_a_meet_with_no_score_says_so_and_names_the_winner(site):
     _, card = card_text(site)
     t = text(card)
-    assert t.count("DePauw won · score not recorded") == 2
+    assert t.count("DePauw won · score\u00a0not\u00a0recorded") == 2    # kept together in a game row
     assert "Score not recorded; the result counts in the record but not in the point totals." in t
 
 
