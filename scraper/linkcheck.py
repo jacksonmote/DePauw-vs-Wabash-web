@@ -29,6 +29,12 @@ mishandle HEAD); one retry of that GET after RETRY_WAIT seconds for a timeout, a
 Redirects are followed by hand, at most MAX_REDIRECTS, each hop paced like any request. A GET never reads the
 body, so no link costs more than one page.
 
+A YouTube video (a watch link, youtube_oembed) is checked differently, because its watch page answers 200 even for
+a video that does not exist: one GET of YouTube's oEmbed address for that video instead (no HEAD, no retry; the
+same pacing and User-Agent; robots.txt on www.youtube.com allows /oembed). 200 is OK; 400 and 404 are broken
+(YouTube answered 400 for two made-up video ids on 2026-11-21); 401 and 403 (a private video, or one that may not
+be embedded), 429, a 5xx and a request that gets no answer are couldn't check, never broken (see check_youtube).
+
 Statuses: broken (404, 410, DNS failure, or still failing after the retry; also "probably broken": a 301 or 308
 on the way to a working homepage or top-level section page from a more specific address, see general_redirect),
 moved (a 301 or 308 on the way to any other working page at a different URL; the report gives the new one, so the
@@ -59,7 +65,7 @@ import sys
 import time
 from html.parser import HTMLParser
 from pathlib import Path
-from urllib.parse import parse_qsl, urldefrag, urljoin, urlparse
+from urllib.parse import parse_qsl, quote, urldefrag, urljoin, urlparse
 
 import politeness                  # robots.txt and the crawl delay on the schools' sites; standard library only
 from politeness import USER_AGENT  # the scraper's user agent (the watcher sends it too; snapshot.py has its own)
@@ -95,6 +101,13 @@ ROBOTS_DETAIL = "redirects to a page robots.txt disallows (not requested)"
 # Query keys a bot check or sign-in page uses to send the visitor on to the page they asked for (lowercase).
 RETURN_KEYS = {"next", "return", "return_to", "returnto", "returnurl", "return_url", "redirect", "redirect_to",
                "redirect_uri", "continue", "destination"}
+# A YouTube watch page answers 200 even for a video that does not exist, so a watch link is checked through
+# YouTube's oEmbed address for the video instead (check_youtube). robots.txt on www.youtube.com allows /oembed for
+# every user agent (read 2026-11-21).
+YOUTUBE_HOSTS = {"www.youtube.com", "youtube.com", "m.youtube.com"}
+YOUTUBE_ID = re.compile(r"[A-Za-z0-9_-]{11}")
+OEMBED = "https://www.youtube.com/oembed?url={watch}&format=json"
+OEMBED_WORDS = "from YouTube’s oEmbed address"
 # Hosts that put the cited pages behind a bot check an automated client cannot pass, each checked by hand. There a
 # timeout or a failed connection means "couldn't check", not broken (a DNS or TLS failure is still broken). Add or
 # remove a host only through a pull request, with what was seen and when.
@@ -471,8 +484,51 @@ def classify(url: str, result: dict, retried: bool) -> dict:
     return {**out, "status": "other", "detail": f"{code}"}
 
 
+def youtube_oembed(url: str) -> str | None:
+    """YouTube's oEmbed address for a watch link ("https://www.youtube.com/watch?v=<11-character id>", also on
+    youtube.com or m.youtube.com, other query keys ignored), or None for any other address."""
+    p = urlparse(url)
+    if p.scheme not in ("http", "https") or (p.hostname or "").lower() not in YOUTUBE_HOSTS or p.path != "/watch":
+        return None
+    ids = [value for key, value in parse_qsl(p.query) if key == "v"]
+    if len(ids) != 1 or not YOUTUBE_ID.fullmatch(ids[0]):
+        return None
+    return OEMBED.format(watch=quote(f"https://www.youtube.com/watch?v={ids[0]}", safe=""))
+
+
+def check_youtube(url: str, oembed: str, transport, pacer: Pacer) -> dict:
+    """A YouTube video, checked with one GET of its oEmbed address (no HEAD, no retry; the body is never read). The
+    result is the watch link's: 200 OK; 400 or 404 broken (YouTube answered 400 for made-up video ids on
+    2026-11-21); 401 or 403 (private, or not allowed to be embedded), 429, a 5xx or no answer couldn't check, never
+    broken; any other answer other, like any unexpected answer. These rules hold for the oEmbed address only: on
+    any other page a 400 is still other."""
+    result = follow("GET", oembed, transport, pacer)
+    code, error = result["status"], result["error"]
+    out = {"url": url, "code": code, "final_url": None}
+    if error in TRANSIENT_ERRORS:
+        return {**out, "status": "blocked", "detail": f"{ERROR_WORDS[error]} at YouTube’s oEmbed address"}
+    if error:
+        return {**out, "status": "other", "detail": f"{result['detail']} ({OEMBED_WORDS})"}
+    if 200 <= code < 300:
+        return {**out, "status": "ok", "detail": f"{code} {OEMBED_WORDS}: the video is there"}
+    if code == 404:
+        return {**out, "status": "broken", "detail": f"404 {OEMBED_WORDS}: the video is gone"}
+    if code == 400:
+        return {**out, "status": "broken", "detail": f"400 {OEMBED_WORDS}: YouTube does not know the video"}
+    if code in (401, 403):
+        return {**out, "status": "blocked",
+                "detail": f"{code} {OEMBED_WORDS}: the video is private or may not be embedded, so it was not checked"}
+    if code == 429 or code >= 500:
+        return {**out, "status": "blocked", "detail": f"{code} {OEMBED_WORDS}"}
+    return {**out, "status": "other", "detail": f"{code} {OEMBED_WORDS}"}
+
+
 def check_link(url: str, transport, pacer: Pacer, sleep=None) -> dict:
-    """HEAD, then a GET if HEAD did not answer 2xx, then one retry of the GET for a transient failure."""
+    """HEAD, then a GET if HEAD did not answer 2xx, then one retry of the GET for a transient failure. A YouTube
+    watch link is checked through its oEmbed address instead (check_youtube)."""
+    oembed = youtube_oembed(url)
+    if oembed:
+        return check_youtube(url, oembed, transport, pacer)
     sleep = sleep or time.sleep
     result, retried = follow("HEAD", url, transport, pacer), False
     if not _ok(result):
