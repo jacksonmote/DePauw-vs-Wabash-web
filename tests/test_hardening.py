@@ -74,14 +74,43 @@ def test_ordinary_cells_are_untouched():
         assert render.csv_text(value) == ("" if value is None else str(value))
 
 
-def test_every_free_text_column_in_the_csv_is_guarded():
-    g = game("1941-11-15", "L", 19, 27, "away")
-    g.update({"source": "=cmd", "site": "\t=cmd", "note": "@x", "season": "-1", "wabash_date": "+1", "date_differs": True})
+# Every column of games.csv is in exactly one of these two lists, so a new column cannot ship unclassified.
+# Text that comes from a school's page or from a ruling: each cell goes through csv_text.
+CSV_TEXT = ("sport", "season", "location", "site", "note", "source", "wabash_record_date", "ruling_notes",
+            "wabash_record_location", "wabash_record_site")
+# Cells the renderer builds itself: a date, a number, a fixed word, or a link that safe_url has passed.
+CSV_BUILT = ("date", "depauw_score", "wabash_score", "result", "boxscore_url", "date_recorded", "disputed",
+             "date_differs", "depauw_record_score", "wabash_record_score", "place_differs")
+
+
+def hostile_row():
+    """One game in which every value a page or a ruling supplies would run as a formula, as its row in games.csv."""
+    g = game("1941-11-15", "L", 19, 27, "away", box='=HYPERLINK("https://depauwtigers.com/boxscore.aspx?id=1941")')
+    g.update({"source": "=cmd", "site": "\t=cmd", "note": "@x", "season": "-1", "wabash_date": "+1", "date_differs": True,
+              "disputed": True, "wabash_version": {"depauw": 19.5, "wabash": 28}, "place_differs": True,
+              "wabash_place": {"location": "=home", "site": "+cmd"},
+              "ruled": [{"kind": "note", "note": "=cmd", "sources": []}]})
     g["location"] = "\r=cmd"
     data = {"sports": {"football": merged_sport("football", "=Football", [g])}}
-    row = next(csv.DictReader(io.StringIO(render.render_csv(data))))
-    for column in ("sport", "season", "location", "site", "note", "source", "wabash_record_date"):
-        assert row[column][:1] == "'", (column, row[column])
+    [row] = csv.DictReader(io.StringIO(render.render_csv(data)))
+    return row
+
+
+def test_every_column_of_the_csv_is_free_text_or_a_fixed_form_and_none_is_left_out():
+    assert sorted([*CSV_TEXT, *CSV_BUILT]) == sorted(render.CSV_COLUMNS)
+    assert list(hostile_row()) == render.CSV_COLUMNS
+
+
+@pytest.mark.parametrize("column", CSV_TEXT)
+def test_every_free_text_column_in_the_csv_is_guarded(column):
+    cell = hostile_row()[column]
+    assert cell[:1] == "'" and cell[1:2] in render.CSV_FORMULA_STARTS, (column, cell)
+
+
+def test_a_box_score_link_that_is_not_safe_is_left_out_of_the_csv_and_no_built_cell_starts_a_formula():
+    row = hostile_row()
+    assert row["boxscore_url"] == ""              # never written as the page gave it
+    assert [c for c in CSV_BUILT if row[c][:1] in render.CSV_FORMULA_STARTS] == []
 
 
 # ---- fetch -------------------------------------------------------------------------------------------------------

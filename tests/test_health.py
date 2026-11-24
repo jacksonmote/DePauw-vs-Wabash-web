@@ -515,6 +515,22 @@ def test_a_game_day_update_is_not_a_full_scrape():
     assert scrape is None and deploy == ago(hours=1)
 
 
+def test_a_gate_log_without_the_gates_line_is_not_a_full_scrape():
+    """Only the gate's own "scope=all" makes a run a full scrape. A log without the line (cut short, empty, or in a
+    format the gate no longer writes) says nothing about what was read, so the search goes on to an older run."""
+    for said in ("", "2026-11-20T00:00:00.0000000Z the job's log, without the gate's line\n",
+                 "2026-11-20T00:00:00.0000000Z run=true scope=\n", "2026-11-20T00:00:00.0000000Z scope=all\n"):
+        assert health.gate_scope(said) != health.FULL_SCOPE
+        h = Runs().add(3, ago(hours=1), scope="all").add(2, ago(hours=30), scope="all")
+        h.logs[30] = said
+        scrape, deploy, looked = h.found()
+        assert scrape == ago(hours=30, minutes=3) and deploy == ago(hours=1) and looked == 2, said
+        assert h.asked_logs == [30, 20]
+        alone = Runs().add(3, ago(hours=1), scope="all")
+        alone.logs[30] = said
+        assert alone.find() == {"scrape": None, "deploy": ago(hours=1), "looked": 1, "capped": False, "log_error": ""}
+
+
 def test_a_failed_scrape_or_a_red_run_is_not_a_successful_full_scrape_but_its_deploy_counts():
     h = Runs()
     h.add(4, ago(hours=1), scope="all", scraped=False, conclusion="failure")     # the scraper failed; fallback data deployed

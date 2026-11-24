@@ -334,6 +334,45 @@ def test_streak_disagreeing_with_the_page_is_rejected():
     assert any(p.startswith("streak:") for p in scrape.validate(games, summary))
 
 
+def test_a_home_or_away_record_disagreeing_with_the_page_is_rejected():
+    """The totals can agree while a game sits on the wrong side: only the home and away records show that."""
+    games = [G("2024-11-16", "W", 21, 14), G("2023-11-11", "L", 7, 14, loc="away"), G("2022-11-12", "W", 28, 3)]
+    totals = {"wins": 2, "losses": 1, "ties": 0}
+    assert scrape.validate(games, scrape.Summary(**totals, home=(2, 0, 0), away=(0, 1, 0))) == []
+    assert scrape.validate(games, scrape.Summary(**totals, home=(1, 0, 0), away=(1, 1, 0))) == [
+        "home record: parsed 2-0-0, page says 1-0-0", "away record: parsed 0-1-0, page says 1-1-0"]
+    assert scrape.validate(games, scrape.Summary(**totals, home=(2, 1, 0), away=(0, 1, 0))) == [
+        "home record: parsed 2-0-0, page says 2-1-0"]
+    assert scrape.validate(games, scrape.Summary(**totals, home=(2, 0, 0), away=(0, 0, 1))) == [
+        "away record: parsed 0-1-0, page says 0-0-1"]
+    # a page that gives a record for a side on which no game was parsed
+    at_home = [G("2024-11-16", "W", 21, 14), G("2022-11-12", "W", 28, 3)]
+    assert scrape.validate(at_home, scrape.Summary(wins=2, losses=0, ties=0, home=(1, 0, 0), away=(1, 0, 0))) == [
+        "home record: parsed 2-0-0, page says 1-0-0", "away record: parsed 0-0-0, page says 1-0-0"]
+
+
+def captured_page(school, key):
+    """One of the fourteen captured history pages, parsed: (games, summary)."""
+    if school == "wabash":
+        return parse_wabash(full_html(f"wabash-{key}"))[:2]
+    whole = FIX / f"{key}.html"                    # three DePauw pages are kept whole, the rest as a subset
+    return parse(whole.read_text(encoding="utf-8") if whole.exists() else full_html(key))[:2]
+
+
+@pytest.mark.parametrize("school", ["depauw", "wabash"])
+@pytest.mark.parametrize("key", ["football", "mens-basketball", "baseball", "mens-soccer", "mens-lacrosse",
+                                 "mens-tennis", "mens-swimming-and-diving"])
+def test_each_real_page_gives_a_home_and_an_away_record_and_both_are_compared(school, key):
+    """On every captured page of either school: the parsed games agree with the page's own home and away records,
+    and moving one win from one side to the other in the summary is a problem for each side."""
+    games, summary = captured_page(school, key)
+    assert summary.home is not None and summary.away is not None and scrape.validate(games, summary) == []
+    home, away = summary.home, summary.away
+    summary.home, summary.away = (home[0] + 1, *home[1:]), (away[0] - 1, *away[1:])    # the totals stay as they were
+    problems = scrape.validate(games, summary)
+    assert [p.split(":")[0] for p in problems] == ["home record", "away record"], problems
+
+
 @pytest.mark.parametrize("sport,label", [
     ("football", "points"), ("mens-basketball", "points"), ("baseball", "runs"),
     ("mens-soccer", "goals"), ("mens-lacrosse", "goals"), ("mens-tennis", "points"),

@@ -130,6 +130,82 @@ def test_a_change_to_a_row_a_ruling_names_is_flagged():
     assert "ruling" in review.render_body([e]).lower()
 
 
+SWIMMING = "mens-swimming-and-diving"
+MEET_ROWS = [("2021-03-19", 32, 59), ("2021-03-20", 76, 163), ("2021-03-21", 120, 231)]    # two sessions, then the meet
+
+
+def session_rules(tmp_path):
+    """A session_of ruling as the scraper reads it from overrides.json: one three-day meet on Wabash's page."""
+    ruling = {"school": "wabash", "meet": {"date": "2021-03-21", "score": "120-231"},
+              "sessions": [{"date": "2021-03-19", "score": "32-59"}, {"date": "2021-03-20", "score": "76-163"}],
+              "reason": "one three-day meet", "sources": ["https://example.org/recap"]}
+    path = tmp_path / "overrides.json"
+    path.write_text(json.dumps({"schema_version": 1, "sports": {SWIMMING: {"session_of": [ruling]}}}), encoding="utf-8")
+    return merge.load_overrides(path)[SWIMMING]
+
+
+def test_a_change_to_the_meet_or_a_session_row_of_a_session_of_ruling_is_flagged(tmp_path):
+    """A session_of ruling names three rows of one school's page. Approving an edit to any of them leaves the
+    ruling without its row, and the sport's merge then stops: the reviewer has to be told before approving."""
+    rules = session_rules(tmp_path)
+    for date, us, them in MEET_ROWS:
+        edited = {"kind": "edited", "old": game(date, us, them), "new": game(date, us, them + 1)}
+        removed = {"kind": "removed", "old": game(date, us, them), "new": None}
+        back = {"kind": "edited", "old": game(date, us, them + 1), "new": game(date, us, them)}    # edited into the row
+        for change in (edited, removed, back):
+            assert review.touches_ruling(change, "wabash", rules) is True, (date, change["kind"])
+            assert review.touches_ruling(change, "depauw", rules) is False        # the ruling names Wabash's rows only
+    other_day = {"kind": "edited", "old": game("2021-03-18", 32, 59), "new": game("2021-03-18", 32, 60)}
+    other_score = {"kind": "edited", "old": game("2021-03-19", 30, 58), "new": game("2021-03-19", 30, 57)}
+    assert not review.touches_ruling(other_day, "wabash", rules)
+    assert not review.touches_ruling(other_score, "wabash", rules)
+    assert not review.touches_ruling(other_day, "wabash", None) and not review.touches_ruling(other_day, "wabash", {})
+
+
+def test_the_pending_entry_and_the_issue_say_that_a_session_row_belongs_to_a_ruling(tmp_path):
+    old = [game(date, us, them) for date, us, them in MEET_ROWS] + [game("2025-11-01", 100, 150)]
+    for i, (date, us, them) in enumerate(MEET_ROWS):
+        new = [*old]
+        new[i] = game(date, us, them + 2)
+        games, entries, _, _ = review.settle("wabash", SWIMMING, old, new, 2025, "https://x/y", pending=[], rules=[],
+                                             sport_rules=session_rules(tmp_path), apply_reviewed=False,
+                                             now="2026-10-29T01:00:00+00:00")
+        assert len(entries) == 1
+        [e] = entries
+        assert games == old and (e["old"]["date"], e["new"]["wabash"]) == (date, them + 2)
+        assert e.get("touches_ruling") is True
+        assert "ruling" in review.render_body([e]).lower()
+    plain = [*old[:3], game("2024-11-02", 90, 140), old[3]]                    # an old meet no ruling names
+    edited = [*old[:3], game("2024-11-02", 90, 141), old[3]]
+    [e] = review.settle("wabash", SWIMMING, plain, edited, 2025, "https://x/y", pending=[], rules=[],
+                        sport_rules=session_rules(tmp_path), apply_reviewed=False, now="2026-10-29T01:00:00+00:00")[1]
+    assert "touches_ruling" not in e
+
+
+def test_a_change_to_only_the_box_score_link_of_an_old_game_is_held_like_any_other_edit():
+    """The link is compared with the rest of the game: an old game whose link appears, changes or goes is held for
+    review, and the saved game keeps the link it had. Spacing around a link is styling, not a change.
+
+    This pins the behavior as it is today. Jackson’s decision 6 of the 2026-11-23 review reverses the link
+    part (a change to only the link will no longer be held), in PR 5 of that review: PR 5 changes this test on
+    purpose."""
+    link, other = "https://depauwtigers.com/boxscore.aspx?id=1957", "https://depauwtigers.com/boxscore.aspx?id=2057"
+    this_year = game("2025-11-15", 41, 20)
+    for before, after in ((link, other), (link, None), (None, link)):
+        old = [game("1957-11-16", 37, 6, boxscore=before), this_year]
+        new = [game("1957-11-16", 37, 6, boxscore=after), this_year]
+        games, entries, _, _ = settle(old, new)
+        assert games == old and len(entries) == 1, (before, after)
+        [e] = entries
+        assert (e["kind"], e["old"]["boxscore"], e["new"]["boxscore"]) == ("edited", before, after)
+        assert review.norm(old[0]) != review.norm(new[0])
+        assert {k: v for k, v in review.norm(old[0]).items() if k != "boxscore"} == \
+            {k: v for k, v in review.norm(new[0]).items() if k != "boxscore"}
+    old = [game("1957-11-16", 37, 6, boxscore=link), this_year]
+    assert settle(old, [game("1957-11-16", 37, 6, boxscore=f"  {link} "), this_year])[1] == []
+    assert settle(old, [old[0], game("2025-11-15", 41, 20, boxscore=link)])[1] == []      # this season: straight through
+
+
 # ---- the whole scraper -------------------------------------------------------------------------- #
 
 def edit_score(page_dir, date, old, new):

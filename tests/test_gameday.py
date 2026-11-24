@@ -162,6 +162,40 @@ def test_the_gate_imports_nothing_outside_the_standard_library():
     assert modules <= set(sys.stdlib_module_names) | {"meetings", "timeutil"}, modules
 
 
+# ---- an evening game ------------------------------------------------------ #
+# A start at 7 PM Eastern or later, when the UTC date is already the next day, and a result that may arrive after
+# midnight Eastern, when the game is yesterday's: the shape of the Dec 4, 2026 swimming and diving meet.
+
+EVENING = "2026-12-04"
+SWIMMING = "mens-swimming-and-diving"
+
+
+def evening(time="7:00 PM", games=True, result=False):
+    """(upcoming, sports) for a meet on EVENING at `time`: still on the schedule or not, its result in or not."""
+    listed = [sched(EVENING, time, location="away", site="Crawfordsville, Ind.")] if games else []
+    history = [played(EVENING, "W", 172.5, 121.5, location="away", site="Crawfordsville, Ind.")] if result else []
+    return inputs(listed, history, key=SWIMMING, name="Swimming & Diving")
+
+
+def test_a_game_day_run_reads_an_evening_game_from_its_start_until_3_am_also_after_its_result():
+    def scope(now, **kw):
+        return gameday.gameday_sports(et(now), *evening(**kw))
+    assert scope("2026-12-04 18:59") == []                       # not started: nothing new on its pages
+    assert scope("2026-12-04 19:00") == [SWIMMING] and scope("2026-12-04 23:59") == [SWIMMING]
+    assert scope("2026-12-05 00:20") == [SWIMMING]               # after midnight the game is yesterday's
+    assert scope("2026-12-05 00:40", result=True) == [SWIMMING]  # the final update still reads what was played
+    assert scope("2026-12-05 00:40", result=True, games=False) == [SWIMMING]
+    assert scope("2026-12-05 03:00") == [] and scope("2026-12-05 03:00", result=True) == []
+    assert scope("2026-12-04 19:10", time="7:30 PM") == [] and scope("2026-12-04 19:30", time="7:30 PM") == [SWIMMING]
+    # the evening before, when it is Dec 4 in UTC only: nothing dated Dec 4 is today's yet, not even a row in the history
+    assert scope("2026-12-03 19:30") == [] and scope("2026-12-03 19:30", result=True, games=False) == []
+    up, sports = evening()
+    run, read, why = gameday.plan(et("2026-12-05 00:37"), "schedule", FREQ, False, None, False, up, sports)
+    assert (run, read) == (True, SWIMMING) and "0 of 1 result(s) in" in why
+    assert gameday.plan(et("2026-12-05 00:50"), "workflow_dispatch", "", True, None, False,
+                        *evening(result=True))[:2] == (True, SWIMMING)       # the watcher's final update
+
+
 # ---- the banner ---------------------------------------------------------- #
 
 def banner(tmp_path, now, games, sports=None, text=True):
@@ -405,6 +439,30 @@ def test_the_frequent_cron_in_the_workflow_is_the_one_the_gate_recognises_and_is
     assert crons == ["19 10 * * *", "47 3 * * *", FREQ]                  # the two daily runs are unchanged
     minutes = FREQ.split()[0].split(",")
     assert minutes == ["7", "37"] and "0" not in minutes and "30" not in minutes
+
+
+def test_every_cron_the_workflow_compares_the_schedule_with_is_one_of_its_own_schedules():
+    """The workflow asks "which schedule started this run?" by comparing github.event.schedule with a typed-out
+    cron string. A string that matches no schedule never matches, and the step or job behind it silently never
+    runs: for the watcher question below, the 30-minute run would then update beside the watcher's own updates."""
+    crons = [entry["cron"] for entry in yaml.safe_load(WORKFLOW)[True]["schedule"]]        # YAML reads `on` as True
+    compared = re.findall(r"github\.event\.schedule\s*[=!]=\s*'([^']*)'", WORKFLOW)
+    assert sorted(set(compared)) == sorted(crons)             # each schedule is asked about, and nothing else is
+    assert "github.event.schedule" not in re.sub(r"github\.event\.schedule\s*[=!]=\s*'[^']*'", "", WORKFLOW).replace(
+        "SCHEDULE: ${{ github.event.schedule }}", "")         # no comparison this pattern cannot read
+
+
+def test_only_the_frequent_run_asks_whether_the_watcher_is_running_and_the_gate_gets_the_answer():
+    steps = workflow_jobs()["gate"]["steps"]
+    ask = named_step("Is the game-day watcher running?", "gate")
+    assert ask["if"] == "${{ github.event.schedule == '" + FREQ + "' }}"
+    assert ask["id"] == "watcher" and ask["run"] == "python3 scraper/watcher.py running"
+    decide = named_step("Is a game being played, and what does this run read?", "gate")
+    assert decide["env"]["WATCHER_RUNNING"] == "${{ steps.watcher.outputs.running }}"
+    assert decide["env"]["SCHEDULE"] == "${{ github.event.schedule }}"
+    assert '--watcher-running "$WATCHER_RUNNING"' in decide["run"] and '--schedule "$SCHEDULE"' in decide["run"]
+    assert steps.index(ask) < steps.index(decide)
+    assert "if" not in decide and "continue-on-error" not in ask
 
 
 def test_only_the_gate_decides_and_build_deploy_and_report_follow_it():
@@ -730,6 +788,25 @@ def test_production_html_validation_matches_pull_request_checks():
     assert production_syntax["continue-on-error"] is True
     pr_syntax = next(step for step in production_checks if step.get("name") == "Check the title script syntax")
     assert "continue-on-error" not in pr_syntax and "if" not in pr_syntax
+
+
+VALIDATED_NOW = dt.datetime(2026, 10, 30, 12, tzinfo=dt.timezone.utc)
+FROZEN_SERIES = ROOT / "tests" / "fixtures" / "series-frozen-2026-10-30.json"
+
+
+@pytest.mark.parametrize("flow, in_job", [("checks.yml", "checks"), ("update-and-deploy.yml", "validate")])
+def test_the_html_validation_list_is_exactly_the_pages_a_full_render_writes(tmp_path, flow, in_job):
+    """html-validate says nothing about a file that is not there, and a page left off the list is never checked.
+    So the list in each workflow is every .html file a full render writes: no page missing, none named twice, no
+    name that is not built. A new page fails here until both lists name it."""
+    out = tmp_path / "site"
+    render.build(FROZEN_SERIES, out, now=VALIDATED_NOW, upcoming_path=tmp_path / "no-schedule.json")
+    built = sorted("site/" + page.relative_to(out).as_posix() for page in out.rglob("*.html"))
+    jobs = yaml.safe_load((ROOT / ".github" / "workflows" / flow).read_text(encoding="utf-8"))["jobs"]
+    [step] = [s for s in jobs[in_job]["steps"] if s.get("name") == "Validate generated HTML"]
+    command = shlex.split(step["run"])
+    assert command[:3] == ["npx", "--no-install", "html-validate"]
+    assert sorted(command[3:]) == built and len(built) > 5
 
 
 def test_readme_documents_render_and_html_validation_in_its_own_job():

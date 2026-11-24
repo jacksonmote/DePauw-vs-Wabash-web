@@ -796,3 +796,93 @@ def test_the_test_dispatch_input_is_wired_through_both_jobs_and_ignored_by_the_o
 def test_a_game_day_update_on_a_day_without_a_game_reads_nothing_and_still_deploys():
     run, scope, why = gameday.plan(et("2026-11-03 20:00"), "workflow_dispatch", "", True, None, False, *world())
     assert (run, scope) == (True, "") and "no game today" in why
+
+
+# ---- an evening game: a start after 7 PM Eastern, a result after midnight ---------------------------------- #
+# From 7 PM Eastern (standard time) the UTC date is the next day, and after midnight Eastern the game is yesterday's
+# while its window stays open until 3 AM: the shape of the Dec 4, 2026 swimming and diving meet (7:00 PM).
+
+EVENING = "2026-12-04"
+SWIM = "mens-swimming-and-diving"
+MEET = (SWIM, EVENING)
+
+
+def meet(time="7:00 PM", listed=True, posted=False, status="scheduled"):
+    """(upcoming, sports) for a meet on EVENING: on the schedule or not, its result in the history or not."""
+    return world([sched(EVENING, time, status=status)] if listed else [], [result(EVENING)] if posted else [],
+                 key=SWIM, name="Swimming & Diving")
+
+
+def test_an_evening_game_is_still_ahead_after_7_pm_although_the_utc_date_has_changed():
+    late = meet("7:30 PM")
+    now = et("2026-12-04 19:10")                                       # 00:10 on Dec 5 in UTC, 20 minutes to go
+    assert now.date().isoformat() == "2026-12-05"
+    state, why, start = watcher.status(now, *late)
+    assert (state, start) == (watcher.BEFORE, et("2026-12-04 19:30")) and "Swimming & Diving window opens" in why
+    assert watcher.should_watch(now, *late)[0] is True
+    d = watcher.decide(now, et("2026-12-04 18:00"), None, set(), *late)
+    assert (d.action, d.until) == ("wait", et("2026-12-04 19:25"))
+    assert watcher.decide(et("2026-12-04 19:30"), et("2026-12-04 18:00"), None, set(), *late).action == "dispatch"
+    assert watcher.open_keys(et("2026-12-04 19:30"), *late) == {MEET}
+    assert watcher.should_watch(et("2026-12-03 19:10"), *late)[0] is False     # the evening before: Dec 4 in UTC only
+    assert watcher.status(et("2026-12-03 19:10"), *late)[0] == watcher.NONE
+
+
+def test_a_game_can_be_updated_on_its_own_eastern_day_and_until_3_am_the_next():
+    assert watcher.live(et("2026-12-04 00:00"), EVENING) and watcher.live(et("2026-12-04 23:59"), EVENING)
+    assert watcher.live(et("2026-12-05 00:00"), EVENING) and watcher.live(et("2026-12-05 02:59"), EVENING)
+    assert not watcher.live(et("2026-12-05 03:00"), EVENING)
+    assert not watcher.live(et("2026-12-03 19:30"), EVENING)          # Dec 4 in UTC already, but not in Eastern
+    assert not watcher.live(et("2026-12-03 23:59"), EVENING)
+
+
+def test_a_result_that_arrives_after_midnight_still_gets_its_one_final_update():
+    now, started, last = et("2026-12-05 00:46"), et("2026-12-04 22:46"), et("2026-12-05 00:31")
+    for listed in (True, False):                                       # with the game still on the schedule, and dropped
+        data = meet(posted=True, listed=listed)
+        assert watcher.result_in(SWIM, EVENING, *data) is True
+        assert watcher.owed_finals(now, {MEET}, set(), *data) == {MEET}
+        d = watcher.decide(now, started, last, {MEET}, *data)
+        assert (d.action, d.until, d.finals) == ("final", None, frozenset({MEET})) and "result is in" in d.why
+        assert watcher.decide(now, started, last, {MEET}, *data, finalized={MEET}).action == "stop"    # exactly one
+        early = watcher.decide(et("2026-12-05 00:40"), started, last, {MEET}, *data)
+        assert (early.action, early.until) == ("wait", et("2026-12-05 00:46"))                        # the 15 minutes hold
+        assert watcher.should_watch(now, *data, {MEET})[0] is True         # a relay handed the game starts for it
+        assert watcher.should_watch(now, *data)[0] is False                # nothing else is left to watch
+    assert watcher.owed_finals(et("2026-12-05 03:00"), {MEET}, set(), *meet(posted=True)) == set()   # 3 AM: over
+    assert watcher.decide(et("2026-12-05 03:00"), started, last, {MEET}, *meet(posted=True)).action == "stop"
+
+
+def test_dec_4_a_7_pm_meet_whose_result_is_posted_at_12_20_am():
+    """Started at 6 PM: waits for 7:00, updates every 15 minutes, hands the meet to a relay at 10:45 PM, carries
+    on past midnight; the 12:31 AM update reads the 12:20 result, so the 12:46 pass starts the one final update."""
+    out, runs, handovers = game_day("2026-12-04 18:00", {SWIM: ("7:00 PM", "2026-12-05 00:20")}, date=EVENING)
+    assert [t for t, _, _ in runs] == [
+        "19:00", "19:15", "19:30", "19:45", "20:00", "20:15", "20:30", "20:45", "21:00", "21:15", "21:30", "21:45",
+        "22:00", "22:15", "22:30", "22:46", "23:01", "23:16", "23:31", "23:46", "00:01", "00:16", "00:31", "00:46"]
+    assert all(scope == [SWIM] for _, scope, _ in runs)                # every update reads the meet, after midnight too
+    assert [kind for _, _, kind in runs] == ["update"] * 23 + ["final"]
+    assert handovers == [{MEET}]                                       # 6:00 PM + 4 h 45 min, mid-meet
+    assert out.finalized == {MEET} and out.stopped.endswith("started one last update") and not out.failed
+
+
+def test_a_watcher_that_first_starts_after_midnight_takes_up_last_nights_game_and_gives_it_its_final():
+    """No relay and nothing handed over (the earlier watcher was lost, say): the window is still open, so the run
+    watches the game from what it sees, and the result posted at 12:20 AM gets its final update."""
+    out, runs, handovers = game_day("2026-12-05 00:10", {SWIM: ("7:00 PM", "2026-12-05 00:20")}, date=EVENING)
+    assert runs == [("00:10", [SWIM], "update"), ("00:25", [SWIM], "update"), ("00:40", [SWIM], "final")]
+    assert handovers == [] and out.watched == {MEET} and out.finalized == {MEET}
+
+
+def test_a_game_that_leaves_the_schedule_without_a_result_is_not_a_result():
+    """Only a row in the history is a result. A game called off after its window opened (postponed, or gone from
+    the schedule) leaves nothing on either side: it gets no final update, and nothing says its result is in."""
+    for gone in (meet(listed=False), meet(status="postponed")):
+        assert watcher.result_in(SWIM, EVENING, *gone) is False
+        for now in ("2026-12-04 21:00", "2026-12-05 00:30"):
+            assert watcher.owed_finals(et(now), {MEET}, set(), *gone) == set()
+            d = watcher.decide(et(now), et("2026-12-04 18:00"), et("2026-12-04 20:45"), {MEET}, *gone)
+            assert d.action == "stop" and d.finals == frozenset() and "result is in" not in d.why
+            assert watcher.should_watch(et(now), *gone, {MEET})[0] is False
+    assert watcher.result_in(SWIM, EVENING, *meet(listed=False, posted=True)) is True
+    assert watcher.result_in("mens-tennis", EVENING, *meet(posted=True)) is False     # a sport the data does not hold
