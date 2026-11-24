@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scraper"))
+import facts  # noqa: E402
 import heists  # noqa: E402
 import render  # noqa: E402
 
@@ -157,6 +158,26 @@ def test_a_story_can_show_another_years_game_and_the_line_names_that_year():
     assert "Bell game" not in no_game[no_game.index('id="heist-buried"'):no_game.index('id="heist-late"')]
     burial = next(i for i in real()["incidents"] if i["outcome"] == "hidden" and i["school"] == "depauw")
     assert burial["year"] + 1 == burial["game_year"]              # buried one November, dug up at the next game
+
+
+def test_a_football_game_before_the_first_bell_game_is_never_a_cards_bell_game():
+    """The schools played football for decades before the Bell (1932). A story from one of those years has a football
+    game that year, and the card must not call it "that year's Bell game"."""
+    first = facts.BELL_START
+    before = [game(f"{first - 17}-11-20", "L", 0, 34), game(f"{first - 1}-11-21", "W", 13, 7)]
+    since = [game(f"{first}-11-19", "T", 0, 0), game(f"{first + 1}-11-18", "W", 14, 0)]
+    for played in before:
+        assert heists.bell_game(before + since, int(played["date"][:4])) is None
+    for played in since:
+        assert heists.bell_game(before + since, int(played["date"][:4])) == played
+    assert heists.bell_game(before, first - 1) is None and heists.bell_game(before + since, first + 2) is None
+    stories = small([incident("prebell", first - 1), incident("firstbell", first),
+                     incident("later", first + 1, game_year=first - 1)])            # a card that shows another year's game
+    cards = BeautifulSoup(page(before + since, stories), "html.parser")
+    assert "Bell game" not in cards.find(id="heist-prebell").get_text()
+    assert "Bell game" not in cards.find(id="heist-later").get_text()
+    assert "That year’s Bell game: Tie 0–0" in cards.find(id="heist-firstbell").get_text(" ", strip=True)
+
 
 
 def page(games, data=SAMPLE):

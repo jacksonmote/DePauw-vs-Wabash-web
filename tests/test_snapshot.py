@@ -6,8 +6,12 @@ import json
 import re
 import shutil
 import sys
+import types
 import urllib.request
 from pathlib import Path
+
+import pytest
+import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scraper"))
 import snapshot  # noqa: E402
@@ -260,6 +264,42 @@ def test_the_archive_command_exits_zero_whatever_happens(monkeypatch):
     assert snapshot.main(["archive", "--tag", "not-a-tag"]) == 0
 
 
+FROZEN = ROOT / "tests" / "fixtures" / "series-frozen-2026-10-30.json"
+
+
+def frozen_notes():
+    """A release's notes made from the frozen series, so nothing here follows the bot-updated files."""
+    return snapshot.release_notes(json.loads(FROZEN.read_text(encoding="utf-8")), "abc", DAY)
+
+
+@pytest.mark.parametrize("tag", [
+    "v1.0", "v1.0; echo hi", "data-2027-01-02; echo hi", "data-2027-01-02 --repo someone/else", "--help", "-R",
+    "data-2027-1-2", "data-2027-01-02-", "data-2027-01-02-x", "DATA-2027-01-02", " data-2027-01-02", "data-2027-01-02\n",
+    "latest", "", None])
+def test_a_tag_that_is_not_a_snapshot_tag_never_reaches_gh_or_the_internet_archive(tag):
+    """The tag comes from a box anyone with write access can type into. Everything here would work if it were let
+    through (gh answers, the saver saves, the edit succeeds), so only the check on the tag can stop it."""
+    gh = FakeRelease(frozen_notes())
+    asked, saved = [], []
+
+    def run(*args):
+        asked.append(args)
+        return gh(*args)
+
+    def saver(urls):
+        saved.extend(urls)
+        return [], list(urls)
+    assert snapshot.archive_release(tag, run=run, saver=saver, log=quiet) is False
+    assert asked == [] and saved == [] and gh.edits == []
+
+
+@pytest.mark.parametrize("tag", ["data-2027-01-02", "data-2027-01-02-2", "data-2026-07-01-13"])
+def test_a_snapshot_tag_with_or_without_its_suffix_is_archived(tag):
+    gh = FakeRelease(frozen_notes())
+    assert snapshot.archive_release(tag, run=gh, saver=lambda urls: ([], list(urls)), log=quiet) is True
+    assert gh.edits == [tag]
+
+
 URLS = snapshot.source_urls(json.loads((ROOT / "scraper" / "sources.json").read_text(encoding="utf-8")))
 
 
@@ -352,6 +392,47 @@ def test_building_without_archiving_says_so_in_the_notes(tmp_path):
     assert "not requested" in (tmp_path / "r" / "NOTES.md").read_text(encoding="utf-8")
 
 
+def made_up_data(tmp_path):
+    """A data folder that owes nothing to the bot-updated files: the frozen series and empty stand-ins."""
+    d = tmp_path / "data"
+    d.mkdir()
+    for name in snapshot.DATA_FILES:
+        (d / name).write_text("{}\n", encoding="utf-8")
+    (d / "series.json").write_bytes(FROZEN.read_bytes())
+    return d
+
+
+def clock_at(monkeypatch, instant):
+    """Make snapshot.py's own clock read `instant` (an aware time), whatever the real or the frozen clock says."""
+    class Clock(dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return instant.astimezone(tz) if tz else instant.replace(tzinfo=None)
+    module = types.ModuleType("datetime")
+    module.__dict__.update({name: value for name, value in vars(dt).items() if not name.startswith("__")})
+    module.datetime = Clock
+    monkeypatch.setattr(snapshot, "dt", module)
+
+
+@pytest.mark.parametrize("utc, tag", [
+    ("2027-01-02T03:30", "data-2027-01-01"),      # 10:30 PM on Jan 1 in Indiana: the UTC date is a day ahead
+    ("2027-01-02T04:59", "data-2027-01-01"),      # 11:59 PM EST
+    ("2027-01-02T05:00", "data-2027-01-02"),      # midnight EST
+    ("2027-01-02T15:41", "data-2027-01-02"),      # the January schedule's own minute
+    ("2027-07-02T03:59", "data-2027-07-01"),      # 11:59 PM EDT
+    ("2027-07-02T04:00", "data-2027-07-02"),      # midnight EDT
+])
+def test_a_snapshot_is_dated_by_the_day_in_eastern_time_not_the_day_in_utc(tmp_path, monkeypatch, utc, tag):
+    clock_at(monkeypatch, dt.datetime.fromisoformat(utc).replace(tzinfo=dt.timezone.utc))
+    out = tmp_path / "release"
+    assert snapshot.build(out, run=fake_gh([]), data_dir=made_up_data(tmp_path)) == tag
+    assert (out / "TAG").read_text(encoding="utf-8") == tag + "\n"
+    day = dt.date.fromisoformat(tag[len("data-"):])
+    assert (out / "NOTES.md").read_text(encoding="utf-8") == snapshot.release_notes(
+        json.loads((out / "series.json").read_text(encoding="utf-8")), snapshot.data_hash(out), day,
+        snapshot.archive_section(None, requested=True))
+
+
 def test_building_the_release_makes_no_requests_to_the_internet_archive(tmp_path, monkeypatch):
     def no_network(*a, **k):
         raise AssertionError("the build must not touch the network")
@@ -388,6 +469,49 @@ def test_the_jobs_run_in_the_order_prepare_release_archive():
     assert re.findall(r"^  (\w+):\n", WORKFLOW.split("\njobs:\n")[1], re.M) == ["prepare", "release", "archive"]
     assert "needs: prepare" in job("release") and "needs: [prepare, release]" in job("archive")
     assert "snapshot.py archive" not in job("prepare") and "snapshot.py archive" not in job("release")
+
+
+FLOW = yaml.safe_load(WORKFLOW)
+
+
+def test_a_release_is_made_only_when_the_check_says_the_data_changed():
+    """Three links, each of which alone would make a release out of unchanged data if it went: the check's answer
+    becomes the prepare job's output, every later step of that job waits for it, and so does the release job."""
+    prepare, release = FLOW["jobs"]["prepare"], FLOW["jobs"]["release"]
+    steps = prepare["steps"]
+    [check] = [s for s in steps if s.get("id") == "check"]
+    assert check["run"] == "python3 scraper/snapshot.py check"
+    assert "if" not in check and "continue-on-error" not in check
+    assert prepare.get("outputs") == {"changed": "${{ steps.check.outputs.changed }}"}
+    after = steps[steps.index(check) + 1:]
+    assert [s.get("name") or s["uses"].split("@")[0] for s in after] == [
+        "actions/setup-python", "Build the release files", "actions/upload-artifact"]
+    for step in after:
+        assert step.get("if") == "${{ steps.check.outputs.changed == 'true' }}", step
+    assert release.get("needs") == "prepare"
+    # the whole condition, on purpose: a main-only guard for this job is planned, and the pull request that adds
+    # it changes this line with it
+    assert release.get("if") == "${{ needs.prepare.outputs.changed == 'true' }}"
+    assert "continue-on-error" not in prepare
+    creating = [name for name, job in FLOW["jobs"].items() if "gh release create" in json.dumps(job)]
+    assert creating == ["release"]
+
+
+def test_the_check_command_writes_its_answer_where_the_workflow_reads_it(tmp_path, monkeypatch, capsys):
+    for changed, word in ((True, "true"), (False, "false")):
+        out = tmp_path / f"output-{word}"
+        monkeypatch.setenv("GITHUB_OUTPUT", str(out))
+        monkeypatch.setattr(snapshot, "changed_since_last_release", lambda changed=changed: (changed, "why"))
+        assert snapshot.main(["check"]) == 0
+        assert out.read_text(encoding="utf-8") == f"changed={word}\n"
+        assert capsys.readouterr().out == f"changed={word}: why\n"
+
+
+def test_two_snapshot_runs_never_overlap_and_a_running_one_is_never_cancelled():
+    """Two runs at once would both see "no release for today yet" and try to make the same tag."""
+    assert FLOW.get("concurrency") == {"group": "data-snapshot", "cancel-in-progress": False}
+    for job in FLOW["jobs"].values():
+        assert "concurrency" not in job                                       # one group, for the whole run
 
 
 def test_the_archive_job_can_never_fail_the_run():

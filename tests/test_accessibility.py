@@ -25,6 +25,9 @@ import render  # noqa: E402
 NOW = dt.datetime(2026, 10, 30, 12, tzinfo=dt.timezone.utc)
 FROZEN = ROOT / "tests" / "fixtures" / "series-frozen-2026-10-30.json"
 CSS = (ROOT / "static" / "styles.css").read_text(encoding="utf-8")
+# Every stylesheet in static/, by file name, with its comments removed: what the focus and motion tests read.
+STYLESHEETS = {p.name: re.sub(r"/\*.*?\*/", "", p.read_text(encoding="utf-8"), flags=re.S)
+               for p in sorted((ROOT / "static").glob("*.css"))}
 MODES = ("light", "dark")
 
 # --- contrast ---------------------------------------------------------------------------------------------------
@@ -377,26 +380,70 @@ def test_nothing_takes_keyboard_focus_out_of_order_or_out_of_reach(site):
             assert details.find("summary", recursive=False) is not None, name     # native, keyboard-operable
 
 
+def outline_switched_off(rules):
+    """The declarations in a stylesheet's rules (comments already removed) that take an outline away."""
+    return re.findall(r"outline(?:-width|-style)?\s*:\s*(?:none|0(?![.\d]))[^;}]*", rules)
+
+
+def moving_without_being_asked(rules):
+    """What in a stylesheet's rules (comments already removed) still moves for a visitor who asked for less motion:
+    a transition or smooth scrolling declared outside a prefers-reduced-motion: no-preference block."""
+    calm = re.sub(r"@media \(prefers-reduced-motion: no-preference\) \{.*?\}\s*\}", "", rules, flags=re.S)
+    return re.findall(r"transition|scroll-behavior", calm)
+
+
+def test_the_focus_and_motion_rules_read_every_stylesheet_the_site_ships(site):
+    """The two tests below go through every stylesheet in static/, so a rule added to the Bell page's own file (or
+    to a stylesheet that does not exist yet) is checked like one in styles.css. The built site ships no other."""
+    assert {"styles.css", "bell.css"} <= set(STYLESHEETS)
+    assert {p.relative_to(site).as_posix() for p in site.rglob("*.css")} == set(STYLESHEETS)
+    linked = {link["href"].rsplit("/", 1)[-1] for _, page in each_page(site)
+              for link in page.find_all("link", rel="stylesheet")}
+    assert linked == set(STYLESHEETS)
+
+
 def test_focus_is_always_visible():
-    """Every focusable kind of element gets the 3px ring; no rule switches an outline off."""
-    rules = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+    """Every focusable kind of element gets the 3px ring; no rule in any stylesheet switches an outline off."""
     assert re.search(r"a:focus-visible, summary:focus-visible, button:focus-visible \{ outline: 3px solid "
-                     r"var\(--color-focus\); outline-offset: 2px; \}", rules)
-    assert not re.search(r"outline:\s*(none|0)\b", rules)
-    assert not re.search(r"outline-width:\s*0\b", rules)
+                     r"var\(--color-focus\); outline-offset: 2px; \}", STYLESHEETS["styles.css"])
+    for name, rules in STYLESHEETS.items():
+        assert outline_switched_off(rules) == [], name
+
+
+@pytest.mark.parametrize("rule", [
+    ".bt-heist:focus-visible { outline: none; }", "a:focus { outline:0 }", "a:focus { outline: 0px; }",
+    "summary:focus-visible { outline-width: 0; }", "button:focus-visible { outline-style: none; }",
+])
+def test_a_rule_that_switches_an_outline_off_is_seen_in_any_stylesheet(rule):
+    assert outline_switched_off(rule) != []
+    for name, rules in STYLESHEETS.items():                          # the same rule, added to each real file
+        assert outline_switched_off(rules + "\n" + rule) != [], name
+    assert outline_switched_off(".bt-heist:focus-visible { outline: 0.1875rem solid; outline-offset: 0; }") == []
 
 
 def test_motion_stops_when_the_visitor_asks_for_less():
-    """The one animation is cancelled under prefers-reduced-motion, and every transition is declared only inside a
-    no-preference block, so nothing moves for someone who asked for reduced motion."""
-    rules = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
-    animated = re.findall(r"([^{}]+)\{[^{}]*\banimation:\s*(?!none)[^;}]+", rules)
-    reduce = "".join(re.findall(r"@media \(prefers-reduced-motion: reduce\) \{(.*?\})\s*\}", rules, flags=re.S))
-    assert animated
-    for selector in animated:
-        assert re.search(re.escape(selector.strip()) + r"\s*\{\s*animation:\s*none", reduce), selector
-    calm = re.sub(r"@media \(prefers-reduced-motion: no-preference\) \{.*?\}\s*\}", "", rules, flags=re.S)
-    assert "transition" not in calm and "scroll-behavior" not in calm
+    """Every animation, in any stylesheet, is cancelled under prefers-reduced-motion, and every transition is
+    declared only inside a no-preference block, so nothing moves for someone who asked for reduced motion."""
+    animated = [(name, selector.strip()) for name, rules in STYLESHEETS.items()
+                for selector in re.findall(r"([^{}]+)\{[^{}]*\banimation(?:-name)?:\s*(?!none)[^;}]+", rules)]
+    reduce = "".join(block for rules in STYLESHEETS.values() for block in
+                     re.findall(r"@media \(prefers-reduced-motion: reduce\) \{(.*?\})\s*\}", rules, flags=re.S))
+    assert ("styles.css", ".entrance-unlocked") in animated          # the title entrance: the pattern still finds it
+    for name, selector in animated:
+        assert re.search(re.escape(selector) + r"\s*\{\s*animation:\s*none", reduce), (name, selector)
+    for name, rules in STYLESHEETS.items():
+        assert moving_without_being_asked(rules) == [], name
+
+
+@pytest.mark.parametrize("rule", [
+    ".bt-dot { transition: border-width 120ms; }", ".bt-heist { transition-duration: 1s; }",
+    "html { scroll-behavior: smooth; }", "@media (min-width: 40rem) { .bt-dot { transition: all 1s; } }",
+])
+def test_a_transition_outside_a_no_preference_block_is_seen_in_any_stylesheet(rule):
+    assert moving_without_being_asked(rule) != []
+    for name, rules in STYLESHEETS.items():                          # the same rule, added to each real file
+        assert moving_without_being_asked(rules + "\n" + rule) != [], name
+    assert moving_without_being_asked("@media (prefers-reduced-motion: no-preference) { " + rule + " }") == []
 
 
 def test_high_contrast_mode_keeps_the_scoreboard_names_readable():

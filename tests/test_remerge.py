@@ -34,13 +34,31 @@ def snapshot(data):
 def test_nothing_to_change_changes_nothing_and_fetches_nothing(both_dir, tmp_path, monkeypatch):
     data = first_run(both_dir, tmp_path)
     before = snapshot(data)
+    asked = []
 
-    def no_network(*a, **k):
+    def no_network(url, *a, **k):
+        asked.append(url)                                 # recorded: the schedule step swallows what a fetch raises
         raise AssertionError("--remerge-only must not fetch")
     monkeypatch.setattr(scrape, "fetch", no_network)
+    del scrape.SLEPT[:]
     assert remerge(data, tmp_path) == 0
+    assert asked == [] and scrape.SLEPT == []             # no page, no schedule, no robots.txt, and no wait for one
     assert snapshot(data) == before                       # even updated_at is untouched
     assert not (tmp_path / "checked-after").exists()      # no live check happened, so no check time
+
+
+def test_a_remerge_that_fails_still_fetches_nothing(both_dir, tmp_path, monkeypatch, capsys):
+    """The run that exits non-zero (a ruling that finds nothing) returns before the schedules too."""
+    data = first_run(both_dir, tmp_path)
+    ruling = {"depauw": {"date": "1801-01-01", "score": "1-0"}, "wabash": {"date": "1801-01-02", "score": "1-0"},
+              "reason": "a ruling whose rows are gone"}
+    (data / "overrides.json").write_text(
+        json.dumps({"schema_version": 1, "sports": {"football": {"same_game": [ruling]}}}), encoding="utf-8")
+    before = snapshot(data)
+    asked = []
+    monkeypatch.setattr(scrape, "fetch", lambda url, *a, **k: asked.append(url) or "")
+    assert remerge(data, tmp_path) == 1 and "no longer finds" in capsys.readouterr().err
+    assert asked == [] and snapshot(data) == before and not (tmp_path / "checked-after").exists()
 
 
 def test_a_stale_series_file_is_rebuilt_from_the_saved_copies(both_dir, tmp_path):

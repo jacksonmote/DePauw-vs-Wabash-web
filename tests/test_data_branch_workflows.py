@@ -77,6 +77,24 @@ def test_checks_remerge_is_a_hard_step_so_a_stale_ruling_fails_the_pull_request(
         assert index_of(steps, is_fetch) < steps.index(remerge) < index_of(steps, lambda s: "pytest" in s.get("run", ""))
 
 
+def test_a_failing_test_fails_the_pull_request_jobs():
+    """`checks` is the one status check a pull request must pass, and its "Run tests" step is why it means
+    anything. Nothing may let that step fail quietly or be skipped: no `|| true` (the command is exactly pytest), no
+    `continue-on-error` and no `if` on the step or on its job, and the same for the fake-clock runs."""
+    jobs = yaml.safe_load((WORKFLOWS / "checks.yml").read_text(encoding="utf-8"))["jobs"]
+    expected = {"checks": {"name": "Run tests", "run": "python -m pytest -q tests"},
+                "fake-clock": {"name": "Run tests with the clock frozen",
+                               "run": 'python -m pytest -q tests --fake-now="${{ matrix.now }}"'}}
+    for name, step in expected.items():
+        job = jobs[name]
+        assert "continue-on-error" not in job and "if" not in job, name
+        assert job.get("defaults") is None
+        assert [s for s in job["steps"] if "pytest" in s.get("run", "")] == [step], name
+        for other in job["steps"]:                          # no earlier step may fail quietly or be skipped either
+            assert "continue-on-error" not in other and "if" not in other, (name, other)
+    assert jobs["fake-clock"]["strategy"]["fail-fast"] is False       # one moment failing never hides another
+
+
 def test_pull_request_checks_stay_read_only_and_never_use_a_token_for_the_fetch():
     checks = load("checks.yml")
     assert checks["permissions"] == {"contents": "read"}

@@ -706,6 +706,26 @@ def test_the_how_it_works_page_says_which_rulings_are_exceptions_to_depauws_vers
     assert howitworks.replaced_places(no_ruling) == []
 
 
+def test_a_place_found_for_a_depauw_row_that_lists_none_is_not_named_as_an_exception(tmp_path):
+    """“DePauw’s version counts” is only overruled when DePauw’s page lists a place and the ruling puts another one
+    in its stead. A found place on a row of DePauw’s page with no place fills a gap: it replaces nothing, so the
+    how-it-works page must not list it among the exceptions. Each game here goes through the real merge."""
+    d = [g("1903-11-21", 0, 6, loc="unknown"), g("1915-11-20", 0, 34, loc="away")]
+    w = [g("1903-11-21", 0, 6, loc="neutral"), g("1915-11-20", 0, 34, loc="neutral", site="Indianapolis, IN"),
+         g("1924-01-01", 0, 0, loc="neutral")]
+    r = merge.merge_sport(d, w, season_months=(9, 10, 11), rules=rules(tmp_path, found=[
+        found("depauw", "1903-11-21", "0-6", location="home", site="Greencastle, IN"),          # fills a gap
+        found("depauw", "1915-11-20", "0-34", location="neutral", site="Indianapolis, IN"),     # replaces "away"
+        found("wabash", "1924-01-01", "0-0", date="1924-11-22", location="neutral", site="Indianapolis, IN")]))
+    listed = {x["date"]: [(e["school"], e["what"], e["listed"]) for e in x.get("ruled", [])] for x in r.games}
+    assert listed == {
+        "1903-11-21": [("DePauw", ["place"], {"location": "unknown", "site": None})],
+        "1915-11-20": [("DePauw", ["place"], {"location": "away", "site": None})],
+        "1924-11-22": [("Wabash", ["date", "place"], {"date": None, "location": "neutral", "site": None})]}
+    sports = {"football": {"name": "Football", "games": r.games}}
+    assert howitworks.replaced_places(sports) == ["Football, Nov 20, 1915"]
+
+
 def test_the_readme_tells_the_1944_ruling_the_way_the_ruling_does():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     [example_1944] = [line for line in readme.splitlines() if line.startswith("- *Basketball 1944:*")]

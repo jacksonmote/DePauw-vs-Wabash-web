@@ -83,6 +83,34 @@ def test_the_skip_rules_one_by_one():
     assert group("https://depauwtigers.com/sports/baseball/roster") is None
 
 
+@pytest.mark.parametrize("url", [
+    "https://www.depauw.edu/about/history-traditions/",                  # the colleges' own sites: most sources are here
+    "https://www.wabash.edu/news/story/1234",
+    "https://www.depauw.edu/files/boxscore-notes.pdf",                  # "boxscore" in a path is not enough
+    "https://www.wabash.edu/athletics/boxscore.cfm?id=7",
+    "https://blogs.wabash.edu/boxscore/2012/11/10/",
+    "https://sports.depauw.edu/boxscore.aspx?id=9",                     # not one of the three athletics hosts
+    "https://archive.sports.wabash.edu/boxscore.aspx?id=9",
+    "https://sports.wabash.edu/news/2021/3/21/a-story.aspx",            # an athletics host, but not a box score
+    "https://notwabash.edu/boxscore.aspx?id=9",
+])
+def test_only_a_box_score_on_one_of_the_three_athletics_hosts_is_left_out_as_a_box_score(url):
+    assert linkcheck.skip_group(url, set()) is None
+
+
+@pytest.mark.parametrize("url", [
+    "https://notdepauwvswabash.com/alumni/",                            # ends with our name, and is someone else's
+    "https://fake-depauwvswabash.com/",
+    "https://depauwvswabash.com.example.org/alumni/",
+    "https://old.depauwvswabash.com/",                                  # no such host is ours: only the two below
+    "https://example.org/depauwvswabash.com/",
+])
+def test_only_our_own_two_hosts_are_left_out_as_this_site(url):
+    assert linkcheck.skip_group(url, set()) is None
+    for own in ("https://depauwvswabash.com/", "https://www.depauwvswabash.com/alumni/", "http://DePauwVsWabash.com/x"):
+        assert linkcheck.skip_group(own, set()) == "own-site"
+
+
 def test_the_real_sources_give_every_page_the_scraper_fetches():
     sources = json.loads(linkcheck.SOURCES.read_text(encoding="utf-8"))
     pages = linkcheck.scraped_pages(sources)
@@ -378,6 +406,48 @@ def test_requests_to_one_host_are_spaced_and_one_link_never_costs_more_than_thre
         ends[host] = start + 0.5                                                           # each fake request takes 0.5 s
 
 
+def test_every_hop_of_a_redirect_waits_its_turn_like_any_request():
+    """A redirect to the same host is a second request to that host: it waits the 2 seconds too, on HEAD and GET."""
+    a, b, c = "https://a.example/one", "https://a.example/two", "https://a.example/three"
+    script = {("HEAD", a): [(302, b)], ("HEAD", b): [(302, c)], ("HEAD", c): [405],
+              ("GET", a): [(302, b)], ("GET", b): [(302, c)], ("GET", c): [200]}
+    result, web = check(script, a)
+    assert result["status"] == "ok" and [(m, u) for m, u, _ in web.calls] == [
+        ("HEAD", a), ("HEAD", b), ("HEAD", c), ("GET", a), ("GET", b), ("GET", c)]
+    starts = [t for _, _, t in web.calls]
+    assert [later - (earlier + 0.5) for earlier, later in zip(starts, starts[1:])] == pytest.approx(
+        [linkcheck.HOST_GAP] * 5)                                                          # each fake request takes 0.5 s
+
+
+def test_a_redirect_between_two_hosts_waits_for_each_hosts_own_last_request():
+    a, b, back = "https://a.example/one", "https://b.example/two", "https://a.example/three"
+    result, web = check({("HEAD", a): [(302, b)], ("HEAD", b): [(302, back)], ("HEAD", back): [200]}, a)
+    assert result["status"] == "ok"
+    starts = [t for _, _, t in web.calls]
+    assert starts[1] - starts[0] == pytest.approx(0.5)                # another host: no wait
+    assert starts[2] - (starts[0] + 0.5) >= linkcheck.HOST_GAP - 1e-9  # back on the first host: its 2 seconds
+
+
+def test_the_one_retry_comes_ten_seconds_after_the_failed_get():
+    clock = FakeClock()
+    waits = []
+
+    def sleep(seconds):
+        waits.append(seconds)
+        clock.sleep(seconds)
+    web = FakeWeb({("HEAD", U): [503], ("GET", U): [503, 200]}, clock)
+    result = linkcheck.check_link(U, web, linkcheck.Pacer(clock=clock, sleep=clock.sleep), sleep=sleep)
+    assert result["status"] == "ok" and [m for m, _, _ in web.calls] == ["HEAD", "GET", "GET"]
+    assert waits == [linkcheck.RETRY_WAIT] and linkcheck.RETRY_WAIT == 10
+    first_get, retry = web.calls[1][2], web.calls[2][2]
+    assert retry - (first_get + 0.5) >= linkcheck.RETRY_WAIT                               # at least the wait, on the clock
+    for answers, tries in (([200], 1), ([404], 1), ([403], 1)):       # an answer that is not transient: no wait, no retry
+        del waits[:]
+        web = FakeWeb({("HEAD", U): [405], ("GET", U): answers}, clock)
+        linkcheck.check_link(U, web, linkcheck.Pacer(clock=clock, sleep=clock.sleep), sleep=sleep)
+        assert waits == [] and [m for m, _, _ in web.calls] == ["HEAD"] + ["GET"] * tries
+
+
 # ---- the schools' sites: robots.txt and its crawl delay (the scraper's rules, politeness.py) ---- #
 
 D, W = "https://depauwtigers.com", "https://sports.wabash.edu"
@@ -485,6 +555,14 @@ def test_a_retry_and_a_get_on_a_school_site_keep_the_crawl_delay_too():
     assert results[0]["status"] == "ok" and [m for m, _, _ in web.calls] == ["HEAD", "GET", "GET"]
     gaps = request_gaps(web, robots, "depauwtigers.com")
     assert len(gaps) == 3 and all(g >= 30 - 1e-9 for g in gaps), gaps
+
+
+def test_a_redirect_on_a_school_site_keeps_the_crawl_delay_at_every_hop():
+    old, new = f"{D}/sports/2022/6/28/rivalry-facts.aspx", f"{D}/sports/2022/6/28/monon-bell-rivalry-facts.aspx"
+    results, _, web, robots, _ = run_with_robots([old], {("HEAD", old): [(302, new)], ("HEAD", new): [200]})
+    assert results[0]["status"] == "ok" and [u for _, u, _ in web.calls] == [old, new]
+    gaps = request_gaps(web, robots, "depauwtigers.com")
+    assert len(gaps) == 2 and all(g >= 30 - 1e-9 for g in gaps), gaps        # robots.txt, the link, its redirect
 
 
 def test_a_redirect_onto_a_disallowed_school_page_is_not_followed_and_is_couldnt_check():
@@ -648,6 +726,51 @@ def test_a_youtube_video_is_not_requested_after_the_time_limit_either():
 def test_the_live_check_reads_robots_txt_the_way_the_scraper_does():
     assert linkcheck.robots_reader() is scrape.fetch
     assert linkcheck.USER_AGENT == linkcheck.politeness.USER_AGENT == scrape.USER_AGENT
+
+
+class UnreadAnswer:
+    """What the requests library hands back for a streamed request, as far as the transport may use it: the status,
+    the headers and close(). Touching the body is an error."""
+    def __init__(self, status, headers):
+        self.status_code, self.headers, self.closed = status, headers, False
+
+    def close(self):
+        self.closed = True
+
+    def _body(self, *args, **kwargs):
+        raise AssertionError("the transport read the body")
+    content = text = raw = property(_body)
+    iter_content = iter_lines = json = _body
+
+
+def live_transport(monkeypatch, answer):
+    """The real requests_transport with the library's own send replaced: (send, the requests it made)."""
+    import requests
+    sent = []
+
+    def request(session, method, url, **options):
+        sent.append({"method": method, "url": url, "options": options, "headers": dict(session.headers)})
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+    monkeypatch.setattr(requests.Session, "request", request)
+    return linkcheck.requests_transport(), sent
+
+
+@pytest.mark.parametrize("method", ["HEAD", "GET"])
+def test_the_live_transport_makes_one_request_follows_no_redirect_and_never_reads_the_body(monkeypatch, method):
+    """The politeness of the whole check rests on these three options: a redirect is not followed by the library
+    (follow() does it, hop by hop, each one paced and checked against robots.txt), and the body is not downloaded
+    (`stream=True`; the answer is closed unread), so no link costs more than one page's headers."""
+    answer = UnreadAnswer(301, {"Location": "https://a.example/new", "Content-Length": "50000000"})
+    send, sent = live_transport(monkeypatch, answer)
+    got = send(method, U, linkcheck.TIMEOUT)
+    [request] = sent                                                    # one request, although the answer redirects
+    assert (request["method"], request["url"]) == (method, U)
+    assert request["options"] == {"allow_redirects": False, "timeout": linkcheck.TIMEOUT, "stream": True}
+    assert request["headers"]["User-Agent"] == linkcheck.USER_AGENT
+    assert (got.status, got.headers["location"]) == (301, "https://a.example/new")
+    assert answer.closed                                                # let go of without reading
 
 
 def test_the_order_alternates_between_hosts():
@@ -959,6 +1082,17 @@ def test_the_checks_own_time_limit_ends_well_inside_the_jobs():
     assert f"When {linkcheck.SILENT_LINKS} links in a row to one host end with no answer" in readme
     assert f"And {linkcheck.DEADLINE_MINUTES} minutes after the check starts" in readme
     assert f"the job's own limit is {limit} minutes" in readme
+
+
+def test_the_issues_job_runs_only_after_a_check_that_succeeded_and_only_on_main():
+    """The issue is written from the report the check job uploaded. After a check that failed or was cancelled
+    there is no report, or an old one: the issues job must not run on it (it could close the issue, or fail)."""
+    issues = workflow()["jobs"]["issues"]
+    assert issues["needs"] == "check"
+    assert issues["if"] == "${{ !cancelled() && needs.check.result == 'success' && github.ref == 'refs/heads/main' }}"
+    assert "continue-on-error" not in issues and "continue-on-error" not in workflow()["jobs"]["check"]
+    for step in workflow()["jobs"]["check"]["steps"]:                    # nothing in the check job may fail quietly
+        assert "continue-on-error" not in step, step
 
 
 def test_every_action_in_the_workflow_is_pinned_to_a_full_sha():

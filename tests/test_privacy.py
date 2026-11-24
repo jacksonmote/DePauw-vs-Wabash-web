@@ -30,6 +30,12 @@ SCRIPT_PAGES = {"index.html": "easter-eggs.js", "alumni/index.html": "../easter-
 FORBIDDEN_IN_SCRIPT = ("fetch", "XMLHttpRequest", "sendBeacon", "WebSocket", "EventSource", "document.cookie",
                        "localStorage", "sessionStorage", "indexedDB", "caches", "import(", "importScripts",
                        "new Image", "navigator.", "location")
+# Names that reach the same things without spelling them: other names for the global object, code built from text,
+# and the ways from an element back to its document or window. `cookie` is refused as a word, whatever it hangs on.
+GLOBAL_NAMES = r"(?<![\w$.])(?:window|globalThis|self|top|parent|frames|opener|eval|Function|Reflect)\b"
+HIDDEN_PROPERTIES = r"\b(?:cookie|ownerDocument|defaultView|contentWindow|contentDocument)\b"
+JS_KEYWORDS = {"return", "case", "of", "in", "typeof", "void", "delete", "new", "yield", "await", "else", "do"}
+SCRIPT = (ROOT / "static" / "easter-eggs.js").read_text(encoding="utf-8")
 ISSUE_KEYS = {"template", "title", "sport", "category", "area"}
 
 
@@ -152,13 +158,104 @@ def test_the_csp_is_the_base_policy_everywhere_plus_script_src_self_on_the_two_s
         assert csp == BASE_CSP + ("; script-src 'self'" if name in SCRIPT_PAGES else ""), name
 
 
+def script_parts(text):
+    """(the script with its comments removed, the same with every string literal emptied, the string literals).
+
+    Strings are read first, so a "//" inside one does not start a comment and the code after it on the line is
+    still searched. The reader knows only what the script uses today: a template string, a regular expression or a
+    division stops it with an error, so that it is taught the new form before it is trusted with it."""
+    kept, bare, strings, i = [], [], [], 0
+    while i < len(text):
+        ch, two = text[i], text[i:i + 2]
+        if two == "//":
+            end = text.find("\n", i)
+            i = len(text) if end == -1 else end
+        elif two == "/*":
+            end = text.find("*/", i + 2)
+            assert end != -1, "a comment that never ends"
+            i = end + 2
+        elif ch in "\"'":
+            j = i + 1
+            while j < len(text) and text[j] != ch:
+                assert text[j] != "\n", f"a string that never ends: {text[i:j]!r}"
+                j += 2 if text[j] == "\\" else 1
+            assert j < len(text), f"a string that never ends: {text[i:i + 40]!r}"
+            strings.append(text[i + 1:j])
+            kept.append(text[i:j + 1])
+            bare.append(ch + ch)
+            i = j + 1
+        else:
+            assert ch not in "/`", (f"{text[max(0, i - 30):i + 30]!r}: this check cannot read a template string, a "
+                                    "regular expression or a division yet; teach script_parts first")
+            kept.append(ch)
+            bare.append(ch)
+            i += 1
+    return "".join(kept), "".join(bare), strings
+
+
+def script_problems(text):
+    """Why a script would break "no cookies, no storage, no network request" (an empty list: nothing found).
+
+    It reads the script's text, so it cannot prove what a script does. It finds the names on the lists above, also
+    when a name is split over strings that are joined, reached through another name for `document`, looked up with
+    brackets, or written on a line after a "//" string. It cannot find a way to store or send something that is on
+    none of the lists; a new kind of code in the script is a reason to read this check again."""
+    kept, bare, strings = script_parts(text)
+    problems = [f"{word!r} is in the code" for word in FORBIDDEN_IN_SCRIPT if word in bare]
+    # a name in a string does nothing by itself, but it has no business there: "local" + "Storage" reads as one name
+    problems += [f"{word!r} is spelled in the strings" for word in FORBIDDEN_IN_SCRIPT
+                 if word in "".join(strings)]
+    problems += [f"{name!r} is used" for name in re.findall(GLOBAL_NAMES, bare) + re.findall(HIDDEN_PROPERTIES, bare)]
+    # `document` only ever finds an element; anything else (const page = document) is a second name for it
+    problems += [f"document is used for more than finding an element: document{rest!r}"
+                 for rest in re.findall(r"\bdocument\b(?!\.getElementById\(|\.querySelector\()(.{0,20})", bare)]
+    # object["name"] can reach any property without spelling it; the script has no need for it
+    problems += [f"a property is looked up with brackets after {m.group(1)!r}"
+                 for m in re.finditer(r"([\w$]+|[\])])\s*\[", bare) if m.group(1) not in JS_KEYWORDS]
+    problems += [f"a string holds a URL or part of one: {s!r}" for s in strings if re.search(r"https?:|//", s)]
+    if re.search(r"\.(src|href|action)\s*=|setAttribute\(\s*['\"](src|href)", kept):
+        problems.append("the script sets a src, an href or an action")
+    return problems
+
+
 def test_the_script_has_no_network_cookie_or_storage_code():
-    text = (ROOT / "static" / "easter-eggs.js").read_text(encoding="utf-8")
-    code = re.sub(r"//[^\n]*|/\*.*?\*/", "", text, flags=re.S)
-    for word in FORBIDDEN_IN_SCRIPT:
-        assert word not in code, word
-    assert not re.search(r"https?:|//\w", code)           # no URL at all
-    assert not re.search(r"\.(src|href|action)\s*=|setAttribute\(\s*['\"](src|href)", code)
+    assert script_problems(SCRIPT) == []
+
+
+@pytest.mark.parametrize("line", [
+    'document.cookie = "seen=1";',
+    'const page = document; page.cookie = "seen=1";',                     # another name for document
+    'const page = document, jar = "coo" + "kie"; page[jar] = "seen=1";',
+    'window["local" + "Storage"].setItem("seen", "1");',                  # the name split over two strings
+    'self["local" + "Storage"].setItem("seen", "1");',
+    'const store = "localStorage"; note[store];',
+    'localStorage.setItem("seen", "1");',
+    'const sep = "//"; localStorage.setItem("seen", sep);',               # after a "//" string on the same line
+    'const sep = "//"; fetch(sep + "example.org/x");',
+    "const sep = '//'; navigator.sendBeacon(sep);",
+    'const sep = "/*"; sessionStorage.setItem("seen", "1"); const end = "*/";',
+    'fetch("https://example.org/x");',
+    'new Image().src = "x.png";',
+    'button.ownerDocument.defaultView.name = "seen";',
+    'globalThis.name = "seen";',
+    'Reflect.get(button, "x");',
+    'eval("1");',
+    'top.location = "x";',
+])
+def test_the_script_check_sees_each_way_of_hiding_a_cookie_storage_or_network_name(line):
+    anchor = "  button.hidden = false;\n"
+    assert SCRIPT.count(anchor) == 1
+    assert script_problems(SCRIPT.replace(anchor, anchor + "  " + line + "\n")) != [], line
+
+
+def test_the_script_check_drops_comments_but_never_the_code_after_a_string():
+    kept, bare, strings = script_parts('a("//x"); b(); // c()\nd(\'/* e\'); /* f() */ g();\n')
+    assert kept == 'a("//x"); b(); \nd(\'/* e\');  g();\n'
+    assert bare == 'a(""); b(); \nd(\'\');  g();\n' and strings == ["//x", "/* e"]
+    assert script_parts('a("it\\"s // fine"); b();')[2] == ['it\\"s // fine']
+    for unread in ("a = `x${document.cookie}`;", "a = /x/.test(b);", "a = b / c;"):
+        with pytest.raises(AssertionError, match="teach script_parts first"):
+            script_parts(unread)
 
 
 VIDEO_HOSTS = {"youtube.com", "youtu.be", "vimeo.com"}
