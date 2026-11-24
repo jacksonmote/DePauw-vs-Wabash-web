@@ -131,6 +131,50 @@
         },
         {
           "school": "wabash",
+          "row": {"date": "1889-01-11", "score": "4-3"},
+          "date": "1889-05-25",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "A report dated Greencastle, May 25, says the third game between the two nines “was played here, in Lynch’s Park, before a large audience, this afternoon”; its line score is DePauw 4, Wabash 3.",
+          "sources": [
+            {"label": "The Indianapolis Journal, May 26, 1889, p. 5 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015679/1889-05-26/ed-1/?sp=5"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1891-01-01", "score": "14-6"},
+          "date": "1891-05-09",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "A report dated Greencastle, May 9, says “DePauw won her fourth consecutive victory to-day in the intercollegiate contest”; its line score is DePauw 14, Wabash 6.",
+          "sources": [
+            {"label": "The Indianapolis Journal, May 10, 1891, p. 2 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015679/1891-05-10/ed-1/?sp=2"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1892-01-01", "score": "16-3"},
+          "date": "1892-05-17",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "A report dated Greencastle, May 17, has the “championship ball game between Wabash and DePauw clubs”, with Wabash “the visitors”; its line score is DePauw 16, Wabash 3.",
+          "sources": [
+            {"label": "The Indianapolis Journal, May 18, 1892, p. 3 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015679/1892-05-18/ed-1/?sp=3"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1893-01-01", "score": "0-9"},
+          "date": "1893-05-13",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "reason": "A report dated Crawfordsville, May 13, says DePauw “played the Wabash College team at the campus this afternoon”, and that the umpire “declared the game forfeited to Wabash, with a score of 9 to nothing”.",
+          "sources": [
+            {"label": "The Indianapolis Journal, May 14, 1893, p. 2 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015679/1893-05-14/ed-1/?sp=2"}
+          ]
+        },
+        {
+          "school": "wabash",
           "row": {"date": "1894-01-01", "score": "4-7"},
           "date": "1894-05-26",
           "location": "home",
@@ -138,6 +182,28 @@
           "reason": "A report from Greencastle has “DePauw 4 and Wabash 7”, played there “to-day”, May 26.",
           "sources": [
             {"label": "The Indianapolis Journal, May 27, 1894, p. 3 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015679/1894-05-27/ed-1/?sp=3"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1895-01-01", "score": "2-39"},
+          "date": "1895-05-18",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "reason": "A report dated Crawfordsville, May 18, says DePauw “was severely drubbed here to-day by the Wabash players, the score being 39 to 2”.",
+          "sources": [
+            {"label": "The Indianapolis Journal, May 19, 1895, p. 3 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015679/1895-05-19/ed-1/?sp=3"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1898-01-01", "score": "19-7"},
+          "date": "1898-06-01",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "A report dated Greencastle, June 1, says “De Pauw easily defeated Wabash to-day, knocking both of the visitors’ pitchers out of the box”; its line score is De Pauw 19, Wabash 7.",
+          "sources": [
+            {"label": "The Indianapolis Journal, Jun 2, 1898, p. 6 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015679/1898-06-02/ed-1/?sp=6"}
           ]
         },
         {
@@ -164,6 +230,17 @@
         },
         {
           "school": "wabash",
+          "row": {"date": "1901-01-01", "score": "3-17"},
+          "date": "1901-05-13",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "reason": "A report dated Crawfordsville, May 13, says “De Pauw succumbed easily to Wabash to-day”; its line score is Wabash 17, De Pauw 3.",
+          "sources": [
+            {"label": "The Indianapolis Journal, May 14, 1901, p. 2 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015679/1901-05-14/ed-1/?sp=2"}
+          ]
+        },
+        {
+          "school": "wabash",
           "row": {"date": "1907-01-01", "score": "5-7"},
           "date": "1907-04-26",
           "location": "away",
@@ -171,6 +248,26 @@
           "reason": "The next day’s paper says DePauw lost at Crawfordsville “yesterday afternoon”, 7 to 5.",
           "sources": [
             {"label": "The Lake County Times, Apr 27, 1907, p. 7 (Library of Congress)", "url": "https://www.loc.gov/resource/sn86058242/1907-04-27/ed-1/?sp=7"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1910-01-01", "score": "1-2"},
+          "date": "1910-04-28",
+          "location": "away",
+          "site": "Crawfordsville, IN",
+          "reason": "DePauw’s yearbook lists the 1910 season game by game; its line for April 28 is Wabash 2, D. P. U. 1, played at Crawfordsville.",
+          "sources": [
+            {"label": "DePauw University, Mirage yearbook, 1911, p. 38 (Internet Archive)", "url": "https://archive.org/details/mirage00depa_2/page/n41/mode/1up"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1912-01-01", "score": "4-1"},
+          "date": "1912-05-10",
+          "reason": "The Wabash, a Wabash College publication, has “De Pauw, 4; Wabash, 1” and says DePauw won “on the tenth of May”. It does not say where the game was played.",
+          "sources": [
+            {"label": "Wabash College, The Wabash, 1912, p. 376 (Internet Archive)", "url": "https://archive.org/details/wabash1912waba/page/n69/mode/1up"}
           ]
         },
         {
@@ -307,6 +404,15 @@
         },
         {
           "school": "wabash",
+          "row": {"date": "1920-01-01", "score": "2-5"},
+          "date": "1920-06-14",
+          "reason": "A report dated Crawfordsville, June 15, says Wabash “yesterday” “defeated DePauw 5 to 2 in the final and deciding contest of their annual diamond series”. It does not say where the game was played.",
+          "sources": [
+            {"label": "Indiana Daily Times, Jun 15, 1920, p. 6 (Library of Congress)", "url": "https://www.loc.gov/resource/sn85047611/1920-06-15/ed-1/?sp=6"}
+          ]
+        },
+        {
+          "school": "wabash",
           "row": {"date": "1921-01-01", "score": "0-9"},
           "date": "1921-05-03",
           "location": "away",
@@ -326,6 +432,26 @@
           "sources": [
             {"label": "Indiana Daily Times, May 11, 1921, p. 8 (Library of Congress)", "url": "https://www.loc.gov/resource/sn85047611/1921-05-11/ed-1/?sp=8"}
           ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1921-01-01", "score": "1-14"},
+          "date": "1921-05-17",
+          "reason": "The next day’s paper says “The Little Giants had little trouble with the Tigers yesterday afternoon, running up a score of 14 to 1”. It does not say where the game was played.",
+          "sources": [
+            {"label": "Indiana Daily Times, May 18, 1921, p. 6 (Library of Congress)", "url": "https://www.loc.gov/resource/sn85047611/1921-05-18/ed-1/?sp=6"}
+          ]
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1921-01-01", "score": "10-7"},
+          "date": "1921-05-31",
+          "location": "home",
+          "site": "Greencastle, IN",
+          "reason": "A report dated Greencastle, June 1, says DePauw “won the last one of the four-game series with the Wabash nine here on McKeen field Tuesday afternoon by a 10 to 7 score”.",
+          "sources": [
+            {"label": "Indiana Daily Times, Jun 1, 1921, p. 6 (Library of Congress)", "url": "https://www.loc.gov/resource/sn85047611/1921-06-01/ed-1/?sp=6"}
+          ]
         }
       ],
       "note": [
@@ -335,6 +461,15 @@
           "note": "Only Wabash’s record lists this game. DePauw’s record lists only the day’s other game (DePauw 10, Wabash 7), dated Mar 18. No account from 1981 has been found.",
           "reason": "Kept as Wabash’s page lists it. Wabash’s page and its 1981 schedule list a doubleheader at Greencastle on Mar 17, 1981, a 10-7 DePauw win and a 7-7 tie; DePauw’s page lists only the 10-7 game, on Mar 18. No yearbook of either school for 1981 or 1982 is on the Internet Archive, and no account of the games from 1981 has been found.",
           "sources": []
+        },
+        {
+          "school": "wabash",
+          "row": {"date": "1893-01-01", "score": "0-9"},
+          "note": "Forfeited: the game stood 10–10 when DePauw refused to bat; recorded as a 9–0 Wabash win.",
+          "reason": "Kept and counted as Wabash’s page lists it. The next day’s paper says Wabash tied the score in the ninth inning, DePauw claimed another run and “would not go to bat”, and the umpire “declared the game forfeited to Wabash, with a score of 9 to nothing”; its line score is Wabash 10, DePauw 10.",
+          "sources": [
+            {"label": "The Indianapolis Journal, May 14, 1893, p. 2 (Library of Congress)", "url": "https://www.loc.gov/resource/sn82015679/1893-05-14/ed-1/?sp=2"}
+          ]
         }
       ]
     },

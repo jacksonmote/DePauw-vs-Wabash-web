@@ -458,8 +458,8 @@ def test_the_1915_football_game_is_a_neutral_site_game_by_ruling():
     assert min(x["date"] for x in r.games if x["location"] == "neutral") == "1915-11-20"
 
 
-def test_the_found_dates_move_22_games_out_of_the_undated_group_and_change_no_result():
-    found_dates = {"baseball": 19, "mens-tennis": 3}
+def test_the_found_dates_move_34_games_out_of_the_undated_group_and_change_no_result():
+    found_dates = {"baseball": 31, "mens-tennis": 3}
     for key, n in found_dates.items():
         d, w, r = committed(key)
         plain = merge.merge_sport(d, w, season_months=MONTHS[key],
@@ -480,13 +480,22 @@ def test_the_found_dates_move_22_games_out_of_the_undated_group_and_change_no_re
 HOME, AWAY = "Greencastle, IN", "Crawfordsville, IN"
 FOUND = {
     "baseball": [
-        ("1888-05-19", 7, 6, "away", AWAY), ("1894-05-26", 4, 7, "home", HOME), ("1899-05-01", 17, 7, "home", HOME),
-        ("1900-05-07", 10, 11, "home", HOME), ("1907-04-26", 5, 7, "away", AWAY), ("1913-04-22", 6, 3, "home", HOME),
-        ("1913-05-19", 7, 1, "home", HOME), ("1915-05-07", 6, 3, "home", HOME), ("1915-05-14", 5, 6, "away", AWAY),
-        ("1918-05-08", 9, 6, "away", AWAY), ("1919-04-11", 6, 1, "away", AWAY), ("1919-04-18", 4, 5, "home", HOME),
-        ("1920-04-27", 7, 7, "neutral", None),            # the date only: no place was found, so Wabash's page's stays
+        ("1888-05-19", 7, 6, "away", AWAY), ("1889-05-25", 4, 3, "home", HOME), ("1891-05-09", 14, 6, "home", HOME),
+        ("1892-05-17", 16, 3, "home", HOME), ("1893-05-13", 0, 9, "away", AWAY), ("1894-05-26", 4, 7, "home", HOME),
+        ("1895-05-18", 2, 39, "away", AWAY), ("1898-06-01", 19, 7, "home", HOME), ("1899-05-01", 17, 7, "home", HOME),
+        ("1900-05-07", 10, 11, "home", HOME), ("1901-05-13", 3, 17, "away", AWAY), ("1907-04-26", 5, 7, "away", AWAY),
+        ("1910-04-28", 1, 2, "away", AWAY),
+        ("1912-05-10", 4, 1, "neutral", None),            # the date only: no place was found, so Wabash's page's stays
+        ("1913-04-22", 6, 3, "home", HOME), ("1913-05-19", 7, 1, "home", HOME), ("1915-05-07", 6, 3, "home", HOME),
+        ("1915-05-14", 5, 6, "away", AWAY), ("1918-05-08", 9, 6, "away", AWAY), ("1919-04-11", 6, 1, "away", AWAY),
+        ("1919-04-18", 4, 5, "home", HOME),
+        ("1920-04-27", 7, 7, "neutral", None),            # the date only, as above
         ("1920-05-04", 5, 8, "away", AWAY), ("1920-05-11", 7, 2, "home", HOME), ("1920-05-18", 5, 4, "away", AWAY),
-        ("1920-06-04", 4, 7, "home", HOME), ("1921-05-03", 0, 9, "away", AWAY), ("1921-05-10", 8, 11, "home", HOME)],
+        ("1920-06-04", 4, 7, "home", HOME),
+        ("1920-06-14", 2, 5, "neutral", None),            # the date only
+        ("1921-05-03", 0, 9, "away", AWAY), ("1921-05-10", 8, 11, "home", HOME),
+        ("1921-05-17", 1, 14, "neutral", None),           # the date only
+        ("1921-05-31", 10, 7, "home", HOME)],
     "mens-tennis": [("1915-05-01", 0, 3, "home", HOME), ("1929-04-26", 7, 0, "home", HOME),
                     ("1937-05-05", 9, 0, "away", AWAY)],
     "football": [("1915-11-20", 0, 34, "neutral", "Indianapolis, IN")],
@@ -507,8 +516,8 @@ def test_the_pinned_table_holds_every_found_ruling():
     parsed = merge.load_overrides(OVERRIDES, sports=merge.sport_keys())
     assert {key: len(by_kind["found"]) for key, by_kind in parsed.items() if by_kind["found"]} == \
         {key: len(rows) for key, rows in FOUND.items()}
-    assert sum(len(rows) for rows in FOUND.values()) == 23
-    assert sum(1 for rows in FOUND.values() for row in rows if row[0] != "1915-11-20") == 22     # the found dates
+    assert sum(len(rows) for rows in FOUND.values()) == 35
+    assert sum(1 for rows in FOUND.values() for row in rows if row[0] != "1915-11-20") == 34     # the found dates
 
 
 def test_both_committed_tennis_repeats_still_have_their_other_copy():
@@ -576,7 +585,7 @@ def test_the_totals_with_the_committed_rulings(built):
     assert data["totals"] == {"depauw_wins": 536, "wabash_wins": 357, "ties": 20, "games_played": 913}
     src = {k: sum(s["sources"].get(k, 0) for s in data["sports"].values())
            for k in ("disputed", "dates_not_recorded", "rows_set_aside", "session_rows")}
-    assert src == {"disputed": 15, "dates_not_recorded": 130, "rows_set_aside": 4, "session_rows": 2}
+    assert src == {"disputed": 15, "dates_not_recorded": 118, "rows_set_aside": 4, "session_rows": 2}
 
 
 def test_each_ruled_game_says_so_in_its_row_with_what_the_page_lists_and_the_source(built):
@@ -621,10 +630,10 @@ def test_the_how_it_works_page_lists_every_row_set_aside_with_its_reason_and_sou
     parsed = merge.load_overrides(OVERRIDES)
     counts = howitworks.ruling_counts(parsed)
     assert counts == {"same_game": 17, "different_games": 0, "session_of": 1, "set_aside": 4, "score": 1,
-                      "found": 23, "note": 4}
-    assert ("Rulings made so far: 50 (17 saying two entries are the same game, 1 saying several entries are days of "
-            "one meet, 4 setting a row aside, 1 choosing which score counts, 23 giving a date or a place found in "
-            "another source, 4 adding a note to a game)") in text
+                      "found": 35, "note": 5}
+    assert ("Rulings made so far: 63 (17 saying two entries are the same game, 1 saying several entries are days of "
+            "one meet, 4 setting a row aside, 1 choosing which score counts, 35 giving a date or a place found in "
+            "another source, 5 adding a note to a game)") in text
     assert "saying two entries are different games" not in text                 # a kind with no ruling is left out
     assert "Right now there are 4 such rows:" in text
     for wanted in ("Wabash’s row for Jan 6, 1944 (DePauw 69, Wabash 49).", "Wabash’s row for Feb 5, 1944 (DePauw 28, Wabash 19).",
@@ -656,27 +665,27 @@ def test_the_csv_download_carries_the_ruling_notes(built):
     swim = by[("Men's Swimming and Diving", "2011-11-09")]
     assert (swim["depauw_score"], swim["wabash_score"], swim["disputed"], swim["wabash_record_score"]) == ("205", "89", "no", "")
     assert swim["ruling_notes"].startswith("Score from a ruling; DePauw’s page lists 205-80 (DePauw-Wabash).")
-    assert sum(1 for r in rows if r["ruling_notes"]) == 28
-    assert sum(1 for r in rows if r["date_recorded"] == "no") == 130
+    assert sum(1 for r in rows if r["ruling_notes"]) == 40     # the 1893 game has a found ruling and a note: one row
+    assert sum(1 for r in rows if r["date_recorded"] == "no") == 118
 
 
 def test_a_found_date_changes_the_decade_groups_of_its_card(built):
-    # on the October pages: baseball's first game gets its day, so the card gains an 1880s group, and the 19 dated
+    # on the October pages: baseball's first game gets its day, so the card gains an 1880s group, and the 31 dated
     # games leave "Date not recorded"
     out, data = built
     page = (out / "index.html").read_text(encoding="utf-8")
     card = text_of(page[page.index('id="baseball"'):page.index('id="mens-soccer"')])
-    assert "1880s · 1 game · DePauw 1-0" in card
+    assert "1880s · 2 games · DePauw 2-0" in card
     d, w, r = committed("baseball")
     plain = merge.merge_sport(d, w, season_months=MONTHS["baseball"],
                               rules={**merge.load_overrides(OVERRIDES)["baseball"], "found": []})
     undated = {name: sum(1 for x in games if x.get("date_known") is False)
                for name, games in (("plain", plain.games), ("ruled", data["sports"]["baseball"]["games"]))}
-    assert undated == {"plain": 64, "ruled": 45} and undated["plain"] - undated["ruled"] == len(FOUND["baseball"])
+    assert undated == {"plain": 64, "ruled": 33} and undated["plain"] - undated["ruled"] == len(FOUND["baseball"])
     assert f"Date not recorded · {undated['ruled']} games · " in card
     assert "1880s" not in render.games_table("baseball", plain.games, merged=True)      # no such group without the ruling
     first = [x for x in data["sports"]["baseball"]["games"] if x["date"] < "1890" and x.get("date_known") is not False]
-    assert [(x["date"], x["depauw"], x["wabash"]) for x in first] == [("1888-05-19", 7, 6)]
+    assert [(x["date"], x["depauw"], x["wabash"]) for x in first] == [("1888-05-19", 7, 6), ("1889-05-25", 4, 3)]
 
 
 def test_the_how_it_works_page_says_which_rulings_are_exceptions_to_depauws_version_counts(built):
@@ -692,7 +701,7 @@ def test_the_how_it_works_page_says_which_rulings_are_exceptions_to_depauws_vers
     # the games are counted from the data: a place found for a row whose page lists none replaces nothing
     placed = [x for s in data["sports"].values() for x in s["games"]
               if any(e["kind"] == "found" and "place" in e["what"] for e in x.get("ruled", []))]
-    assert len(placed) == 22 and [x["date"] for x in placed if x["source"] == "both"] == ["1915-11-20"]
+    assert len(placed) == 31 and [x["date"] for x in placed if x["source"] == "both"] == ["1915-11-20"]
     no_ruling = {k: {**s, "games": [{**x, "ruled": []} for x in s["games"]]} for k, s in data["sports"].items()}
     assert howitworks.replaced_places(no_ruling) == []
 
