@@ -489,12 +489,21 @@ def test_a_release_is_made_only_when_the_check_says_the_data_changed():
     for step in after:
         assert step.get("if") == "${{ steps.check.outputs.changed == 'true' }}", step
     assert release.get("needs") == "prepare"
-    # the whole condition, on purpose: a main-only guard for this job is planned, and the pull request that adds
-    # it changes this line with it
-    assert release.get("if") == "${{ needs.prepare.outputs.changed == 'true' }}"
+    # the whole condition, on purpose: the data changed, and the run is on main (a hand run on a branch reads
+    # main's data, so without the guard it would publish a real data-<today> release tagged at the branch commit)
+    assert release.get("if") == "${{ needs.prepare.outputs.changed == 'true' && github.ref == 'refs/heads/main' }}"
     assert "continue-on-error" not in prepare
     creating = [name for name, job in FLOW["jobs"].items() if "gh release create" in json.dumps(job)]
     assert creating == ["release"]
+
+
+def test_archiving_runs_only_on_main_even_for_a_retry():
+    """The archive job can run without the release job (a retry with archive_release_tag), so it needs a main-only
+    guard of its own, outside the "or": a hand run on a branch would otherwise edit a real release's notes and send
+    Save Page Now requests. The whole condition, on purpose, so a guard moved inside the brackets fails here."""
+    assert FLOW["jobs"]["archive"].get("if") == (
+        "${{ always() && github.ref == 'refs/heads/main' && github.event.inputs.archive != 'false' && "
+        "(github.event.inputs.archive_release_tag != '' || needs.release.result == 'success') }}")
 
 
 def test_the_check_command_writes_its_answer_where_the_workflow_reads_it(tmp_path, monkeypatch, capsys):

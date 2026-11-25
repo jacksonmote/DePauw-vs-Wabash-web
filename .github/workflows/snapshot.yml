@@ -9,6 +9,9 @@ name: Data snapshot
 # edit the release notes). The archive job comes last and can never fail the run or hold up the release.
 # Manual runs: `archive: false` makes a snapshot without archiving; `archive_release_tag: data-YYYY-MM-DD`
 # skips the snapshot and only archives that existing release (to retry pages that were not saved).
+# The release and archive jobs run only on main, like the writing jobs of the update, link-check and health-check
+# workflows: a run started on another branch builds the release files and stops, so it makes no release or tag
+# and sends nothing to the Internet Archive (a retry run included).
 
 on:
   schedule:
@@ -85,8 +88,9 @@ jobs:
           if-no-files-found: error
 
   release:
+    # Creates the release from the prepare job's files, only when the data changed and only on main.
     needs: prepare
-    if: ${{ needs.prepare.outputs.changed == 'true' }}
+    if: ${{ needs.prepare.outputs.changed == 'true' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -117,10 +121,10 @@ jobs:
     # Last, and never fatal: asks the Internet Archive to save the 14 source history pages (30 minute budget, 180 second
     # limit per page, see scraper/snapshot.py), then edits the release notes in place. The script always exits 0
     # and continue-on-error covers the rest (a timeout, a cancelled step), so the run's result is the release's.
-    # Runs after a new release, or alone on a manual run with archive_release_tag.
+    # Runs after a new release, or alone on a manual run with archive_release_tag, and in both cases only on main.
     needs: [prepare, release]
     if: >-
-      ${{ always() && github.event.inputs.archive != 'false' &&
+      ${{ always() && github.ref == 'refs/heads/main' && github.event.inputs.archive != 'false' &&
       (github.event.inputs.archive_release_tag != '' || needs.release.result == 'success') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 40
